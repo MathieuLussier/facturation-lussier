@@ -1,0 +1,7 @@
+@import 'tailwindcss';
+
+/* Thème partagé du design system (tokens de marque). */
+@import '../../../packages/ui/src/theme.css';
+
+/* Scanne les composants partagés pour générer leurs classes utilitaires. */
+@source '../../../packages/ui/src';

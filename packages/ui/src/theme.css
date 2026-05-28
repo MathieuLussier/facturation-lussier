@@ -1,0 +1,8 @@
+/*
+ * Thème Tailwind v4 partagé (preset de tokens de marque).
+ * Importé par les applications consommatrices (ex: apps/web) en plus de "tailwindcss".
+ */
+@theme {
+  --color-brand: oklch(55% 0.2 264);
+  --color-brand-fg: oklch(98% 0 0);
+}

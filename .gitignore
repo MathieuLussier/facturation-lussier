@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+.turbo/
+*.tsbuildinfo
+
+# Test / coverage
+coverage/
+
+# Env (only .env.example is committed)
+.env
+.env.*
+!.env.example
+
+# Prisma local artifacts
+prisma/*.db
+
+# ruflo / claude-flow runtime artifacts
+.claude-flow/
+.swarm/
+ruvector.db
+*.ruv
+
+# ruflo-installed agent tooling (reproducible via `ruflo init`) + local state
+.claude/commands/
+.claude/helpers/
+.claude/skills/
+.claude/agents/
+.claude/*.db
+
+# Logs & OS
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# Editor
+.idea/
+*.local

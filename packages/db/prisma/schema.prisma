@@ -1,0 +1,13 @@
+// Prisma schema — squelette.
+// Aucun modèle métier pour l'instant : le schéma de facturation
+// (clients, factures, lignes de facture, taxes TPS/TVQ, paiements)
+// sera ajouté lors des étapes suivantes.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
