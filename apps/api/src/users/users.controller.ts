@@ -1,0 +1,61 @@
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import type { AuthUser } from '@facturation/core';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { UsersService } from './users.service';
+
+@ApiTags('Users')
+@Roles('ADMIN')
+@Controller('users')
+export class UsersController {
+  constructor(private readonly usersService: UsersService) {}
+
+  // GET /users
+  @Get()
+  @ApiOperation({ summary: 'Lister tous les utilisateurs (ADMIN)' })
+  findAll(): Promise<AuthUser[]> {
+    return this.usersService.findAll();
+  }
+
+  // POST /users
+  @Post()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Créer un utilisateur (ADMIN)' })
+  create(@Body() dto: CreateUserDto): Promise<AuthUser> {
+    return this.usersService.create(dto);
+  }
+
+  // GET /users/:id
+  @Get(':id')
+  @ApiOperation({ summary: 'Récupérer un utilisateur par ID (ADMIN)' })
+  findOne(@Param('id') id: string): Promise<AuthUser> {
+    return this.usersService.findById(id);
+  }
+
+  // PATCH /users/:id
+  @Patch(':id')
+  @ApiOperation({ summary: 'Mettre à jour un utilisateur (ADMIN)' })
+  update(@Param('id') id: string, @Body() dto: UpdateUserDto): Promise<AuthUser> {
+    return this.usersService.update(id, dto);
+  }
+
+  // DELETE /users/:id
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Supprimer un utilisateur (ADMIN)' })
+  remove(@Param('id') id: string): Promise<void> {
+    return this.usersService.remove(id);
+  }
+}

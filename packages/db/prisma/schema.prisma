@@ -1,7 +1,6 @@
-// Prisma schema — squelette.
-// Aucun modèle métier pour l'instant : le schéma de facturation
-// (clients, factures, lignes de facture, taxes TPS/TVQ, paiements)
-// sera ajouté lors des étapes suivantes.
+// Prisma schema — jalon Authentification.
+// Les modèles métier (clients, factures, taxes TPS/TVQ, paiements)
+// seront ajoutés lors des étapes suivantes.
 
 generator client {
   provider = "prisma-client-js"
@@ -10,4 +9,47 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Rôles
+// ---------------------------------------------------------------------------
+
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+// ---------------------------------------------------------------------------
+// Utilisateurs
+// ---------------------------------------------------------------------------
+
+model User {
+  id           String         @id @default(cuid())
+  email        String         @unique
+  passwordHash String
+  name         String
+  role         Role           @default(MEMBER)
+  isActive     Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  refreshTokens RefreshToken[]
+
+  @@map("users")
+}
+
+// ---------------------------------------------------------------------------
+// Tokens de rafraîchissement (stockés hachés, avec rotation + révocation)
+// ---------------------------------------------------------------------------
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
 }
