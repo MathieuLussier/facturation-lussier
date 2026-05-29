@@ -1,19 +1,24 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type {
   Client as DbClient,
+  Contact as DbContact,
   Invoice as DbInvoice,
   InvoiceLine as DbLine,
+  Project as DbProject,
 } from '@prisma/client';
 import {
   computeInvoiceTotals,
   computeLineAmountCents,
   type Client,
+  type Contact,
   type CreateInvoiceRequest,
   type Invoice,
   type InvoiceLine,
   type InvoiceStats,
   type InvoiceStatus,
   type Paginated,
+  type Project,
+  type ProjectStatus,
 } from '@facturation/core';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -25,11 +30,20 @@ interface ListParams {
 const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 20;
 
-type InvoiceRow = DbInvoice & { lines?: DbLine[]; client?: DbClient | null };
+type DbProjectWithContacts = DbProject & { billingContacts?: DbContact[] };
+
+type InvoiceRow = DbInvoice & {
+  lines?: DbLine[];
+  client?: DbClient | null;
+  project?: DbProjectWithContacts | null;
+  billingContact?: DbContact | null;
+};
 
 const INCLUDE_FULL = {
   client: true,
   lines: { orderBy: { position: 'asc' as const } },
+  project: { include: { billingContacts: true } },
+  billingContact: true,
 };
 
 function toClient(c: DbClient): Client {
@@ -61,6 +75,34 @@ function toLine(l: DbLine): InvoiceLine {
   };
 }
 
+function toContact(c: DbContact): Contact {
+  return {
+    id: c.id,
+    companyId: c.companyId,
+    name: c.name,
+    email: c.email,
+    phone: c.phone,
+    title: c.title,
+    isBillingContact: c.isBillingContact,
+    notes: c.notes,
+    createdAt: c.createdAt.toISOString(),
+    updatedAt: c.updatedAt.toISOString(),
+  };
+}
+
+function toProject(p: DbProjectWithContacts): Project {
+  return {
+    id: p.id,
+    companyId: p.companyId,
+    name: p.name,
+    status: p.status as ProjectStatus,
+    notes: p.notes,
+    billingContacts: (p.billingContacts ?? []).map(toContact),
+    createdAt: p.createdAt.toISOString(),
+    updatedAt: p.updatedAt.toISOString(),
+  };
+}
+
 function toInvoice(row: InvoiceRow): Invoice {
   return {
     id: row.id,
@@ -68,6 +110,10 @@ function toInvoice(row: InvoiceRow): Invoice {
     status: row.status as InvoiceStatus,
     clientId: row.clientId,
     client: row.client ? toClient(row.client) : undefined,
+    projectId: row.projectId,
+    project: row.project ? toProject(row.project) : undefined,
+    billingContactId: row.billingContactId,
+    billingContact: row.billingContact ? toContact(row.billingContact) : undefined,
     issueDate: row.issueDate.toISOString(),
     dueDate: row.dueDate ? row.dueDate.toISOString() : null,
     notes: row.notes,
@@ -168,16 +214,38 @@ export class InvoicesService {
   }
 
   async create(data: CreateInvoiceRequest, createdById: string): Promise<Invoice> {
-    const client = await this.prisma.client.client.findUnique({ where: { id: data.clientId } });
+    const db = this.prisma.client;
+    let clientId = data.clientId;
+
+    // Si un projet est fourni, l'entreprise est dérivée du projet.
+    if (data.projectId) {
+      const project = await db.project.findUnique({ where: { id: data.projectId } });
+      if (!project) {
+        throw new NotFoundException('Projet introuvable');
+      }
+      clientId = project.companyId;
+    }
+
+    const client = await db.client.findUnique({ where: { id: clientId } });
     if (!client) {
       throw new NotFoundException('Client introuvable');
     }
 
+    // Le contact de facturation (optionnel) doit appartenir à l'entreprise.
+    if (data.billingContactId) {
+      const contact = await db.contact.findUnique({ where: { id: data.billingContactId } });
+      if (!contact || contact.companyId !== clientId) {
+        throw new BadRequestException("Le contact de facturation n'appartient pas à l'entreprise");
+      }
+    }
+
     const totals = computeInvoiceTotals(data.lines);
 
-    const row = await this.prisma.client.invoice.create({
+    const row = await db.invoice.create({
       data: {
-        clientId: data.clientId,
+        clientId,
+        projectId: data.projectId ?? null,
+        billingContactId: data.billingContactId ?? null,
         issueDate: data.issueDate ? new Date(data.issueDate) : undefined,
         dueDate: data.dueDate ? new Date(data.dueDate) : null,
         notes: data.notes ?? null,

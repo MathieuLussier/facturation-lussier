@@ -7,6 +7,8 @@ const invoice: Invoice = {
   number: 42,
   status: 'ENVOYEE',
   clientId: 'c1',
+  projectId: null,
+  billingContactId: null,
   client: {
     id: 'c1',
     companyName: 'Acme',

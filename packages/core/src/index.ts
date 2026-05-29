@@ -20,6 +20,15 @@ export type {
 
 export type { IssuerProfile, UpsertIssuerRequest } from './issuer';
 
+export type { Contact, CreateContactRequest, UpdateContactRequest } from './contact';
+
+export type {
+  Project,
+  ProjectStatus,
+  CreateProjectRequest,
+  UpdateProjectRequest,
+} from './project';
+
 export {
   GST_RATE,
   QST_RATE,

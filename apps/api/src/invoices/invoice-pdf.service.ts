@@ -78,6 +78,17 @@ export class InvoicePdfService {
         .filter((l): l is string => Boolean(l))
         .forEach((l) => doc.text(l));
     }
+
+    // Contact de facturation (à l'attention de) + projet
+    if (invoice.billingContact) {
+      const bc = invoice.billingContact;
+      doc.fontSize(9).fillColor('#555555');
+      doc.text(`À l'attention de : ${bc.name}${bc.title ? ` (${bc.title})` : ''}`);
+    }
+    if (invoice.project) {
+      doc.fontSize(9).fillColor('#555555');
+      doc.text(`Projet : ${invoice.project.name}`);
+    }
     doc.fillColor('#000000');
 
     // Lignes

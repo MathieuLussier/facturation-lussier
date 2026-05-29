@@ -10,6 +10,7 @@ import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
 import { UsersPage } from './pages/UsersPage';
 import { ClientsPage } from './pages/ClientsPage';
+import { ClientDetailPage } from './pages/ClientDetailPage';
 import { IssuerPage } from './pages/IssuerPage';
 import { InvoicesPage } from './pages/InvoicesPage';
 import { InvoiceFormPage } from './pages/InvoiceFormPage';
@@ -45,6 +46,7 @@ createRoot(rootElement).render(
           >
             <Route path="/" element={<HomePage />} />
             <Route path="/clients" element={<ClientsPage />} />
+            <Route path="/clients/:id" element={<ClientDetailPage />} />
             <Route path="/invoices" element={<InvoicesPage />} />
             <Route path="/invoices/new" element={<InvoiceFormPage />} />
             <Route path="/invoices/:id" element={<InvoiceDetailPage />} />

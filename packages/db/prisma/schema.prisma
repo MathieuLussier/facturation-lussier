@@ -78,6 +78,8 @@ model Client {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   invoices    Invoice[]
+  contacts    Contact[]
+  projects    Project[]
 
   @@index([companyName])
   @@map("clients")
@@ -120,8 +122,12 @@ model Invoice {
   id            String        @id @default(cuid())
   number        Int           @unique @default(autoincrement())
   status        InvoiceStatus @default(BROUILLON)
-  clientId      String
-  client        Client        @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  clientId         String
+  client           Client        @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  projectId        String?
+  project          Project?      @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  billingContactId String?
+  billingContact   Contact?      @relation(fields: [billingContactId], references: [id], onDelete: SetNull)
   issueDate     DateTime      @default(now())
   dueDate       DateTime?
   notes         String?
@@ -136,6 +142,7 @@ model Invoice {
   updatedAt     DateTime      @updatedAt
 
   @@index([clientId])
+  @@index([projectId])
   @@map("invoices")
 }
 
@@ -151,4 +158,52 @@ model InvoiceLine {
 
   @@index([invoiceId])
   @@map("invoice_lines")
+}
+
+// ---------------------------------------------------------------------------
+// Contacts (personnes rattachées à une entreprise)
+// ---------------------------------------------------------------------------
+
+model Contact {
+  id               String    @id @default(cuid())
+  companyId        String
+  company          Client    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name             String
+  email            String?
+  phone            String?
+  title            String?
+  isBillingContact Boolean   @default(false)
+  notes            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  projects         Project[] @relation("ProjectBillingContacts")
+  invoices         Invoice[]
+
+  @@index([companyId])
+  @@map("contacts")
+}
+
+// ---------------------------------------------------------------------------
+// Projets (rattachés à une entreprise + contacts de facturation)
+// ---------------------------------------------------------------------------
+
+enum ProjectStatus {
+  ACTIF
+  TERMINE
+}
+
+model Project {
+  id              String        @id @default(cuid())
+  companyId       String
+  company         Client        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name            String
+  status          ProjectStatus @default(ACTIF)
+  notes           String?
+  billingContacts Contact[]     @relation("ProjectBillingContacts")
+  invoices        Invoice[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([companyId])
+  @@map("projects")
 }

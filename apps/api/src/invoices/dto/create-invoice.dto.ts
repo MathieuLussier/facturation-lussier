@@ -34,6 +34,14 @@ export class CreateInvoiceDto {
   clientId!: string;
 
   @IsOptional()
+  @IsString()
+  projectId?: string;
+
+  @IsOptional()
+  @IsString()
+  billingContactId?: string;
+
+  @IsOptional()
   @IsISO8601()
   issueDate?: string;
 

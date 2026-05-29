@@ -1,5 +1,5 @@
 import { type FormEvent, useCallback, useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Button, Card, Input, Modal } from '@facturation/ui';
 import type { Client, CreateClientRequest } from '@facturation/core';
 import { ApiError } from '../lib/api';
@@ -244,7 +244,12 @@ export function ClientsPage() {
             {items.map((c) => (
               <li key={c.id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
                 <div className="min-w-0">
-                  <p className="truncate font-medium text-fg">{c.companyName}</p>
+                  <Link
+                    to={`/clients/${c.id}`}
+                    className="block truncate font-medium text-fg hover:text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                  >
+                    {c.companyName}
+                  </Link>
                   <p className="truncate text-muted">
                     {[c.contactName, c.email, c.city].filter(Boolean).join(' · ') || '—'}
                   </p>

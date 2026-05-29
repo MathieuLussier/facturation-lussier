@@ -1,4 +1,6 @@
 import type { Client } from './client';
+import type { Contact } from './contact';
+import type { Project } from './project';
 
 export type InvoiceStatus = 'BROUILLON' | 'ENVOYEE' | 'PAYEE' | 'ANNULEE';
 
@@ -29,6 +31,10 @@ export interface Invoice extends InvoiceTotals {
   clientId: string;
   /** Présent dans le détail / la liste. */
   client?: Client;
+  projectId: string | null;
+  project?: Project;
+  billingContactId: string | null;
+  billingContact?: Contact;
   issueDate: string;
   dueDate: string | null;
   notes: string | null;
@@ -61,6 +67,8 @@ export interface CreateInvoiceLineInput {
 
 export interface CreateInvoiceRequest {
   clientId: string;
+  projectId?: string | null;
+  billingContactId?: string | null;
   issueDate?: string;
   dueDate?: string | null;
   notes?: string | null;
