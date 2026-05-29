@@ -57,36 +57,30 @@ Construit en solo (Lead), commits `b4ae097` (backend) + `251fcc0` (frontend).
 
 ---
 
-## Jalon — Coordonnées de l'entreprise émettrice (Issuer / Paramètres)
+## ✅ Jalon livré — Entreprise émettrice (Issuer / Paramètres) — `eced493`
 
-Nécessaire pour l'en-tête de facture et les numéros de taxe.
-
-- [ ] Modèle `IssuerProfile` (nom légal, adresse, courriel/téléphone, **numéros TPS & TVQ**, logo optionnel)
-- [ ] API + UI de paramètres (édition réservée ADMIN), singleton ou multi-profils
-- [ ] Tests + revue → commit
+- [x] Modèle `IssuerProfile` (singleton) + migration : coordonnées + **numéros TPS & TVQ**
+- [x] API GET /issuer (auth) + PUT /issuer (ADMIN, upsert) + UI page paramètres + 4 tests
+- [ ] Followup : logo optionnel
 
 ---
 
-## Jalon — Factures (cœur) + Taxes TPS/TVQ
+## ✅ Jalon livré — Factures + Taxes TPS/TVQ — `3e88b77` + `ecd4ed5`
 
-- [ ] Modèles `Invoice` (numéro séquentiel, dates émission/échéance, statut, client, sous-total, taxes,
-      total), `InvoiceLine` (description service, quantité/heures, prix unitaire, montant), enum
-      `InvoiceStatus` (BROUILLON, ENVOYÉE, PAYÉE, ANNULÉE, EN_RETARD)
-- [ ] **Calcul des taxes** : TPS 5 % + TVQ 9,975 % (logique pure et testée dans `packages/core`,
-      arrondis au cent, attention à l'ordre de calcul québécois)
-- [ ] Numérotation des factures (format configurable, séquence sans trou)
-- [ ] API : CRUD facture + transitions de statut ; UI : liste, détail, création avec lignes dynamiques
-- [ ] Tests (incl. cas limites de taxes/arrondis) + revue → commit
+- [x] Modèles `Invoice` + `InvoiceLine` + enum `InvoiceStatus` (BROUILLON/ENVOYEE/PAYEE/ANNULEE) + migration
+- [x] **Calcul des taxes** TPS 5 % + TVQ 9,975 % : `computeInvoiceTotals` pur et testé (cents entiers, arrondis)
+- [x] API CRUD + transition de statut (totaux calculés serveur) ; UI liste + détail + formulaire à lignes dynamiques
+- [x] Tests (8 core + 7 service + 7 web)
+- [ ] Followup : numérotation strictement sans trou (actuellement `autoincrement`), statut EN_RETARD, e2e
 
 ---
 
-## Jalon — Export PDF des factures
+## ✅ Jalon livré — Export PDF des factures — `b23265f`
 
-- [ ] Choisir l'approche (gabarit HTML→PDF côté serveur, ex. `@react-pdf/renderer` ou Puppeteer ;
-      évaluer via Context7/registres avant d'implémenter)
-- [ ] Gabarit FR : en-tête émetteur + numéros TPS/TVQ, client, lignes, totaux, mentions légales QC
-- [ ] Endpoint de téléchargement + bouton UI ; tests de rendu
-- [ ] Revue → commit
+- [x] Approche choisie : **pdfkit** côté serveur (pur Node, pas de navigateur headless)
+- [x] Gabarit FR : en-tête émetteur + numéros TPS/TVQ, client, lignes, totaux, notes
+- [x] GET /invoices/:id/pdf (authentifié) + bouton « Télécharger le PDF » ; 2 tests + smoke live
+- [ ] Followup : mentions légales QC complètes, logo
 
 ---
 
