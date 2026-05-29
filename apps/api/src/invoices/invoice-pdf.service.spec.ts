@@ -11,6 +11,7 @@ const invoice: Invoice = {
   billingContactId: null,
   client: {
     id: 'c1',
+    type: 'COMPANY',
     companyName: 'Acme',
     email: 'a@acme.com',
     phone: null,

@@ -1,9 +1,15 @@
 /**
- * Client (entreprise facturée — B2B). Types partagés API ↔ front.
+ * Client (entreprise OU particulier facturé). Types partagés API ↔ front.
  * Les dates sont sérialisées en chaînes ISO sur le fil.
  */
+
+/** Type de client : société (entreprise) ou particulier (personne). */
+export type ClientType = 'COMPANY' | 'INDIVIDUAL';
+
 export interface Client {
   id: string;
+  type: ClientType;
+  /** Nom : raison sociale (société) ou nom complet (particulier). */
   companyName: string;
   email: string | null;
   phone: string | null;
@@ -25,6 +31,8 @@ export interface Client {
 }
 
 export interface CreateClientRequest {
+  /** Défaut COMPANY si absent. */
+  type?: ClientType;
   companyName: string;
   email?: string | null;
   phone?: string | null;
@@ -39,6 +47,24 @@ export interface CreateClientRequest {
 }
 
 export type UpdateClientRequest = Partial<CreateClientRequest>;
+
+/** Catégorie d'une entrée de l'annuaire Clients unifié. */
+export type DirectoryKind = 'company' | 'individual' | 'contact';
+
+/**
+ * Entrée de l'annuaire Clients unifié (grille) : une entreprise, un particulier
+ * ou un contact rattaché à une entreprise.
+ */
+export interface DirectoryEntry {
+  kind: DirectoryKind;
+  /** id du Client (company/individual) ou du Contact. */
+  id: string;
+  name: string;
+  subtitle: string | null;
+  /** Entreprise parente pour un contact ; null sinon. */
+  companyId: string | null;
+  archivedAt: string | null;
+}
 
 /** Enveloppe de réponse paginée. */
 export interface Paginated<T> {

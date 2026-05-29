@@ -11,7 +11,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import type { AuthUser, Client, Paginated } from '@facturation/core';
+import type { AuthUser, Client, DirectoryEntry, Paginated } from '@facturation/core';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { ClientsService } from './clients.service';
 import { CreateClientDto } from './dto/create-client.dto';
@@ -27,6 +27,12 @@ export class ClientsController {
   @Get()
   list(@Query() query: ListClientsQuery): Promise<Paginated<Client>> {
     return this.clients.list(query);
+  }
+
+  // Annuaire unifié (entreprises + particuliers + contacts) — AVANT @Get(':id').
+  @Get('directory')
+  directory(@Query() query: ListClientsQuery): Promise<Paginated<DirectoryEntry>> {
+    return this.clients.directory(query);
   }
 
   @Get(':id')

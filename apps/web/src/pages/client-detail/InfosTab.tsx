@@ -1,6 +1,6 @@
 import { type FormEvent, useState } from 'react';
 import { Button, Card, Input, Modal } from '@facturation/ui';
-import type { Client, UpdateClientRequest } from '@facturation/core';
+import type { Client, ClientType, UpdateClientRequest } from '@facturation/core';
 import { ApiError } from '../../lib/api';
 import { updateClient } from '../../lib/clients';
 import { useToast } from '../../components/Toast';
@@ -19,15 +19,25 @@ const INFOS_FIELDS: { key: keyof UpdateClientRequest; label: string; type?: stri
   { key: 'postalCode', label: 'Code postal' },
 ];
 
+const TYPE_LABELS: Record<ClientType, string> = {
+  COMPANY: 'Société',
+  INDIVIDUAL: 'Particulier',
+};
+
+interface EditFields extends UpdateClientRequest {
+  type: ClientType;
+}
+
 export function InfosTab({ client, onUpdated }: InfosTabProps) {
   const { notify } = useToast();
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
-  const [fields, setFields] = useState<UpdateClientRequest>({});
+  const [fields, setFields] = useState<EditFields>({ type: client.type });
 
   const openEdit = () => {
     setFields({
+      type: client.type,
       companyName: client.companyName,
       email: client.email ?? '',
       phone: client.phone ?? '',
@@ -41,7 +51,7 @@ export function InfosTab({ client, onUpdated }: InfosTabProps) {
     setOpen(true);
   };
 
-  const change = (key: keyof UpdateClientRequest, value: string) =>
+  const change = (key: keyof EditFields, value: string) =>
     setFields((prev) => ({ ...prev, [key]: value }));
 
   const submit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
@@ -56,7 +66,7 @@ export function InfosTab({ client, onUpdated }: InfosTabProps) {
       const updated = await updateClient(client.id, fields);
       onUpdated(updated);
       setOpen(false);
-      notify('Entreprise mise à jour', 'success');
+      notify('Client mis à jour', 'success');
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : "Erreur lors de l'enregistrement.");
     } finally {
@@ -78,6 +88,10 @@ export function InfosTab({ client, onUpdated }: InfosTabProps) {
         <div className="flex items-start justify-between gap-4">
           <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {row('Nom', client.companyName)}
+            <div>
+              <dt className="text-xs font-medium uppercase tracking-wide text-muted">Type</dt>
+              <dd className="mt-0.5 text-sm text-fg">{TYPE_LABELS[client.type]}</dd>
+            </div>
             {row('Courriel', client.email)}
             {row('Téléphone', client.phone)}
             {row('Adresse', client.addressLine)}
@@ -92,7 +106,7 @@ export function InfosTab({ client, onUpdated }: InfosTabProps) {
         </div>
       </Card>
 
-      <Modal open={open} onClose={() => !submitting && setOpen(false)} title="Modifier l'entreprise">
+      <Modal open={open} onClose={() => !submitting && setOpen(false)} title="Modifier le client">
         {formError && (
           <div
             role="alert"
@@ -102,6 +116,29 @@ export function InfosTab({ client, onUpdated }: InfosTabProps) {
           </div>
         )}
         <form onSubmit={(e) => void submit(e)} noValidate className="space-y-4">
+          {/* Segmented toggle Société / Particulier */}
+          <div className="flex flex-col gap-1">
+            <span className="text-sm font-medium text-fg">Type</span>
+            <div className="inline-flex rounded-lg border border-border">
+              {(['COMPANY', 'INDIVIDUAL'] as ClientType[]).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  disabled={submitting}
+                  onClick={() => change('type', t)}
+                  className={[
+                    'flex-1 px-4 py-2 text-sm font-medium transition-colors first:rounded-l-lg last:rounded-r-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50',
+                    fields.type === t
+                      ? 'bg-brand text-white'
+                      : 'bg-surface text-muted hover:text-fg',
+                  ].join(' ')}
+                >
+                  {TYPE_LABELS[t]}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <Input
             id="info-companyName"
             label="Nom *"

@@ -57,11 +57,17 @@ model RefreshToken {
 }
 
 // ---------------------------------------------------------------------------
-// Clients (entreprises facturées — B2B)
+// Clients (entreprises ET particuliers facturés — B2B/B2C)
 // ---------------------------------------------------------------------------
 
+enum ClientType {
+  COMPANY
+  INDIVIDUAL
+}
+
 model Client {
-  id          String   @id @default(cuid())
+  id          String     @id @default(cuid())
+  type        ClientType @default(COMPANY)
   companyName String
   email       String?
   phone       String?

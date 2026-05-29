@@ -6,6 +6,7 @@ import type { PrismaService } from '../prisma/prisma.service';
 function makeRow(overrides: Record<string, unknown> = {}) {
   return {
     id: 'c1',
+    type: 'COMPANY',
     companyName: 'Acme Inc',
     email: null,
     phone: null,
@@ -36,7 +37,7 @@ function makePrisma() {
     delete: jest.fn(),
   };
   const invoice = { count: jest.fn().mockResolvedValue(0) };
-  const contact = { count: jest.fn().mockResolvedValue(0) };
+  const contact = { count: jest.fn().mockResolvedValue(0), findMany: jest.fn().mockResolvedValue([]) };
   const project = { count: jest.fn().mockResolvedValue(0) };
   const client = {
     client: model,
@@ -169,6 +170,60 @@ describe('ClientsService', () => {
         data: { companyName: 'Acme Inc', createdById: 'u1' },
       });
       expect(res.companyName).toBe('Acme Inc');
+    });
+
+    it('transmet le type et retourne un particulier', async () => {
+      model.create.mockResolvedValue(makeRow({ type: 'INDIVIDUAL', companyName: 'Jean Tremblay' }));
+      const res = await service.create({ type: 'INDIVIDUAL', companyName: 'Jean Tremblay' }, 'u1');
+      expect(model.create).toHaveBeenCalledWith({
+        data: { type: 'INDIVIDUAL', companyName: 'Jean Tremblay', createdById: 'u1' },
+      });
+      expect(res.type).toBe('INDIVIDUAL');
+    });
+  });
+
+  describe('directory', () => {
+    const makeContactRow = (over: Record<string, unknown> = {}) => ({
+      id: 'ct1',
+      name: 'Jean Tremblay',
+      companyId: 'c1',
+      archivedAt: null,
+      company: { companyName: 'Acme Inc' },
+      ...over,
+    });
+
+    it('fusionne entreprises/particuliers + contacts, triés par nom', async () => {
+      model.findMany.mockResolvedValue([
+        makeRow({ id: 'c1', type: 'COMPANY', companyName: 'Acme Inc', city: 'Québec' }),
+        makeRow({ id: 'c2', type: 'INDIVIDUAL', companyName: 'Zoé Bernard' }),
+      ]);
+      contact.findMany.mockResolvedValue([makeContactRow({ name: 'Bob Roy' })]);
+
+      const res = await service.directory({});
+
+      expect(res.total).toBe(3);
+      expect(res.items.map((e) => e.name)).toEqual(['Acme Inc', 'Bob Roy', 'Zoé Bernard']);
+      const byName = Object.fromEntries(res.items.map((e) => [e.name, e]));
+      expect(byName['Acme Inc'].kind).toBe('company');
+      expect(byName['Zoé Bernard'].kind).toBe('individual');
+      expect(byName['Bob Roy'].kind).toBe('contact');
+      expect(byName['Bob Roy'].companyId).toBe('c1');
+      expect(byName['Bob Roy'].subtitle).toBe('Acme Inc');
+    });
+
+    it('exclut les archivés par défaut, les inclut avec includeArchived', async () => {
+      model.findMany.mockResolvedValue([]);
+      contact.findMany.mockResolvedValue([]);
+
+      await service.directory({});
+      expect(model.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: expect.objectContaining({ archivedAt: null }) }),
+      );
+
+      model.findMany.mockClear();
+      await service.directory({ includeArchived: true });
+      const whereArg = model.findMany.mock.calls[0][0].where as Record<string, unknown>;
+      expect(whereArg).not.toHaveProperty('archivedAt');
     });
   });
 

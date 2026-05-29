@@ -1,8 +1,13 @@
-import { IsEmail, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsEmail, IsIn, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import type { ClientType } from '@facturation/core';
 
 export class CreateClientDto {
+  @IsOptional()
+  @IsIn(['COMPANY', 'INDIVIDUAL'], { message: 'Le type doit être COMPANY ou INDIVIDUAL' })
+  type?: ClientType;
+
   @IsString()
-  @MinLength(1, { message: 'La raison sociale est requise' })
+  @MinLength(1, { message: 'Le nom est requis' })
   @MaxLength(255)
   companyName!: string;
 

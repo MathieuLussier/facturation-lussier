@@ -111,7 +111,7 @@ export function InvoiceFormPage() {
     e.preventDefault();
     setError('');
     if (!effectiveClientId) {
-      setError('Sélectionnez un projet ou une entreprise.');
+      setError('Sélectionnez un projet ou un client.');
       return;
     }
     if (lines.some((l) => !l.description.trim())) {
@@ -186,7 +186,7 @@ export function InvoiceFormPage() {
 
             {selectedProject ? (
               <div className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-fg">Entreprise</span>
+                <span className="text-sm font-medium text-fg">Client</span>
                 <p className="rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm text-muted">
                   {companyName(selectedProject.companyId)} (depuis le projet)
                 </p>
@@ -194,7 +194,7 @@ export function InvoiceFormPage() {
             ) : (
               <div className="flex flex-col gap-1">
                 <label htmlFor="inv-client" className="text-sm font-medium text-fg">
-                  Entreprise *
+                  Client *
                 </label>
                 <select
                   id="inv-client"
@@ -206,7 +206,7 @@ export function InvoiceFormPage() {
                   disabled={submitting}
                   className={SELECT_CLASS}
                 >
-                  <option value="">— Sélectionner —</option>
+                  <option value="">— Sélectionner un client —</option>
                   {clients.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.companyName}

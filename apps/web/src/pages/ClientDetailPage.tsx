@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import type { Client, Contact, Project } from '@facturation/core';
-import { getClient } from '../lib/clients';
+import { Badge, Button } from '@facturation/ui';
+import { archiveClient, deleteClient, getClient, unarchiveClient } from '../lib/clients';
 import { listContacts } from '../lib/contacts';
 import { listProjects } from '../lib/projects';
+import { useConfirm } from '../components/Confirm';
 import { useToast } from '../components/Toast';
 import { InfosTab } from './client-detail/InfosTab';
 import { ContactsTab } from './client-detail/ContactsTab';
@@ -11,39 +13,52 @@ import { ProjectsTab } from './client-detail/ProjectsTab';
 
 type Tab = 'infos' | 'contacts' | 'projets';
 
-const TAB_LABELS: { key: Tab; label: string }[] = [
-  { key: 'infos', label: 'Infos' },
-  { key: 'contacts', label: 'Contacts' },
-  { key: 'projets', label: 'Projets' },
-];
-
 export function ClientDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { notify } = useToast();
+  const confirm = useConfirm();
 
   const [client, setClient] = useState<Client | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
-  const [tab, setTab] = useState<Tab>('infos');
+  const [archiving, setArchiving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [showArchivedContacts, setShowArchivedContacts] = useState(false);
   const [showArchivedProjects, setShowArchivedProjects] = useState(false);
+
+  // Resolve the initial tab from the URL ?tab= param.
+  // Contacts tab is only valid for COMPANY clients; fall back to 'infos' otherwise.
+  const resolveInitialTab = useCallback(
+    (loadedClient: Client): Tab => {
+      const raw = searchParams.get('tab') as Tab | null;
+      const valid: Tab[] = ['infos', 'contacts', 'projets'];
+      if (!raw || !valid.includes(raw)) return 'infos';
+      if (raw === 'contacts' && loadedClient.type === 'INDIVIDUAL') return 'infos';
+      return raw;
+    },
+    [searchParams],
+  );
+
+  const [tab, setTab] = useState<Tab>('infos');
 
   const load = useCallback(async (): Promise<void> => {
     if (!id) return;
     setLoading(true);
     setLoadError('');
     try {
-      // Les listes contacts/projets sont chargées par leurs effets dédiés
-      // (refreshContacts/refreshProjects), qui gèrent aussi le filtre « archivés ».
-      setClient(await getClient(id));
+      const loaded = await getClient(id);
+      setClient(loaded);
+      setTab(resolveInitialTab(loaded));
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : 'Erreur de chargement.');
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, resolveInitialTab]);
 
   useEffect(() => {
     void load();
@@ -75,6 +90,41 @@ export function ClientDetailPage() {
     void refreshProjects();
   }, [refreshProjects]);
 
+  const handleArchive = async (): Promise<void> => {
+    if (!client) return;
+    setArchiving(true);
+    try {
+      const updated = client.archivedAt
+        ? await unarchiveClient(client.id)
+        : await archiveClient(client.id);
+      setClient(updated);
+      notify(updated.archivedAt ? 'Client archivé.' : 'Client désarchivé.', 'success');
+    } catch (err) {
+      notify(err instanceof Error ? err.message : "Erreur lors de l'archivage.", 'error');
+    } finally {
+      setArchiving(false);
+    }
+  };
+
+  const handleDelete = async (): Promise<void> => {
+    if (!client) return;
+    const ok = await confirm({
+      tone: 'danger',
+      confirmLabel: 'Supprimer',
+      message: `Supprimer « ${client.companyName} » ? Cette action est définitive.`,
+    });
+    if (!ok) return;
+    setDeleting(true);
+    try {
+      await deleteClient(client.id);
+      notify('Client supprimé.', 'success');
+      navigate('/clients');
+    } catch (err) {
+      notify(err instanceof Error ? err.message : 'Erreur lors de la suppression.', 'error');
+      setDeleting(false);
+    }
+  };
+
   if (loading) {
     return <p className="p-4 text-sm text-muted">Chargement…</p>;
   }
@@ -85,28 +135,73 @@ export function ClientDetailPage() {
         role="alert"
         className="mx-auto mt-8 max-w-lg rounded-lg border border-danger/40 bg-danger-soft px-4 py-3 text-sm text-danger"
       >
-        {loadError || 'Entreprise introuvable.'}
+        {loadError || 'Client introuvable.'}
       </div>
     );
   }
 
   const billingContacts = contacts.filter((c) => !c.archivedAt && c.isBillingContact);
 
+  // Tabs available depend on client type (individuals have no sub-contacts).
+  const tabLabels: { key: Tab; label: string }[] =
+    client.type === 'INDIVIDUAL'
+      ? [
+          { key: 'infos', label: 'Infos' },
+          { key: 'projets', label: 'Projets' },
+        ]
+      : [
+          { key: 'infos', label: 'Infos' },
+          { key: 'contacts', label: 'Contacts' },
+          { key: 'projets', label: 'Projets' },
+        ];
+
+  const busy = archiving || deleting;
+
   return (
     <div className="space-y-6">
-      <div>
-        <Link
-          to="/clients"
-          className="mb-2 inline-flex items-center gap-1 text-sm text-muted hover:text-fg"
-        >
-          ← Clients
-        </Link>
-        <h1 className="text-2xl font-bold tracking-tight text-fg">{client.companyName}</h1>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <Link
+            to="/clients"
+            className="mb-2 inline-flex items-center gap-1 text-sm text-muted hover:text-fg"
+          >
+            ← Clients
+          </Link>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold tracking-tight text-fg">{client.companyName}</h1>
+            {client.archivedAt && <Badge tone="warning">Archivé</Badge>}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => void handleArchive()}
+            disabled={busy}
+          >
+            {archiving
+              ? '…'
+              : client.archivedAt
+                ? 'Désarchiver'
+                : 'Archiver'}
+          </Button>
+          {client.deletable === true && (
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => void handleDelete()}
+              disabled={busy}
+            >
+              {deleting ? '…' : 'Supprimer'}
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Onglets */}
       <div className="flex w-fit gap-1 rounded-lg border border-border bg-surface-2 p-1">
-        {TAB_LABELS.map(({ key, label }) => (
+        {tabLabels.map(({ key, label }) => (
           <button
             key={key}
             type="button"
@@ -124,7 +219,7 @@ export function ClientDetailPage() {
       {tab === 'infos' && (
         <InfosTab client={client} onUpdated={(c) => setClient(c)} />
       )}
-      {tab === 'contacts' && (
+      {tab === 'contacts' && client.type !== 'INDIVIDUAL' && (
         <ContactsTab
           companyId={client.id}
           contacts={contacts}

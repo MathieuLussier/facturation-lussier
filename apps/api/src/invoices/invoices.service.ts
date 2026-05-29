@@ -50,6 +50,7 @@ const INCLUDE_FULL = {
 function toClient(c: DbClient): Client {
   return {
     id: c.id,
+    type: c.type,
     companyName: c.companyName,
     email: c.email,
     phone: c.phone,

@@ -1,6 +1,7 @@
 import type {
   Client,
   CreateClientRequest,
+  DirectoryEntry,
   Paginated,
   UpdateClientRequest,
 } from '@facturation/core';
@@ -27,6 +28,10 @@ export function buildClientsQuery(params: ListClientsParams): string {
 
 export function listClients(params: ListClientsParams = {}): Promise<Paginated<Client>> {
   return apiFetch<Paginated<Client>>(`/clients${buildClientsQuery(params)}`);
+}
+
+export function getClientsDirectory(params: ListClientsParams = {}): Promise<Paginated<DirectoryEntry>> {
+  return apiFetch<Paginated<DirectoryEntry>>(`/clients/directory${buildClientsQuery(params)}`);
 }
 
 export function getClient(id: string): Promise<Client> {

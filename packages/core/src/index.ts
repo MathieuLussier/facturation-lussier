@@ -14,8 +14,11 @@ export type {
 
 export type {
   Client,
+  ClientType,
   CreateClientRequest,
   UpdateClientRequest,
+  DirectoryEntry,
+  DirectoryKind,
   Paginated,
 } from './client';
 

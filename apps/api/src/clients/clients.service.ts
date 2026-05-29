@@ -3,6 +3,7 @@ import type { Client as DbClient } from '@prisma/client';
 import type {
   Client,
   CreateClientRequest,
+  DirectoryEntry,
   Paginated,
   UpdateClientRequest,
 } from '@facturation/core';
@@ -32,6 +33,7 @@ const COUNT_INCLUDE = {
 function toClient(row: ClientRow): Client {
   return {
     id: row.id,
+    type: row.type,
     companyName: row.companyName,
     email: row.email,
     phone: row.phone,
@@ -86,6 +88,57 @@ export class ClientsService {
     ]);
 
     return { items: rows.map(toClient), total, page, pageSize };
+  }
+
+  /**
+   * Annuaire unifié : entreprises + particuliers (Client) + contacts rattachés,
+   * trié par nom, filtré par recherche/archivage, paginé en mémoire.
+   */
+  async directory(params: ListParams): Promise<Paginated<DirectoryEntry>> {
+    const page = params.page ?? DEFAULT_PAGE;
+    const pageSize = params.pageSize ?? DEFAULT_PAGE_SIZE;
+    const db = this.prisma.client;
+    const archived = params.includeArchived ? {} : { archivedAt: null };
+    const search = params.search?.trim();
+
+    const clientWhere = {
+      ...archived,
+      ...(search ? { companyName: { contains: search, mode: 'insensitive' as const } } : {}),
+    };
+    const contactWhere = {
+      ...archived,
+      ...(search ? { name: { contains: search, mode: 'insensitive' as const } } : {}),
+    };
+
+    const [clients, contacts] = await Promise.all([
+      db.client.findMany({ where: clientWhere }),
+      db.contact.findMany({
+        where: contactWhere,
+        include: { company: { select: { companyName: true } } },
+      }),
+    ]);
+
+    const entries: DirectoryEntry[] = [
+      ...clients.map((c) => ({
+        kind: (c.type === 'INDIVIDUAL' ? 'individual' : 'company') as DirectoryEntry['kind'],
+        id: c.id,
+        name: c.companyName,
+        subtitle: [c.city, c.email].filter(Boolean).join(' · ') || null,
+        companyId: null,
+        archivedAt: c.archivedAt ? c.archivedAt.toISOString() : null,
+      })),
+      ...contacts.map((ct) => ({
+        kind: 'contact' as const,
+        id: ct.id,
+        name: ct.name,
+        subtitle: ct.company.companyName,
+        companyId: ct.companyId,
+        archivedAt: ct.archivedAt ? ct.archivedAt.toISOString() : null,
+      })),
+    ].sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+
+    const start = (page - 1) * pageSize;
+    return { items: entries.slice(start, start + pageSize), total: entries.length, page, pageSize };
   }
 
   async findById(id: string): Promise<Client> {
