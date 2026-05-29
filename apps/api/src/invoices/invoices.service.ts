@@ -11,6 +11,7 @@ import {
   type CreateInvoiceRequest,
   type Invoice,
   type InvoiceLine,
+  type InvoiceStats,
   type InvoiceStatus,
   type Paginated,
 } from '@facturation/core';
@@ -100,6 +101,59 @@ export class InvoicesService {
     ]);
 
     return { items: rows.map(toInvoice), total, page, pageSize };
+  }
+
+  /** Agrégats pour le tableau de bord. */
+  async stats(): Promise<InvoiceStats> {
+    const db = this.prisma.client;
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const [
+      countBrouillon,
+      countEnvoyee,
+      countPayee,
+      countAnnulee,
+      paid,
+      outstanding,
+      overdue,
+      month,
+      recentRows,
+    ] = await db.$transaction([
+      db.invoice.count({ where: { status: 'BROUILLON' } }),
+      db.invoice.count({ where: { status: 'ENVOYEE' } }),
+      db.invoice.count({ where: { status: 'PAYEE' } }),
+      db.invoice.count({ where: { status: 'ANNULEE' } }),
+      db.invoice.aggregate({ _sum: { totalCents: true }, where: { status: 'PAYEE' } }),
+      db.invoice.aggregate({ _sum: { totalCents: true }, where: { status: 'ENVOYEE' } }),
+      db.invoice.aggregate({
+        _sum: { totalCents: true },
+        _count: { _all: true },
+        where: { status: 'ENVOYEE', dueDate: { lt: now } },
+      }),
+      db.invoice.aggregate({
+        _sum: { totalCents: true },
+        where: { status: { not: 'ANNULEE' }, issueDate: { gte: monthStart } },
+      }),
+      db.invoice.findMany({ orderBy: { number: 'desc' }, take: 5, include: { client: true } }),
+    ]);
+
+    const countByStatus: Record<InvoiceStatus, number> = {
+      BROUILLON: countBrouillon,
+      ENVOYEE: countEnvoyee,
+      PAYEE: countPayee,
+      ANNULEE: countAnnulee,
+    };
+
+    return {
+      paidCents: paid._sum.totalCents ?? 0,
+      outstandingCents: outstanding._sum.totalCents ?? 0,
+      overdueCents: overdue._sum.totalCents ?? 0,
+      overdueCount: overdue._count._all,
+      currentMonthCents: month._sum.totalCents ?? 0,
+      countByStatus,
+      recent: recentRows.map(toInvoice),
+    };
   }
 
   async findById(id: string): Promise<Invoice> {

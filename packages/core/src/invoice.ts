@@ -37,6 +37,22 @@ export interface Invoice extends InvoiceTotals {
   updatedAt: string;
 }
 
+/** Agrégats pour le tableau de bord. */
+export interface InvoiceStats {
+  /** Encaissé (factures PAYÉE). */
+  paidCents: number;
+  /** À recevoir (factures ENVOYÉE, en attente de paiement). */
+  outstandingCents: number;
+  /** En retard (ENVOYÉE dont l'échéance est passée). */
+  overdueCents: number;
+  overdueCount: number;
+  /** Chiffre d'affaires émis durant le mois courant (hors ANNULÉE). */
+  currentMonthCents: number;
+  countByStatus: Record<InvoiceStatus, number>;
+  /** Dernières factures (avec client). */
+  recent: Invoice[];
+}
+
 export interface CreateInvoiceLineInput {
   description: string;
   quantity: number;

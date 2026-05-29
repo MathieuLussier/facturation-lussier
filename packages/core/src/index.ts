@@ -32,6 +32,7 @@ export type {
   InvoiceLine,
   InvoiceStatus,
   InvoiceTotals,
+  InvoiceStats,
   CreateInvoiceLineInput,
   CreateInvoiceRequest,
   UpdateInvoiceStatusRequest,

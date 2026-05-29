@@ -62,6 +62,8 @@ function makePrisma() {
     create: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),
+    groupBy: jest.fn(),
+    aggregate: jest.fn(),
   };
   const client = { findUnique: jest.fn() };
   const c = { invoice, client, $transaction: jest.fn((ops: Promise<unknown>[]) => Promise.all(ops)) };
@@ -69,6 +71,33 @@ function makePrisma() {
 }
 
 describe('InvoicesService', () => {
+  it('stats agrège les montants et compte par statut', async () => {
+    const { prisma, invoice } = makePrisma();
+    invoice.count
+      .mockResolvedValueOnce(0) // BROUILLON
+      .mockResolvedValueOnce(1) // ENVOYEE
+      .mockResolvedValueOnce(2) // PAYEE
+      .mockResolvedValueOnce(0); // ANNULEE
+    invoice.aggregate
+      .mockResolvedValueOnce({ _sum: { totalCents: 11498 } })
+      .mockResolvedValueOnce({ _sum: { totalCents: 5000 } })
+      .mockResolvedValueOnce({ _sum: { totalCents: 5000 }, _count: { _all: 1 } })
+      .mockResolvedValueOnce({ _sum: { totalCents: 16498 } });
+    invoice.findMany.mockResolvedValue([makeInvoiceRow()]);
+
+    const res = await new InvoicesService(prisma).stats();
+
+    expect(res.paidCents).toBe(11498);
+    expect(res.outstandingCents).toBe(5000);
+    expect(res.overdueCents).toBe(5000);
+    expect(res.overdueCount).toBe(1);
+    expect(res.currentMonthCents).toBe(16498);
+    expect(res.countByStatus.PAYEE).toBe(2);
+    expect(res.countByStatus.ENVOYEE).toBe(1);
+    expect(res.countByStatus.BROUILLON).toBe(0);
+    expect(res.recent).toHaveLength(1);
+  });
+
   it('create calcule les totaux côté serveur et crée les lignes', async () => {
     const { prisma, invoice, client } = makePrisma();
     client.findUnique.mockResolvedValue(makeClientRow());

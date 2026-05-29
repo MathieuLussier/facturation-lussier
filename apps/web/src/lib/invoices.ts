@@ -1,6 +1,7 @@
 import type {
   CreateInvoiceRequest,
   Invoice,
+  InvoiceStats,
   InvoiceStatus,
   Paginated,
 } from '@facturation/core';
@@ -29,6 +30,10 @@ export function dollarsToCents(input: string): number {
 /** Cents → saisie en dollars à 2 décimales. Pure. */
 export function centsToInput(cents: number): string {
   return (cents / 100).toFixed(2);
+}
+
+export function getInvoiceStats(): Promise<InvoiceStats> {
+  return apiFetch<InvoiceStats>('/invoices/stats');
 }
 
 export function listInvoices(params: ListInvoicesParams = {}): Promise<Paginated<Invoice>> {

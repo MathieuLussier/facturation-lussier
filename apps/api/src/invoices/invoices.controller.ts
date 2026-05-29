@@ -13,7 +13,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
-import type { AuthUser, Invoice, Paginated } from '@facturation/core';
+import type { AuthUser, Invoice, InvoiceStats, Paginated } from '@facturation/core';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { IssuerService } from '../issuer/issuer.service';
 import { InvoicesService } from './invoices.service';
@@ -34,6 +34,12 @@ export class InvoicesController {
   @Get()
   list(@Query() query: ListInvoicesQuery): Promise<Paginated<Invoice>> {
     return this.invoices.list(query);
+  }
+
+  // Doit rester AVANT @Get(':id') sinon « stats » serait capturé comme un id.
+  @Get('stats')
+  stats(): Promise<InvoiceStats> {
+    return this.invoices.stats();
   }
 
   @Get(':id')
