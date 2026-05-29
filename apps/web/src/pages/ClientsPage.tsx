@@ -15,7 +15,7 @@ function DirectoryCard({ entry, onClick }: { entry: DirectoryEntry; onClick: () 
       type="button"
       onClick={onClick}
       className={[
-        'group flex w-full flex-col items-start gap-2 rounded-xl border border-border bg-surface p-4 text-left shadow-sm',
+        'group flex w-full cursor-pointer flex-col items-start gap-2 rounded-xl border border-border bg-surface p-4 text-left shadow-sm',
         'transition-all duration-150',
         'hover:border-brand/40 hover:shadow-md hover:ring-1 hover:ring-brand/20',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
