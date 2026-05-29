@@ -42,9 +42,7 @@ export function AppLayout() {
       {/* Barre latérale (desktop) */}
       <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-border bg-surface sm:flex">
         <div className="flex items-center gap-2.5 px-5 py-5">
-          <div className="grid h-9 w-9 place-items-center rounded-lg bg-brand font-bold text-brand-fg">
-            L
-          </div>
+          <img src="/lussier_facturation_monogram.svg" alt="" className="h-9 w-9" />
           <div className="leading-tight">
             <p className="font-semibold">Lussier</p>
             <p className="text-xs text-muted">Facturation</p>

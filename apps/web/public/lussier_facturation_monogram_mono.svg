@@ -1,0 +1,11 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Lussier Facturation — Monogramme LF monochrome</title>
+  <desc id="desc">Variante monochrome claire du logo LF pour fond sombre.</desc>
+  <rect x="128" y="128" width="768" height="768" rx="150" fill="#F8FAFC"/>
+  <path d="M258 278H358V664H530V754H258V278Z" fill="#111827"/>
+  <path d="M486 278H760V368H586V472H724V562H586V754H486V278Z" fill="#111827"/>
+  <path d="M191 806L419 640H512L302 806H191Z" fill="#F8FAFC"/>
+  <path d="M833 806L605 640H512L722 806H833Z" fill="#F8FAFC"/>
+  <path d="M512 650L350 806H674L512 650Z" fill="#111827"/>
+  <path d="M498 697H526L538 780H486L498 697Z" fill="#F8FAFC"/>
+</svg>

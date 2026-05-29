@@ -1,0 +1,34 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Lussier Facturation — Monogramme LF</title>
+  <desc id="desc">Logo minimaliste bleu professionnel combinant les lettres LF, un carré arrondi et un chevron de route.</desc>
+  <defs>
+    <style>
+      .blue { fill: #3b5bdb; }
+      .blue-stroke { stroke: #3b5bdb; }
+      .dark { fill: #1f2937; }
+      .cut { fill: #ffffff; }
+    </style>
+  </defs>
+
+  <!-- Transparent background -->
+
+  <!-- Rounded square / app icon frame -->
+  <rect x="128" y="128" width="768" height="768" rx="150" class="blue"/>
+
+  <!-- subtle document notch implied by inner negative space -->
+  <path d="M760 128H896V264L760 128Z" fill="#2f4fd1" opacity="0.22"/>
+
+  <!-- LF monogram, geometric -->
+  <path class="cut" d="M258 278H358V664H530V754H258V278Z"/>
+  <path class="cut" d="M486 278H760V368H586V472H724V562H586V754H486V278Z"/>
+
+  <!-- Road chevron integrated at the bottom -->
+  <path class="blue" d="M191 806L419 640H512L302 806H191Z"/>
+  <path class="blue" d="M833 806L605 640H512L722 806H833Z"/>
+  <path class="dark" d="M512 650L350 806H674L512 650Z"/>
+  <path class="cut" d="M498 697H526L538 780H486L498 697Z"/>
+  <path class="blue" d="M506 713H518L522 742H502L506 713Z"/>
+
+  <!-- small optical rounding / internal detail -->
+  <path d="M258 664C258 714 298 754 348 754H258V664Z" fill="#eef3ff" opacity="0.12"/>
+</svg>

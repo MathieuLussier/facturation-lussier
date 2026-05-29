@@ -1,0 +1,38 @@
+<svg width="1600" height="420" viewBox="0 0 1600 420" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Lussier Facturation — Logotype horizontal</title>
+  <desc id="desc">Logo horizontal minimaliste avec une icône fusionnant un document de facturation et une route, suivi du texte Lussier Facturation.</desc>
+  <defs>
+    <style>
+      .blue { fill: #3b5bdb; }
+      .blue-stroke { stroke: #3b5bdb; }
+      .dark { fill: #1f2937; }
+      .dark-stroke { stroke: #1f2937; }
+      .text { fill: #1f2937; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; font-weight: 700; }
+      .subtext { fill: #334155; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; font-weight: 600; }
+    </style>
+  </defs>
+
+  <!-- Transparent background -->
+
+  <!-- Icon: document + folded corner -->
+  <g transform="translate(92 58)">
+    <path d="M44 22H210L286 98V286H44V22Z" stroke="#3b5bdb" stroke-width="24" stroke-linejoin="round"/>
+    <path d="M210 22V98H286" stroke="#3b5bdb" stroke-width="24" stroke-linejoin="round"/>
+
+    <!-- invoice lines -->
+    <rect x="82" y="82" width="76" height="18" rx="9" class="blue"/>
+    <rect x="82" y="128" width="126" height="18" rx="9" class="blue" opacity="0.84"/>
+    <rect x="82" y="174" width="96" height="18" rx="9" class="blue" opacity="0.68"/>
+
+    <!-- route chevron overlay -->
+    <path d="M28 252L143 164H187L84 252H28Z" class="blue"/>
+    <path d="M302 252L187 164H143L246 252H302Z" class="blue"/>
+    <path d="M165 171L88 286H242L165 171Z" class="dark"/>
+    <path d="M156 205H174L182 268H148L156 205Z" fill="#ffffff"/>
+    <path d="M160 219H170L173 242H157L160 219Z" class="blue"/>
+  </g>
+
+  <!-- Wordmark -->
+  <text x="440" y="178" class="text" font-size="96" letter-spacing="-2">Lussier</text>
+  <text x="440" y="288" class="subtext" font-size="86" letter-spacing="-1.5">Facturation</text>
+</svg>
