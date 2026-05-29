@@ -10,3 +10,10 @@ export type {
   CreateUserRequest,
   UpdateUserRequest,
 } from './auth';
+
+export type {
+  Client,
+  CreateClientRequest,
+  UpdateClientRequest,
+  Paginated,
+} from './client';

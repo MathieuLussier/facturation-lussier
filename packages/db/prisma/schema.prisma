@@ -33,7 +33,8 @@ model User {
   isActive     Boolean        @default(true)
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
-  refreshTokens RefreshToken[]
+  refreshTokens  RefreshToken[]
+  createdClients Client[]
 
   @@map("users")
 }
@@ -52,4 +53,30 @@ model RefreshToken {
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("refresh_tokens")
+}
+
+// ---------------------------------------------------------------------------
+// Clients (entreprises facturées — B2B)
+// ---------------------------------------------------------------------------
+
+model Client {
+  id          String   @id @default(cuid())
+  companyName String
+  email       String?
+  phone       String?
+  addressLine String?
+  city        String?
+  province    String?  @default("QC")
+  postalCode  String?
+  country     String?  @default("Canada")
+  neq         String?
+  contactName String?
+  notes       String?
+  createdById String?
+  createdBy   User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([companyName])
+  @@map("clients")
 }
