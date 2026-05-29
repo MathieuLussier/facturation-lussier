@@ -1,50 +1,89 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Badge, Button, buttonClasses, Card } from '@facturation/ui';
-import { formatCents, type Invoice, type InvoiceStatus } from '@facturation/core';
-import { archiveInvoice, listInvoices, unarchiveInvoice, updateInvoiceStatus } from '../lib/invoices';
+import { Card, buttonClasses } from '@facturation/ui';
+import type { Invoice, InvoiceStatus } from '@facturation/core';
+import {
+  archiveInvoice,
+  listInvoices,
+  unarchiveInvoice,
+  updateInvoiceStatus,
+} from '../lib/invoices';
 import { useToast } from '../components/Toast';
-import { StatusSelect } from '../components/StatusSelect';
+import { InvoiceTable } from './invoices/InvoiceTable';
+import type { InvoiceGroupBy } from '../lib/invoice-view';
 
-const PAGE_SIZE = 10;
+type FilterChip = InvoiceStatus | 'overdue' | 'all';
+
+const FILTER_CHIPS: Array<{ id: FilterChip; label: string }> = [
+  { id: 'all', label: 'Toutes' },
+  { id: 'BROUILLON', label: 'Brouillon' },
+  { id: 'ENVOYEE', label: 'Envoyée' },
+  { id: 'PAYEE', label: 'Payée' },
+  { id: 'ANNULEE', label: 'Annulée' },
+  { id: 'overdue', label: 'En retard' },
+];
+
+const GROUP_OPTIONS: Array<{ value: InvoiceGroupBy; label: string }> = [
+  { value: 'none', label: 'Aucun' },
+  { value: 'client', label: 'Client' },
+  { value: 'status', label: 'Statut' },
+  { value: 'month', label: 'Mois' },
+];
 
 export function InvoicesPage() {
   const { notify } = useToast();
   const [items, setItems] = useState<Invoice[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showArchived, setShowArchived] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<FilterChip>('all');
+  const [groupBy, setGroupBy] = useState<InvoiceGroupBy>('none');
+  const [hitLimit, setHitLimit] = useState(false);
 
-  const fetchPage = useCallback(async (p: number, includeArchived: boolean): Promise<void> => {
-    setLoading(true);
-    setError('');
-    try {
-      const res = await listInvoices({ page: p, pageSize: PAGE_SIZE, includeArchived });
-      setItems(res.items);
-      setTotal(res.total);
-      setPage(res.page);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur de chargement.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const fetchInvoices = useCallback(
+    async (filter: FilterChip, includeArchived: boolean): Promise<void> => {
+      setLoading(true);
+      setError('');
+      try {
+        const status: InvoiceStatus | undefined =
+          filter !== 'all' && filter !== 'overdue' ? filter : undefined;
+        const overdue = filter === 'overdue' ? true : undefined;
+
+        const res = await listInvoices({
+          status,
+          overdue,
+          includeArchived,
+          pageSize: 500,
+        });
+        setItems(res.items);
+        setHitLimit(res.items.length === 500);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Erreur de chargement.');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
-    void fetchPage(1, showArchived);
-  }, [fetchPage, showArchived]);
+    void fetchInvoices(activeFilter, showArchived);
+  }, [fetchInvoices, activeFilter, showArchived]);
+
+  const handleFilterClick = (chip: FilterChip): void => {
+    setActiveFilter(chip);
+  };
 
   const changeStatus = async (id: string, status: InvoiceStatus): Promise<void> => {
     try {
       await updateInvoiceStatus(id, status);
-      setItems((prev) =>
-        prev.map((inv) => (inv.id === id ? { ...inv, status } : inv)),
-      );
+      setItems((prev) => prev.map((inv) => (inv.id === id ? { ...inv, status } : inv)));
       notify('Statut mis à jour', 'success');
     } catch (err) {
-      notify(err instanceof Error ? err.message : 'Erreur lors de la mise à jour.', 'error');
+      notify(
+        err instanceof Error ? err.message : 'Erreur lors de la mise à jour.',
+        'error',
+      );
     }
   };
 
@@ -56,14 +95,16 @@ export function InvoicesPage() {
       setItems((prev) => prev.map((i) => (i.id === inv.id ? updated : i)));
       notify(inv.archivedAt ? 'Facture désarchivée' : 'Facture archivée', 'success');
     } catch (err) {
-      notify(err instanceof Error ? err.message : "Erreur lors de l'archivage.", 'error');
+      notify(
+        err instanceof Error ? err.message : "Erreur lors de l'archivage.",
+        'error',
+      );
     }
   };
 
-  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
-
   return (
     <div className="space-y-6">
+      {/* Page header */}
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-fg">Factures</h1>
@@ -74,6 +115,7 @@ export function InvoicesPage() {
         </Link>
       </div>
 
+      {/* Error banner */}
       {error && (
         <div
           role="alert"
@@ -83,23 +125,74 @@ export function InvoicesPage() {
         </div>
       )}
 
-      <div className="flex items-center gap-2">
-        <input
-          id="show-archived"
-          type="checkbox"
-          className="h-4 w-4 rounded border-border accent-brand"
-          checked={showArchived}
-          onChange={(e) => setShowArchived(e.target.checked)}
-        />
-        <label htmlFor="show-archived" className="text-sm text-muted select-none cursor-pointer">
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-3">
+        {/* Filter chips */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          {FILTER_CHIPS.map((chip) => {
+            const isActive = activeFilter === chip.id;
+            return (
+              <button
+                key={chip.id}
+                type="button"
+                onClick={() => handleFilterClick(chip.id)}
+                className={[
+                  'rounded-full px-3 py-1 text-xs font-medium transition-colors',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
+                  isActive
+                    ? 'bg-brand text-brand-fg shadow-sm'
+                    : 'border border-border bg-surface text-muted hover:bg-surface-2 hover:text-fg',
+                ].join(' ')}
+              >
+                {chip.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Separator */}
+        <span className="hidden h-5 w-px bg-border sm:block" aria-hidden="true" />
+
+        {/* Group-by select */}
+        <label className="flex items-center gap-2 text-sm text-muted">
+          Regrouper par
+          <select
+            value={groupBy}
+            onChange={(e) => setGroupBy(e.target.value as InvoiceGroupBy)}
+            className="rounded-md border border-border bg-surface px-2 py-1 text-xs text-fg
+                       focus:outline-none focus:ring-2 focus:ring-brand"
+          >
+            {GROUP_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {/* Show archived */}
+        <label className="flex cursor-pointer items-center gap-2 text-sm text-muted select-none">
+          <input
+            id="show-archived"
+            type="checkbox"
+            className="h-4 w-4 rounded border-border accent-brand"
+            checked={showArchived}
+            onChange={(e) => setShowArchived(e.target.checked)}
+          />
           Afficher les archivés
         </label>
       </div>
 
+      {/* Limit notice */}
+      {hitLimit && (
+        <p className="text-xs text-muted">
+          Affichage limité aux 500 plus récentes — affinez les filtres.
+        </p>
+      )}
+
+      {/* Main card */}
       <Card>
-        {loading && (
-          <p className="p-4 text-sm text-muted">Chargement…</p>
-        )}
+        {loading && <p className="p-4 text-sm text-muted">Chargement…</p>}
 
         {!loading && !error && items.length === 0 && (
           <div className="py-12 text-center">
@@ -111,63 +204,13 @@ export function InvoicesPage() {
         )}
 
         {!loading && items.length > 0 && (
-          <ul className="divide-y divide-border">
-            {items.map((inv) => (
-              <li key={inv.id} className="flex items-center justify-between gap-3 px-4">
-                <Link
-                  to={`/invoices/${inv.id}`}
-                  className="flex min-w-0 flex-1 items-center justify-between gap-3 py-3 text-sm hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-                >
-                  <div className="min-w-0">
-                    <p className="flex items-center gap-2 font-medium text-fg">
-                      Facture #{inv.number} — {inv.client?.companyName ?? '—'}
-                      {inv.archivedAt && <Badge tone="warning">Archivé</Badge>}
-                    </p>
-                    <p className="text-muted">{inv.issueDate.slice(0, 10)}</p>
-                  </div>
-                  <span className="shrink-0 font-medium text-fg">
-                    {formatCents(inv.totalCents)}
-                  </span>
-                </Link>
-                <StatusSelect
-                  value={inv.status}
-                  onChange={(s) => void changeStatus(inv.id, s)}
-                />
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => void toggleArchive(inv)}
-                >
-                  {inv.archivedAt ? 'Désarchiver' : 'Archiver'}
-                </Button>
-              </li>
-            ))}
-          </ul>
+          <InvoiceTable
+            items={items}
+            groupBy={groupBy}
+            onStatusChange={(id, status) => void changeStatus(id, status)}
+            onToggleArchive={(inv) => void toggleArchive(inv)}
+          />
         )}
-
-        <div className="flex items-center justify-between border-t border-border px-4 py-3 text-sm text-muted">
-          <span>
-            {total} facture(s) — page {page}/{pageCount}
-          </span>
-          <div className="flex gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={loading || page <= 1}
-              onClick={() => void fetchPage(page - 1, showArchived)}
-            >
-              Précédent
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={loading || page >= pageCount}
-              onClick={() => void fetchPage(page + 1, showArchived)}
-            >
-              Suivant
-            </Button>
-          </div>
-        </div>
       </Card>
     </div>
   );

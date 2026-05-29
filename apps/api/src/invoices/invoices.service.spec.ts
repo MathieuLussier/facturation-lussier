@@ -227,6 +227,27 @@ describe('InvoicesService', () => {
     expect(findManyArg?.where?.archivedAt).toBeUndefined();
   });
 
+  it('list filtre par statut', async () => {
+    const { prisma, invoice } = makePrisma();
+    invoice.findMany.mockResolvedValue([]);
+    invoice.count.mockResolvedValue(0);
+    await new InvoicesService(prisma).list({ status: 'ENVOYEE' });
+    expect(invoice.findMany.mock.calls[0][0]?.where).toMatchObject({ status: 'ENVOYEE' });
+  });
+
+  it('list overdue = envoyées dont l’échéance est dépassée', async () => {
+    const { prisma, invoice } = makePrisma();
+    invoice.findMany.mockResolvedValue([]);
+    invoice.count.mockResolvedValue(0);
+    await new InvoicesService(prisma).list({ overdue: true });
+    const where = invoice.findMany.mock.calls[0][0]?.where as {
+      status?: string;
+      dueDate?: { lt?: Date };
+    };
+    expect(where.status).toBe('ENVOYEE');
+    expect(where.dueDate?.lt).toBeInstanceOf(Date);
+  });
+
   it('toInvoice: deletable est vrai pour BROUILLON, faux sinon', async () => {
     const { prisma, invoice } = makePrisma();
     invoice.findUnique.mockResolvedValue(makeInvoiceRow({ status: 'BROUILLON' }));

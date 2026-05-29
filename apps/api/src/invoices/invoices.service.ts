@@ -26,6 +26,9 @@ interface ListParams {
   page?: number;
   pageSize?: number;
   includeArchived?: boolean;
+  status?: InvoiceStatus;
+  /** Envoyées dont l'échéance est dépassée. */
+  overdue?: boolean;
 }
 
 const DEFAULT_PAGE = 1;
@@ -142,7 +145,11 @@ export class InvoicesService {
     const page = params.page ?? DEFAULT_PAGE;
     const pageSize = params.pageSize ?? DEFAULT_PAGE_SIZE;
     const db = this.prisma.client;
-    const where = { archivedAt: params.includeArchived ? undefined : null };
+    const where = {
+      ...(params.includeArchived ? {} : { archivedAt: null }),
+      ...(params.status ? { status: params.status } : {}),
+      ...(params.overdue ? { status: 'ENVOYEE' as const, dueDate: { lt: new Date() } } : {}),
+    };
 
     const [rows, total] = await db.$transaction([
       db.invoice.findMany({

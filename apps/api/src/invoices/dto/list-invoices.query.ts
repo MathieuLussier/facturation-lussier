@@ -1,5 +1,6 @@
 import { Transform, Type } from 'class-transformer';
-import { IsBoolean, IsInt, IsOptional, Max, Min } from 'class-validator';
+import { IsBoolean, IsIn, IsInt, IsOptional, Max, Min } from 'class-validator';
+import type { InvoiceStatus } from '@facturation/core';
 
 export class ListInvoicesQuery {
   @IsOptional()
@@ -12,11 +13,20 @@ export class ListInvoicesQuery {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(100)
+  @Max(500)
   pageSize?: number;
 
   @IsOptional()
   @Transform(({ value }) => value === true || value === 'true' || value === '1')
   @IsBoolean()
   includeArchived?: boolean;
+
+  @IsOptional()
+  @IsIn(['BROUILLON', 'ENVOYEE', 'PAYEE', 'ANNULEE'])
+  status?: InvoiceStatus;
+
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true' || value === '1')
+  @IsBoolean()
+  overdue?: boolean;
 }

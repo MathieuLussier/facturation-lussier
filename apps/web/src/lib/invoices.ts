@@ -12,6 +12,10 @@ export interface ListInvoicesParams {
   pageSize?: number;
   /** Inclure les factures archivées (masquées par défaut). */
   includeArchived?: boolean;
+  /** Filtrer par statut. */
+  status?: InvoiceStatus;
+  /** Seulement les factures ENVOYÉE en retard. */
+  overdue?: boolean;
 }
 
 /** Query string pour GET /invoices. Pure, testable. */
@@ -20,6 +24,8 @@ export function buildInvoicesQuery(params: ListInvoicesParams): string {
   if (params.page) sp.set('page', String(params.page));
   if (params.pageSize) sp.set('pageSize', String(params.pageSize));
   if (params.includeArchived) sp.set('includeArchived', 'true');
+  if (params.status) sp.set('status', params.status);
+  if (params.overdue) sp.set('overdue', 'true');
   const qs = sp.toString();
   return qs ? `?${qs}` : '';
 }
