@@ -8,6 +8,9 @@ import { LoginPage } from './pages/LoginPage';
 import { UsersPage } from './pages/UsersPage';
 import { ClientsPage } from './pages/ClientsPage';
 import { IssuerPage } from './pages/IssuerPage';
+import { InvoicesPage } from './pages/InvoicesPage';
+import { InvoiceFormPage } from './pages/InvoiceFormPage';
+import { InvoiceDetailPage } from './pages/InvoiceDetailPage';
 import './index.css';
 
 const rootElement = document.getElementById('root');
@@ -39,6 +42,32 @@ createRoot(rootElement).render(
             element={
               <ProtectedRoute>
                 <ClientsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Routes protégées — factures */}
+          <Route
+            path="/invoices"
+            element={
+              <ProtectedRoute>
+                <InvoicesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/invoices/new"
+            element={
+              <ProtectedRoute>
+                <InvoiceFormPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/invoices/:id"
+            element={
+              <ProtectedRoute>
+                <InvoiceDetailPage />
               </ProtectedRoute>
             }
           />

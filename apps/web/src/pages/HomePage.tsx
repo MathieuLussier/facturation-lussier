@@ -54,6 +54,12 @@ export function HomePage() {
         >
           Clients
         </Link>
+        <Link
+          to="/invoices"
+          className="rounded px-2 py-1 text-brand underline hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        >
+          Factures
+        </Link>
         {user?.role === 'ADMIN' && (
           <>
             <Link
