@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Button } from '@facturation/ui';
+import { Button, Card, Badge } from '@facturation/ui';
 import type { Health } from '@facturation/core';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../auth/AuthContext';
@@ -11,9 +11,8 @@ type HealthStatus =
   | { state: 'ready'; health: Health };
 
 export function HomePage() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [healthStatus, setHealthStatus] = useState<HealthStatus>({ state: 'loading' });
-  const [loggingOut, setLoggingOut] = useState(false);
 
   const refreshHealth = useCallback(async (): Promise<void> => {
     setHealthStatus({ state: 'loading' });
@@ -32,78 +31,83 @@ export function HomePage() {
     void refreshHealth();
   }, [refreshHealth]);
 
-  const handleLogout = async (): Promise<void> => {
-    setLoggingOut(true);
-    try {
-      await logout();
-    } finally {
-      setLoggingOut(false);
-    }
-  };
-
   return (
-    <main className="mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center gap-6 p-8 text-center">
-      <h1 className="text-3xl font-bold text-brand">Facturation Lussier</h1>
-      <p className="text-sm text-gray-500">Bienvenue, <strong>{user?.name ?? user?.email}</strong></p>
-
-      <div className="flex items-center gap-2 text-xs text-gray-400">
-        <span>Rôle : <strong>{user?.role}</strong></span>
-        <Link
-          to="/clients"
-          className="rounded px-2 py-1 text-brand underline hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-        >
-          Clients
-        </Link>
-        <Link
-          to="/invoices"
-          className="rounded px-2 py-1 text-brand underline hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-        >
-          Factures
-        </Link>
-        {user?.role === 'ADMIN' && (
-          <>
-            <Link
-              to="/issuer"
-              className="rounded px-2 py-1 text-brand underline hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-            >
-              Émetteur
-            </Link>
-            <Link
-              to="/users"
-              className="rounded px-2 py-1 text-brand underline hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-            >
-              Utilisateurs
-            </Link>
-          </>
-        )}
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-fg">
+            Bonjour, {user?.name ?? user?.email}
+          </h1>
+          <p className="text-sm text-muted">Tableau de bord</p>
+        </div>
       </div>
 
-      <section className="w-full rounded-lg border border-gray-200 p-6">
-        <h2 className="mb-3 text-lg font-semibold">État de l&apos;API</h2>
-        {healthStatus.state === 'loading' && <p className="text-gray-500">Vérification…</p>}
-        {healthStatus.state === 'error' && (
-          <p className="text-red-600">API injoignable : {healthStatus.message}</p>
-        )}
-        {healthStatus.state === 'ready' && (
-          <p>
-            Statut : <strong>{healthStatus.health.status}</strong> — base de données :{' '}
-            <strong>{healthStatus.health.db ? 'connectée' : 'indisponible'}</strong>
-          </p>
-        )}
-      </section>
+      <Card padded>
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="text-base font-semibold text-fg">État de l&apos;API</h2>
+          <Button variant="secondary" size="sm" onClick={() => void refreshHealth()}>
+            Rafraîchir
+          </Button>
+        </div>
 
-      <div className="flex gap-3">
-        <Button onClick={() => void refreshHealth()} variant="secondary">
-          Rafraîchir
-        </Button>
-        <Button
-          onClick={() => void handleLogout()}
-          variant="secondary"
-          disabled={loggingOut}
-        >
-          {loggingOut ? 'Déconnexion…' : 'Se déconnecter'}
-        </Button>
+        <div className="mt-4">
+          {healthStatus.state === 'loading' && (
+            <p className="text-sm text-muted">Vérification…</p>
+          )}
+          {healthStatus.state === 'error' && (
+            <div
+              role="alert"
+              className="rounded-lg border border-danger/40 bg-danger-soft px-4 py-3 text-sm text-danger"
+            >
+              API injoignable : {healthStatus.message}
+            </div>
+          )}
+          {healthStatus.state === 'ready' && (
+            <div className="flex flex-wrap items-center gap-3 text-sm text-fg">
+              <span>
+                Statut :{' '}
+                <strong>{healthStatus.health.status}</strong>
+              </span>
+              <span className="text-muted">—</span>
+              <span className="flex items-center gap-2">
+                Base de données :
+                <Badge tone={healthStatus.health.db ? 'success' : 'danger'}>
+                  {healthStatus.health.db ? 'connectée' : 'indisponible'}
+                </Badge>
+              </span>
+            </div>
+          )}
+        </div>
+      </Card>
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Link to="/clients" className="group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded-xl">
+          <Card>
+            <div className="p-6 group-hover:bg-surface-2 rounded-xl transition-colors">
+              <p className="text-sm font-medium text-muted">Répertoire</p>
+              <p className="mt-1 text-lg font-semibold text-fg">Clients</p>
+            </div>
+          </Card>
+        </Link>
+
+        <Link to="/invoices/new" className="group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded-xl">
+          <Card>
+            <div className="p-6 group-hover:bg-surface-2 rounded-xl transition-colors">
+              <p className="text-sm font-medium text-muted">Créer</p>
+              <p className="mt-1 text-lg font-semibold text-fg">Nouvelle facture</p>
+            </div>
+          </Card>
+        </Link>
+
+        <Link to="/invoices" className="group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded-xl">
+          <Card>
+            <div className="p-6 group-hover:bg-surface-2 rounded-xl transition-colors">
+              <p className="text-sm font-medium text-muted">Historique</p>
+              <p className="mt-1 text-lg font-semibold text-fg">Toutes les factures</p>
+            </div>
+          </Card>
+        </Link>
       </div>
-    </main>
+    </div>
   );
 }

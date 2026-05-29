@@ -1,6 +1,5 @@
 import { type FormEvent, useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Button, Input } from '@facturation/ui';
+import { Button, Input, Card, Badge } from '@facturation/ui';
 import type { AuthUser, CreateUserRequest, Role } from '@facturation/core';
 import { ApiError, createUser, listUsers } from '../lib/api';
 
@@ -114,78 +113,85 @@ export function UsersPage() {
   };
 
   return (
-    <main className="mx-auto max-w-3xl space-y-8 p-8">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6">
+      {/* En-tête */}
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-brand">Gestion des utilisateurs</h1>
-          <p className="text-sm text-gray-500">Réservé aux administrateurs</p>
+          <h1 className="text-2xl font-bold tracking-tight text-fg">Utilisateurs</h1>
+          <p className="text-sm text-muted">Réservé aux administrateurs</p>
         </div>
-        <Link
-          to="/"
-          className="text-sm text-brand underline hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        <Button
+          onClick={() => {
+            setShowForm((v) => !v);
+            setFormError('');
+            setFormSuccess('');
+          }}
         >
-          ← Accueil
-        </Link>
+          {showForm ? 'Annuler' : 'Nouvel utilisateur'}
+        </Button>
       </div>
 
+      {/* Message de succès */}
+      {formSuccess && (
+        <div role="status" className="rounded-lg border border-success/40 bg-success-soft px-4 py-3 text-sm text-success">
+          {formSuccess}
+        </div>
+      )}
+
       {/* Liste des utilisateurs */}
-      <section className="rounded-lg border border-gray-200">
-        <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
-          <h2 className="font-semibold">Utilisateurs ({users.length})</h2>
-          <div className="flex gap-2">
-            <Button variant="secondary" onClick={() => void fetchUsers()} disabled={loadingUsers}>
-              Actualiser
-            </Button>
-            <Button onClick={() => { setShowForm((v) => !v); setFormError(''); setFormSuccess(''); }}>
-              {showForm ? 'Annuler' : 'Nouvel utilisateur'}
-            </Button>
-          </div>
+      <Card>
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+          <h2 className="text-sm font-semibold text-fg">
+            Utilisateurs ({users.length})
+          </h2>
+          <Button variant="secondary" size="sm" onClick={() => void fetchUsers()} disabled={loadingUsers}>
+            Actualiser
+          </Button>
         </div>
 
         {loadingUsers && (
-          <p className="p-4 text-sm text-gray-500">Chargement…</p>
+          <p className="p-4 text-sm text-muted">Chargement…</p>
         )}
+
         {listError && (
-          <p className="p-4 text-sm text-red-600">{listError}</p>
+          <div role="alert" className="m-4 rounded-lg border border-danger/40 bg-danger-soft px-4 py-3 text-sm text-danger">
+            {listError}
+          </div>
         )}
 
         {!loadingUsers && !listError && users.length === 0 && (
-          <p className="p-4 text-sm text-gray-500">Aucun utilisateur.</p>
+          <p className="p-4 text-sm text-muted">Aucun utilisateur.</p>
         )}
 
         {!loadingUsers && users.length > 0 && (
-          <ul className="divide-y divide-gray-100">
+          <ul className="divide-y divide-border">
             {users.map((u) => (
               <li key={u.id} className="flex items-center justify-between px-4 py-3 text-sm">
                 <div>
-                  <p className="font-medium text-gray-900">{u.name}</p>
-                  <p className="text-gray-500">{u.email}</p>
+                  <p className="font-medium text-fg">{u.name}</p>
+                  <p className="text-muted">{u.email}</p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                    u.role === 'ADMIN'
-                      ? 'bg-brand/10 text-brand'
-                      : 'bg-gray-100 text-gray-600'
-                  }`}>
+                  <Badge tone={u.role === 'ADMIN' ? 'brand' : 'neutral'}>
                     {u.role}
-                  </span>
-                  <span className={`text-xs ${u.isActive ? 'text-green-600' : 'text-red-500'}`}>
+                  </Badge>
+                  <Badge tone={u.isActive ? 'success' : 'danger'}>
                     {u.isActive ? 'Actif' : 'Inactif'}
-                  </span>
+                  </Badge>
                 </div>
               </li>
             ))}
           </ul>
         )}
-      </section>
+      </Card>
 
       {/* Formulaire de création */}
       {showForm && (
-        <section className="rounded-lg border border-gray-200 p-6">
-          <h2 className="mb-4 font-semibold">Créer un utilisateur</h2>
+        <Card padded>
+          <h2 className="mb-4 text-sm font-semibold text-fg">Créer un utilisateur</h2>
 
           {formError && (
-            <div role="alert" className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <div role="alert" className="mb-4 rounded-lg border border-danger/40 bg-danger-soft px-4 py-3 text-sm text-danger">
               {formError}
             </div>
           )}
@@ -228,7 +234,7 @@ export function UsersPage() {
             />
 
             <div className="flex flex-col gap-1">
-              <label htmlFor="create-role" className="text-sm font-medium text-gray-700">
+              <label htmlFor="create-role" className="text-sm font-medium text-fg">
                 Rôle
               </label>
               <select
@@ -236,7 +242,7 @@ export function UsersPage() {
                 value={fields.role}
                 onChange={(e) => handleFieldChange('role', e.target.value as Role)}
                 disabled={submitting}
-                className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
+                className="block w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
               >
                 <option value="MEMBER">MEMBER</option>
                 <option value="ADMIN">ADMIN</option>
@@ -247,14 +253,8 @@ export function UsersPage() {
               {submitting ? 'Création…' : 'Créer l\'utilisateur'}
             </Button>
           </form>
-        </section>
+        </Card>
       )}
-
-      {formSuccess && (
-        <div role="status" className="rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-          {formSuccess}
-        </div>
-      )}
-    </main>
+    </div>
   );
 }

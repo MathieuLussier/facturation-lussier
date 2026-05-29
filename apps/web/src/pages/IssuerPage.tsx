@@ -1,6 +1,5 @@
 import { type FormEvent, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Button, Input } from '@facturation/ui';
+import { Button, Card, Input } from '@facturation/ui';
 import type { UpsertIssuerRequest } from '@facturation/core';
 import { ApiError } from '../lib/api';
 import { getIssuer, upsertIssuer } from '../lib/issuer';
@@ -107,35 +106,29 @@ export function IssuerPage() {
       await upsertIssuer(toPayload(fields));
       setSuccess('Profil de l’entreprise enregistré.');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Erreur lors de l'enregistrement.");
+      setError(err instanceof ApiError ? err.message : "Erreur lors de l’enregistrement.");
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <main className="mx-auto max-w-2xl space-y-6 p-8">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-brand">Entreprise émettrice</h1>
-          <p className="text-sm text-gray-500">Coordonnées et numéros de taxe (en-tête des factures)</p>
+          <h1 className="text-2xl font-bold tracking-tight text-fg">Entreprise émettrice</h1>
+          <p className="text-sm text-muted">Coordonnées et numéros de taxe — en-tête des factures</p>
         </div>
-        <Link
-          to="/"
-          className="text-sm text-brand underline hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-        >
-          ← Accueil
-        </Link>
       </div>
 
       {loading ? (
-        <p className="text-sm text-gray-500">Chargement…</p>
+        <p className="text-sm text-muted">Chargement…</p>
       ) : (
-        <section className="rounded-lg border border-gray-200 p-6">
+        <Card padded>
           {error && (
             <div
               role="alert"
-              className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+              className="mb-4 rounded-lg border border-danger/40 bg-danger-soft px-4 py-3 text-sm text-danger"
             >
               {error}
             </div>
@@ -143,7 +136,7 @@ export function IssuerPage() {
           {success && (
             <div
               role="status"
-              className="mb-4 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700"
+              className="mb-4 rounded-lg border border-success/40 bg-success-soft px-4 py-3 text-sm text-success"
             >
               {success}
             </div>
@@ -171,12 +164,12 @@ export function IssuerPage() {
                 />
               ))}
             </div>
-            <Button type="submit" disabled={submitting}>
+            <Button type="submit" variant="primary" disabled={submitting}>
               {submitting ? 'Enregistrement…' : 'Enregistrer'}
             </Button>
           </form>
-        </section>
+        </Card>
       )}
-    </main>
+    </div>
   );
 }

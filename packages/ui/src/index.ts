@@ -1,6 +1,10 @@
 export { Button } from './Button';
 export type { ButtonProps } from './Button';
 export { buttonClasses } from './button-classes';
-export type { ButtonVariant } from './button-classes';
+export type { ButtonVariant, ButtonSize } from './button-classes';
 export { Input } from './Input';
 export type { InputProps } from './Input';
+export { Card } from './Card';
+export type { CardProps } from './Card';
+export { Badge } from './Badge';
+export type { BadgeProps, BadgeTone } from './Badge';

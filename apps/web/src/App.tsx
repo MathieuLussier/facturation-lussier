@@ -35,13 +35,13 @@ export function App() {
   return (
     <main className="mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center gap-6 p-8 text-center">
       <h1 className="text-3xl font-bold text-brand">Facturation Lussier</h1>
-      <p className="text-sm text-gray-500">Squelette du monorepo — câblage web → api → db.</p>
+      <p className="text-sm text-muted">Squelette du monorepo — câblage web → api → db.</p>
 
-      <section className="w-full rounded-lg border border-gray-200 p-6">
+      <section className="w-full rounded-lg border border-border p-6">
         <h2 className="mb-3 text-lg font-semibold">État de l&apos;API</h2>
         {status.state === 'loading' && <p>Vérification…</p>}
         {status.state === 'error' && (
-          <p className="text-red-600">API injoignable : {status.message}</p>
+          <p className="text-danger">API injoignable : {status.message}</p>
         )}
         {status.state === 'ready' && (
           <p>

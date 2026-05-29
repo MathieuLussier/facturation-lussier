@@ -1,7 +1,19 @@
 @import 'tailwindcss';
 
-/* Thème partagé du design system (tokens de marque). */
+/* Tokens du design system (clair/sombre) */
 @import '../../../packages/ui/src/theme.css';
 
 /* Scanne les composants partagés pour générer leurs classes utilitaires. */
 @source '../../../packages/ui/src';
+
+/* Active la variante dark:* via la classe .dark sur <html> (bascule manuelle). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  html {
+    color-scheme: light dark;
+  }
+  body {
+    @apply bg-canvas text-fg antialiased;
+  }
+}

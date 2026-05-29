@@ -1,6 +1,6 @@
 import { type FormEvent, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Button, Input } from '@facturation/ui';
+import { Button, Card, Input } from '@facturation/ui';
 import {
   computeInvoiceTotals,
   computeLineAmountCents,
@@ -90,64 +90,68 @@ export function InvoiceFormPage() {
   };
 
   return (
-    <main className="mx-auto max-w-3xl space-y-6 p-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-brand">Nouvelle facture</h1>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold tracking-tight">Nouvelle facture</h1>
         <Link
           to="/invoices"
-          className="text-sm text-brand underline hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          className="text-sm text-muted hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         >
           ← Factures
         </Link>
       </div>
 
       {error && (
-        <div role="alert" className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div role="alert" className="rounded-lg border border-danger/40 bg-danger-soft px-4 py-3 text-sm text-danger">
           {error}
         </div>
       )}
 
       <form onSubmit={(e) => void submit(e)} noValidate className="space-y-6">
-        <section className="grid grid-cols-1 gap-4 rounded-lg border border-gray-200 p-6 sm:grid-cols-2">
-          <div className="flex flex-col gap-1">
-            <label htmlFor="inv-client" className="text-sm font-medium text-gray-700">
-              Client *
-            </label>
-            <select
-              id="inv-client"
-              value={clientId}
-              onChange={(e) => setClientId(e.target.value)}
+        {/* Section client + dates */}
+        <Card padded>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1">
+              <label htmlFor="inv-client" className="text-sm font-medium text-fg">
+                Client *
+              </label>
+              <select
+                id="inv-client"
+                value={clientId}
+                onChange={(e) => setClientId(e.target.value)}
+                disabled={submitting}
+                className="block w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
+              >
+                <option value="">— Sélectionner —</option>
+                {clients.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.companyName}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Input
+              id="inv-issueDate"
+              label="Date d'émission"
+              type="date"
+              value={issueDate}
+              onChange={(e) => setIssueDate(e.target.value)}
               disabled={submitting}
-              className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
-            >
-              <option value="">— Sélectionner —</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.companyName}
-                </option>
-              ))}
-            </select>
+            />
+            <Input
+              id="inv-dueDate"
+              label="Échéance"
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+              disabled={submitting}
+            />
           </div>
-          <Input
-            id="inv-issueDate"
-            label="Date d'émission"
-            type="date"
-            value={issueDate}
-            onChange={(e) => setIssueDate(e.target.value)}
-            disabled={submitting}
-          />
-          <Input
-            id="inv-dueDate"
-            label="Échéance"
-            type="date"
-            value={dueDate}
-            onChange={(e) => setDueDate(e.target.value)}
-            disabled={submitting}
-          />
-        </section>
+        </Card>
 
-        <section className="rounded-lg border border-gray-200 p-6">
-          <h2 className="mb-4 font-semibold">Lignes</h2>
+        {/* Section lignes */}
+        <Card padded>
+          <h2 className="mb-4 text-sm font-semibold text-fg">Lignes</h2>
           <div className="space-y-3">
             {lines.map((l, i) => (
               <div key={i} className="grid grid-cols-12 items-end gap-2">
@@ -184,7 +188,7 @@ export function InvoiceFormPage() {
                   />
                 </div>
                 <div className="col-span-2 flex items-center justify-between gap-1 pb-2">
-                  <span className="text-sm text-gray-700">
+                  <span className="text-sm text-muted">
                     {formatCents(computeLineAmountCents(parseQty(l.quantity), dollarsToCents(l.unitPrice)))}
                   </span>
                   <button
@@ -192,7 +196,7 @@ export function InvoiceFormPage() {
                     onClick={() => removeLine(i)}
                     disabled={submitting || lines.length <= 1}
                     aria-label="Retirer la ligne"
-                    className="text-gray-400 hover:text-red-600 disabled:opacity-30"
+                    className="text-muted hover:text-danger disabled:opacity-30"
                   >
                     ✕
                   </button>
@@ -201,51 +205,55 @@ export function InvoiceFormPage() {
             ))}
           </div>
           <div className="mt-4">
-            <Button type="button" variant="secondary" onClick={addLine} disabled={submitting}>
+            <Button type="button" variant="secondary" size="sm" onClick={addLine} disabled={submitting}>
               + Ajouter une ligne
             </Button>
           </div>
-        </section>
+        </Card>
 
-        <section className="rounded-lg border border-gray-200 p-6">
+        {/* Section totaux */}
+        <Card padded>
           <dl className="ml-auto max-w-xs space-y-1 text-sm">
             <div className="flex justify-between">
-              <dt className="text-gray-500">Sous-total</dt>
-              <dd>{formatCents(totals.subtotalCents)}</dd>
+              <dt className="text-muted">Sous-total</dt>
+              <dd className="text-fg">{formatCents(totals.subtotalCents)}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-gray-500">TPS (5 %)</dt>
-              <dd>{formatCents(totals.gstCents)}</dd>
+              <dt className="text-muted">TPS (5 %)</dt>
+              <dd className="text-fg">{formatCents(totals.gstCents)}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-gray-500">TVQ (9,975 %)</dt>
-              <dd>{formatCents(totals.qstCents)}</dd>
+              <dt className="text-muted">TVQ (9,975 %)</dt>
+              <dd className="text-fg">{formatCents(totals.qstCents)}</dd>
             </div>
-            <div className="flex justify-between border-t border-gray-200 pt-1 font-semibold">
-              <dt>Total</dt>
-              <dd>{formatCents(totals.totalCents)}</dd>
+            <div className="flex justify-between border-t border-border pt-2 font-semibold">
+              <dt className="text-fg">Total</dt>
+              <dd className="text-fg">{formatCents(totals.totalCents)}</dd>
             </div>
           </dl>
-        </section>
+        </Card>
 
-        <div className="flex flex-col gap-1">
-          <label htmlFor="inv-notes" className="text-sm font-medium text-gray-700">
-            Notes
-          </label>
-          <textarea
-            id="inv-notes"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            disabled={submitting}
-            rows={2}
-            className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
-          />
-        </div>
+        {/* Section notes */}
+        <Card padded>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="inv-notes" className="text-sm font-medium text-fg">
+              Notes
+            </label>
+            <textarea
+              id="inv-notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              disabled={submitting}
+              rows={2}
+              className="block w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
+            />
+          </div>
+        </Card>
 
         <Button type="submit" disabled={submitting}>
           {submitting ? 'Création…' : 'Créer la facture'}
         </Button>
       </form>
-    </main>
+    </div>
   );
 }

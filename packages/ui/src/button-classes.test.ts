@@ -2,16 +2,21 @@ import { describe, expect, it } from 'vitest';
 import { buttonClasses } from './button-classes';
 
 describe('buttonClasses', () => {
-  it('applies the brand background for the primary variant', () => {
+  it('applique le fond de marque pour la variante primary', () => {
     expect(buttonClasses('primary')).toContain('bg-brand');
   });
 
-  it('applies a border for the secondary variant', () => {
+  it('applique une bordure pour la variante secondary', () => {
     expect(buttonClasses('secondary')).toContain('border');
   });
 
-  it('always includes the shared base classes', () => {
-    expect(buttonClasses('primary')).toContain('rounded-md');
-    expect(buttonClasses('secondary')).toContain('rounded-md');
+  it('inclut toujours les classes de base partagées', () => {
+    expect(buttonClasses('primary')).toContain('rounded-lg');
+    expect(buttonClasses('secondary')).toContain('rounded-lg');
+  });
+
+  it('gère les tailles', () => {
+    expect(buttonClasses('primary', 'sm')).toContain('text-xs');
+    expect(buttonClasses('primary', 'md')).toContain('text-sm');
   });
 });

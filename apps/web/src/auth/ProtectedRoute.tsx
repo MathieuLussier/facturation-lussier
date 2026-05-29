@@ -10,18 +10,17 @@ interface ProtectedRouteProps {
 }
 
 /**
- * Protège une route :
- * - Redirige vers /login si non authentifié.
- * - Affiche une page d'accès refusé si le rôle requis n'est pas satisfait.
- * - Affiche un écran de chargement pendant le silent refresh.
+ * Protège une route : redirige vers /login si non authentifié,
+ * affiche un accès refusé si le rôle requis n'est pas satisfait,
+ * et un écran de chargement pendant le silent refresh.
  */
 export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
   const { user, status } = useAuth();
 
   if (status === 'loading') {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-gray-500">Chargement…</p>
+      <div className="grid min-h-screen place-items-center bg-canvas text-muted">
+        <p className="text-sm">Chargement…</p>
       </div>
     );
   }
@@ -32,9 +31,13 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
 
   if (requiredRole && user?.role !== requiredRole) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4">
-        <h1 className="text-2xl font-bold text-red-600">Accès refusé</h1>
-        <p className="text-gray-600">Vous n&apos;avez pas les droits nécessaires pour cette page.</p>
+      <div className="grid min-h-screen place-items-center bg-canvas px-6 text-center">
+        <div>
+          <h1 className="text-2xl font-bold text-danger">Accès refusé</h1>
+          <p className="mt-2 text-sm text-muted">
+            Vous n&apos;avez pas les droits nécessaires pour cette page.
+          </p>
+        </div>
       </div>
     );
   }

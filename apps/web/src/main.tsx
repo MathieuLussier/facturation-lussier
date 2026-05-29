@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './auth/AuthContext';
 import { ProtectedRoute } from './auth/ProtectedRoute';
+import { AppLayout } from './components/AppLayout';
 import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
 import { UsersPage } from './pages/UsersPage';
@@ -11,7 +12,11 @@ import { IssuerPage } from './pages/IssuerPage';
 import { InvoicesPage } from './pages/InvoicesPage';
 import { InvoiceFormPage } from './pages/InvoiceFormPage';
 import { InvoiceDetailPage } from './pages/InvoiceDetailPage';
+import { applyTheme, resolveInitialTheme } from './lib/theme';
 import './index.css';
+
+// Applique le thème avant le rendu pour éviter un flash.
+applyTheme(resolveInitialTheme());
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -26,71 +31,36 @@ createRoot(rootElement).render(
           {/* Route publique */}
           <Route path="/login" element={<LoginPage />} />
 
-          {/* Route protégée — accueil */}
+          {/* Routes protégées sous la coquille d'application */}
           <Route
-            path="/"
             element={
               <ProtectedRoute>
-                <HomePage />
+                <AppLayout />
               </ProtectedRoute>
             }
-          />
-
-          {/* Route protégée — clients */}
-          <Route
-            path="/clients"
-            element={
-              <ProtectedRoute>
-                <ClientsPage />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Routes protégées — factures */}
-          <Route
-            path="/invoices"
-            element={
-              <ProtectedRoute>
-                <InvoicesPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/invoices/new"
-            element={
-              <ProtectedRoute>
-                <InvoiceFormPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/invoices/:id"
-            element={
-              <ProtectedRoute>
-                <InvoiceDetailPage />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Route protégée ADMIN — entreprise émettrice */}
-          <Route
-            path="/issuer"
-            element={
-              <ProtectedRoute requiredRole="ADMIN">
-                <IssuerPage />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Route protégée ADMIN — gestion des utilisateurs */}
-          <Route
-            path="/users"
-            element={
-              <ProtectedRoute requiredRole="ADMIN">
-                <UsersPage />
-              </ProtectedRoute>
-            }
-          />
+          >
+            <Route path="/" element={<HomePage />} />
+            <Route path="/clients" element={<ClientsPage />} />
+            <Route path="/invoices" element={<InvoicesPage />} />
+            <Route path="/invoices/new" element={<InvoiceFormPage />} />
+            <Route path="/invoices/:id" element={<InvoiceDetailPage />} />
+            <Route
+              path="/issuer"
+              element={
+                <ProtectedRoute requiredRole="ADMIN">
+                  <IssuerPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/users"
+              element={
+                <ProtectedRoute requiredRole="ADMIN">
+                  <UsersPage />
+                </ProtectedRoute>
+              }
+            />
+          </Route>
         </Routes>
       </AuthProvider>
     </BrowserRouter>

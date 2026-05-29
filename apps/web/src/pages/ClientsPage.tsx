@@ -1,6 +1,5 @@
 import { type FormEvent, useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Button, Input } from '@facturation/ui';
+import { Button, Card, Input } from '@facturation/ui';
 import type { Client, CreateClientRequest } from '@facturation/core';
 import { ApiError } from '../lib/api';
 import { createClient, deleteClient, listClients, updateClient } from '../lib/clients';
@@ -160,22 +159,17 @@ export function ClientsPage() {
   };
 
   return (
-    <main className="mx-auto max-w-3xl space-y-8 p-8">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-brand">Clients</h1>
-          <p className="text-sm text-gray-500">Entreprises facturées</p>
+          <h1 className="text-2xl font-bold tracking-tight text-fg">Clients</h1>
+          <p className="text-sm text-muted">Entreprises facturées</p>
         </div>
-        <Link
-          to="/"
-          className="text-sm text-brand underline hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-        >
-          ← Accueil
-        </Link>
+        <Button onClick={openCreate}>Nouveau client</Button>
       </div>
 
-      <section className="rounded-lg border border-gray-200">
-        <div className="flex flex-wrap items-end justify-between gap-3 border-b border-gray-200 px-4 py-3">
+      <Card>
+        <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border px-4 py-3">
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -191,34 +185,42 @@ export function ClientsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            <Button type="submit" variant="secondary" disabled={loading}>
+            <Button type="submit" variant="secondary" size="sm" disabled={loading}>
               Rechercher
             </Button>
           </form>
-          <Button onClick={openCreate}>Nouveau client</Button>
         </div>
 
-        {loading && <p className="p-4 text-sm text-gray-500">Chargement…</p>}
-        {listError && <p className="p-4 text-sm text-red-600">{listError}</p>}
+        {loading && <p className="p-4 text-sm text-muted">Chargement…</p>}
+
+        {listError && (
+          <div
+            role="alert"
+            className="mx-4 mt-4 rounded-lg border border-danger/40 bg-danger-soft px-4 py-3 text-sm text-danger"
+          >
+            {listError}
+          </div>
+        )}
+
         {!loading && !listError && items.length === 0 && (
-          <p className="p-4 text-sm text-gray-500">Aucun client.</p>
+          <p className="p-4 text-sm text-muted">Aucun client.</p>
         )}
 
         {!loading && items.length > 0 && (
-          <ul className="divide-y divide-gray-100">
+          <ul className="divide-y divide-border">
             {items.map((c) => (
               <li key={c.id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
                 <div className="min-w-0">
-                  <p className="truncate font-medium text-gray-900">{c.companyName}</p>
-                  <p className="truncate text-gray-500">
+                  <p className="truncate font-medium text-fg">{c.companyName}</p>
+                  <p className="truncate text-muted">
                     {[c.contactName, c.email, c.city].filter(Boolean).join(' · ') || '—'}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <Button variant="secondary" onClick={() => openEdit(c)}>
+                  <Button variant="secondary" size="sm" onClick={() => openEdit(c)}>
                     Modifier
                   </Button>
-                  <Button variant="secondary" onClick={() => void remove(c)}>
+                  <Button variant="danger" size="sm" onClick={() => void remove(c)}>
                     Supprimer
                   </Button>
                 </div>
@@ -227,13 +229,14 @@ export function ClientsPage() {
           </ul>
         )}
 
-        <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3 text-sm text-gray-500">
+        <div className="flex items-center justify-between border-t border-border px-4 py-3 text-sm text-muted">
           <span>
             {total} client(s) — page {page}/{pageCount}
           </span>
           <div className="flex gap-2">
             <Button
               variant="secondary"
+              size="sm"
               disabled={loading || page <= 1}
               onClick={() => void fetchPage(page - 1, search)}
             >
@@ -241,6 +244,7 @@ export function ClientsPage() {
             </Button>
             <Button
               variant="secondary"
+              size="sm"
               disabled={loading || page >= pageCount}
               onClick={() => void fetchPage(page + 1, search)}
             >
@@ -248,21 +252,23 @@ export function ClientsPage() {
             </Button>
           </div>
         </div>
-      </section>
+      </Card>
 
       {showForm && (
-        <section className="rounded-lg border border-gray-200 p-6">
-          <h2 className="mb-4 font-semibold">
+        <Card padded>
+          <h2 className="mb-4 font-semibold text-fg">
             {editingId ? 'Modifier le client' : 'Nouveau client'}
           </h2>
+
           {formError && (
             <div
               role="alert"
-              className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+              className="mb-4 rounded-lg border border-danger/40 bg-danger-soft px-4 py-3 text-sm text-danger"
             >
               {formError}
             </div>
           )}
+
           <form onSubmit={(e) => void submit(e)} noValidate className="space-y-4">
             <Input
               id="client-companyName"
@@ -286,7 +292,7 @@ export function ClientsPage() {
               ))}
             </div>
             <div className="flex flex-col gap-1">
-              <label htmlFor="client-notes" className="text-sm font-medium text-gray-700">
+              <label htmlFor="client-notes" className="text-sm font-medium text-fg">
                 Notes
               </label>
               <textarea
@@ -295,7 +301,7 @@ export function ClientsPage() {
                 onChange={(e) => change('notes', e.target.value)}
                 disabled={submitting}
                 rows={3}
-                className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
+                className="block w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
               />
             </div>
             <div className="flex gap-2">
@@ -315,8 +321,8 @@ export function ClientsPage() {
               </Button>
             </div>
           </form>
-        </section>
+        </Card>
       )}
-    </main>
+    </div>
   );
 }
