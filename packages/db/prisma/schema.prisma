@@ -33,8 +33,9 @@ model User {
   isActive     Boolean        @default(true)
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
-  refreshTokens  RefreshToken[]
-  createdClients Client[]
+  refreshTokens   RefreshToken[]
+  createdClients  Client[]
+  createdInvoices Invoice[]
 
   @@map("users")
 }
@@ -76,6 +77,7 @@ model Client {
   createdBy   User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  invoices    Invoice[]
 
   @@index([companyName])
   @@map("clients")
@@ -101,4 +103,52 @@ model IssuerProfile {
   updatedAt   DateTime @updatedAt
 
   @@map("issuer_profile")
+}
+
+// ---------------------------------------------------------------------------
+// Factures (B2B — services) + lignes
+// ---------------------------------------------------------------------------
+
+enum InvoiceStatus {
+  BROUILLON
+  ENVOYEE
+  PAYEE
+  ANNULEE
+}
+
+model Invoice {
+  id            String        @id @default(cuid())
+  number        Int           @unique @default(autoincrement())
+  status        InvoiceStatus @default(BROUILLON)
+  clientId      String
+  client        Client        @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  issueDate     DateTime      @default(now())
+  dueDate       DateTime?
+  notes         String?
+  subtotalCents Int           @default(0)
+  gstCents      Int           @default(0)
+  qstCents      Int           @default(0)
+  totalCents    Int           @default(0)
+  lines         InvoiceLine[]
+  createdById   String?
+  createdBy     User?         @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([clientId])
+  @@map("invoices")
+}
+
+model InvoiceLine {
+  id             String  @id @default(cuid())
+  invoiceId      String
+  invoice        Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description    String
+  quantity       Float
+  unitPriceCents Int
+  amountCents    Int
+  position       Int     @default(0)
+
+  @@index([invoiceId])
+  @@map("invoice_lines")
 }

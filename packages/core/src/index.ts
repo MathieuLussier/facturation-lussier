@@ -19,3 +19,20 @@ export type {
 } from './client';
 
 export type { IssuerProfile, UpsertIssuerRequest } from './issuer';
+
+export {
+  GST_RATE,
+  QST_RATE,
+  computeLineAmountCents,
+  computeInvoiceTotals,
+  formatCents,
+} from './invoice';
+export type {
+  Invoice,
+  InvoiceLine,
+  InvoiceStatus,
+  InvoiceTotals,
+  CreateInvoiceLineInput,
+  CreateInvoiceRequest,
+  UpdateInvoiceStatusRequest,
+} from './invoice';
