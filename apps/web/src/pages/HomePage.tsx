@@ -48,6 +48,12 @@ export function HomePage() {
 
       <div className="flex items-center gap-2 text-xs text-gray-400">
         <span>Rôle : <strong>{user?.role}</strong></span>
+        <Link
+          to="/clients"
+          className="rounded px-2 py-1 text-brand underline hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        >
+          Clients
+        </Link>
         {user?.role === 'ADMIN' && (
           <Link
             to="/users"
