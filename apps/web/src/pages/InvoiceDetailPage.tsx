@@ -2,7 +2,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@facturation/ui';
 import { formatCents, type Invoice, type InvoiceStatus } from '@facturation/core';
-import { deleteInvoice, getInvoice, updateInvoiceStatus } from '../lib/invoices';
+import {
+  deleteInvoice,
+  downloadInvoicePdf,
+  getInvoice,
+  updateInvoiceStatus,
+} from '../lib/invoices';
 import { STATUS_CLASS, STATUS_LABEL } from './InvoicesPage';
 
 const STATUSES: InvoiceStatus[] = ['BROUILLON', 'ENVOYEE', 'PAYEE', 'ANNULEE'];
@@ -41,6 +46,15 @@ export function InvoiceDetailPage() {
       setError(err instanceof Error ? err.message : 'Erreur lors du changement de statut.');
     } finally {
       setBusy(false);
+    }
+  };
+
+  const downloadPdf = async (): Promise<void> => {
+    if (!invoice) return;
+    try {
+      await downloadInvoicePdf(invoice.id, invoice.number);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur lors du téléchargement du PDF.');
     }
   };
 
@@ -156,9 +170,14 @@ export function InvoiceDetailPage() {
                 </Button>
               ))}
             </div>
-            <Button variant="secondary" disabled={busy} onClick={() => void remove()}>
-              Supprimer
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button disabled={busy} onClick={() => void downloadPdf()}>
+                Télécharger le PDF
+              </Button>
+              <Button variant="secondary" disabled={busy} onClick={() => void remove()}>
+                Supprimer
+              </Button>
+            </div>
           </section>
         </>
       )}

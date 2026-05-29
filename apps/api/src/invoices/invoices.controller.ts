@@ -9,11 +9,15 @@ import {
   Patch,
   Post,
   Query,
+  Res,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import type { Response } from 'express';
 import type { AuthUser, Invoice, Paginated } from '@facturation/core';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { IssuerService } from '../issuer/issuer.service';
 import { InvoicesService } from './invoices.service';
+import { InvoicePdfService } from './invoice-pdf.service';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
 import { ListInvoicesQuery } from './dto/list-invoices.query';
 import { UpdateInvoiceStatusDto } from './dto/update-invoice-status.dto';
@@ -21,7 +25,11 @@ import { UpdateInvoiceStatusDto } from './dto/update-invoice-status.dto';
 @ApiTags('Invoices')
 @Controller('invoices')
 export class InvoicesController {
-  constructor(private readonly invoices: InvoicesService) {}
+  constructor(
+    private readonly invoices: InvoicesService,
+    private readonly issuer: IssuerService,
+    private readonly pdf: InvoicePdfService,
+  ) {}
 
   @Get()
   list(@Query() query: ListInvoicesQuery): Promise<Paginated<Invoice>> {
@@ -31,6 +39,19 @@ export class InvoicesController {
   @Get(':id')
   findOne(@Param('id') id: string): Promise<Invoice> {
     return this.invoices.findById(id);
+  }
+
+  @Get(':id/pdf')
+  async downloadPdf(@Param('id') id: string, @Res() res: Response): Promise<void> {
+    const invoice = await this.invoices.findById(id);
+    const issuer = await this.issuer.get();
+    const buffer = await this.pdf.generate(invoice, issuer);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="facture-${invoice.number}.pdf"`,
+      'Content-Length': String(buffer.length),
+    });
+    res.send(buffer);
   }
 
   @Post()

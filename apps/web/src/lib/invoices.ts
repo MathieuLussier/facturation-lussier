@@ -4,7 +4,7 @@ import type {
   InvoiceStatus,
   Paginated,
 } from '@facturation/core';
-import { apiFetch } from './api';
+import { ApiError, apiFetch, buildApiPath, getAccessToken, httpErrorMessage } from './api';
 
 export interface ListInvoicesParams {
   page?: number;
@@ -52,4 +52,25 @@ export function updateInvoiceStatus(id: string, status: InvoiceStatus): Promise<
 
 export function deleteInvoice(id: string): Promise<void> {
   return apiFetch<void>(`/invoices/${id}`, { method: 'DELETE' });
+}
+
+/** Télécharge le PDF d'une facture (fetch authentifié → blob → téléchargement navigateur). */
+export async function downloadInvoicePdf(id: string, number: number): Promise<void> {
+  const token = getAccessToken();
+  const res = await fetch(buildApiPath(`/invoices/${id}/pdf`), {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    credentials: 'include',
+  });
+  if (!res.ok) {
+    throw new ApiError(res.status, httpErrorMessage(res.status));
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `facture-${number}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
