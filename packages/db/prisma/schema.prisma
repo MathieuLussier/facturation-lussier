@@ -80,3 +80,25 @@ model Client {
   @@index([companyName])
   @@map("clients")
 }
+
+// ---------------------------------------------------------------------------
+// Profil de l'entreprise émettrice (singleton — en-tête des factures)
+// ---------------------------------------------------------------------------
+
+model IssuerProfile {
+  id          String   @id @default(cuid())
+  legalName   String
+  email       String?
+  phone       String?
+  addressLine String?
+  city        String?
+  province    String?  @default("QC")
+  postalCode  String?
+  country     String?  @default("Canada")
+  gstNumber   String?
+  qstNumber   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("issuer_profile")
+}

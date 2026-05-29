@@ -17,3 +17,5 @@ export type {
   UpdateClientRequest,
   Paginated,
 } from './client';
+
+export type { IssuerProfile, UpsertIssuerRequest } from './issuer';

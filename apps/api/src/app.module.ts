@@ -7,6 +7,7 @@ import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { ClientsModule } from './clients/clients.module';
+import { IssuerModule } from './issuer/issuer.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
 import { validateEnv } from './config/env.validation';
@@ -30,6 +31,7 @@ import { validateEnv } from './config/env.validation';
     AuthModule,
     UsersModule,
     ClientsModule,
+    IssuerModule,
   ],
   providers: [
     // JwtAuthGuard global — toutes les routes protégées par défaut

@@ -7,6 +7,7 @@ import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
 import { UsersPage } from './pages/UsersPage';
 import { ClientsPage } from './pages/ClientsPage';
+import { IssuerPage } from './pages/IssuerPage';
 import './index.css';
 
 const rootElement = document.getElementById('root');
@@ -38,6 +39,16 @@ createRoot(rootElement).render(
             element={
               <ProtectedRoute>
                 <ClientsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Route protégée ADMIN — entreprise émettrice */}
+          <Route
+            path="/issuer"
+            element={
+              <ProtectedRoute requiredRole="ADMIN">
+                <IssuerPage />
               </ProtectedRoute>
             }
           />

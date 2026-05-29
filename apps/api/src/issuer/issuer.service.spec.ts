@@ -1,0 +1,71 @@
+import 'reflect-metadata';
+import { IssuerService } from './issuer.service';
+import type { PrismaService } from '../prisma/prisma.service';
+
+function makeRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'i1',
+    legalName: 'Lussier inc.',
+    email: null,
+    phone: null,
+    addressLine: null,
+    city: null,
+    province: 'QC',
+    postalCode: null,
+    country: 'Canada',
+    gstNumber: '123456789RT0001',
+    qstNumber: '1234567890TQ0001',
+    createdAt: new Date('2026-01-01T00:00:00.000Z'),
+    updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    ...overrides,
+  };
+}
+
+function makePrisma() {
+  const model = {
+    findFirst: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+  };
+  return {
+    prisma: { client: { issuerProfile: model } } as unknown as PrismaService,
+    model,
+  };
+}
+
+describe('IssuerService', () => {
+  it('get retourne null si aucun profil', async () => {
+    const { prisma, model } = makePrisma();
+    model.findFirst.mockResolvedValue(null);
+    await expect(new IssuerService(prisma).get()).resolves.toBeNull();
+  });
+
+  it('get retourne le profil mappé (dates ISO)', async () => {
+    const { prisma, model } = makePrisma();
+    model.findFirst.mockResolvedValue(makeRow());
+    const res = await new IssuerService(prisma).get();
+    expect(res).toMatchObject({ legalName: 'Lussier inc.', gstNumber: '123456789RT0001' });
+    expect(res?.createdAt).toBe('2026-01-01T00:00:00.000Z');
+  });
+
+  it('upsert crée si aucun profil existant', async () => {
+    const { prisma, model } = makePrisma();
+    model.findFirst.mockResolvedValue(null);
+    model.create.mockResolvedValue(makeRow());
+    await new IssuerService(prisma).upsert({ legalName: 'Lussier inc.' });
+    expect(model.create).toHaveBeenCalledWith({ data: { legalName: 'Lussier inc.' } });
+    expect(model.update).not.toHaveBeenCalled();
+  });
+
+  it('upsert met à jour le profil existant', async () => {
+    const { prisma, model } = makePrisma();
+    model.findFirst.mockResolvedValue(makeRow());
+    model.update.mockResolvedValue(makeRow({ city: 'Québec' }));
+    const res = await new IssuerService(prisma).upsert({ legalName: 'Lussier inc.', city: 'Québec' });
+    expect(model.update).toHaveBeenCalledWith({
+      where: { id: 'i1' },
+      data: { legalName: 'Lussier inc.', city: 'Québec' },
+    });
+    expect(res.city).toBe('Québec');
+  });
+});

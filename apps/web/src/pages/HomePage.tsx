@@ -55,12 +55,20 @@ export function HomePage() {
           Clients
         </Link>
         {user?.role === 'ADMIN' && (
-          <Link
-            to="/users"
-            className="rounded px-2 py-1 text-brand underline hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-          >
-            Gérer les utilisateurs
-          </Link>
+          <>
+            <Link
+              to="/issuer"
+              className="rounded px-2 py-1 text-brand underline hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            >
+              Émetteur
+            </Link>
+            <Link
+              to="/users"
+              className="rounded px-2 py-1 text-brand underline hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            >
+              Utilisateurs
+            </Link>
+          </>
         )}
       </div>
 
