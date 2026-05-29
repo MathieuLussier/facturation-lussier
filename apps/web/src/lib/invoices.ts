@@ -10,6 +10,8 @@ import { ApiError, apiFetch, buildApiPath, getAccessToken, httpErrorMessage } fr
 export interface ListInvoicesParams {
   page?: number;
   pageSize?: number;
+  /** Inclure les factures archivées (masquées par défaut). */
+  includeArchived?: boolean;
 }
 
 /** Query string pour GET /invoices. Pure, testable. */
@@ -17,6 +19,7 @@ export function buildInvoicesQuery(params: ListInvoicesParams): string {
   const sp = new URLSearchParams();
   if (params.page) sp.set('page', String(params.page));
   if (params.pageSize) sp.set('pageSize', String(params.pageSize));
+  if (params.includeArchived) sp.set('includeArchived', 'true');
   const qs = sp.toString();
   return qs ? `?${qs}` : '';
 }
@@ -57,6 +60,14 @@ export function updateInvoiceStatus(id: string, status: InvoiceStatus): Promise<
 
 export function deleteInvoice(id: string): Promise<void> {
   return apiFetch<void>(`/invoices/${id}`, { method: 'DELETE' });
+}
+
+export function archiveInvoice(id: string): Promise<Invoice> {
+  return apiFetch<Invoice>(`/invoices/${id}/archive`, { method: 'PATCH' });
+}
+
+export function unarchiveInvoice(id: string): Promise<Invoice> {
+  return apiFetch<Invoice>(`/invoices/${id}/unarchive`, { method: 'PATCH' });
 }
 
 /** Télécharge le PDF d'une facture (fetch authentifié → blob → téléchargement navigateur). */

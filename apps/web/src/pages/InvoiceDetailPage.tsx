@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Button, Card } from '@facturation/ui';
+import { Badge, Button, Card } from '@facturation/ui';
 import { formatCents, type Invoice, type InvoiceStatus } from '@facturation/core';
 import {
+  archiveInvoice,
   deleteInvoice,
   downloadInvoicePdf,
   getInvoice,
+  unarchiveInvoice,
   updateInvoiceStatus,
 } from '../lib/invoices';
 import { useToast } from '../components/Toast';
@@ -78,6 +80,23 @@ export function InvoiceDetailPage() {
     }
   };
 
+  const toggleArchive = async (): Promise<void> => {
+    if (!invoice) return;
+    setBusy(true);
+    try {
+      const updated = invoice.archivedAt
+        ? await unarchiveInvoice(invoice.id)
+        : await archiveInvoice(invoice.id);
+      setInvoice(updated);
+      notify(invoice.archivedAt ? 'Facture désarchivée' : 'Facture archivée', 'success');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Erreur lors de l'archivage.";
+      notify(msg, 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
@@ -91,6 +110,7 @@ export function InvoiceDetailPage() {
               onChange={(s) => void changeStatus(s as InvoiceStatus)}
             />
           )}
+          {invoice?.archivedAt && <Badge tone="warning">Archivé</Badge>}
         </div>
         <Link
           to="/invoices"
@@ -176,9 +196,14 @@ export function InvoiceDetailPage() {
             <Button variant="primary" disabled={busy} onClick={() => void downloadPdf()}>
               Télécharger le PDF
             </Button>
-            <Button variant="danger" disabled={busy} onClick={() => void remove()}>
-              Supprimer
+            <Button variant="secondary" disabled={busy} onClick={() => void toggleArchive()}>
+              {invoice.archivedAt ? 'Désarchiver' : 'Archiver'}
             </Button>
+            {invoice.deletable && (
+              <Button variant="danger" disabled={busy} onClick={() => void remove()}>
+                Supprimer
+              </Button>
+            )}
           </div>
         </>
       )}

@@ -73,6 +73,7 @@ model Client {
   neq         String?
   contactName String?
   notes       String?
+  archivedAt  DateTime?
   createdById String?
   createdBy   User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
   createdAt   DateTime @default(now())
@@ -82,6 +83,7 @@ model Client {
   projects    Project[]
 
   @@index([companyName])
+  @@index([archivedAt])
   @@map("clients")
 }
 
@@ -131,6 +133,7 @@ model Invoice {
   issueDate     DateTime      @default(now())
   dueDate       DateTime?
   notes         String?
+  archivedAt    DateTime?
   subtotalCents Int           @default(0)
   gstCents      Int           @default(0)
   qstCents      Int           @default(0)
@@ -143,6 +146,7 @@ model Invoice {
 
   @@index([clientId])
   @@index([projectId])
+  @@index([archivedAt])
   @@map("invoices")
 }
 
@@ -174,6 +178,7 @@ model Contact {
   title            String?
   isBillingContact Boolean   @default(false)
   notes            String?
+  archivedAt       DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   projects         Project[] @relation("ProjectBillingContacts")
@@ -199,6 +204,7 @@ model Project {
   name            String
   status          ProjectStatus @default(ACTIF)
   notes           String?
+  archivedAt      DateTime?
   billingContacts Contact[]     @relation("ProjectBillingContacts")
   invoices        Invoice[]
   createdAt       DateTime      @default(now())

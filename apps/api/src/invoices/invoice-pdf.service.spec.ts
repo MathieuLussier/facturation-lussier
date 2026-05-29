@@ -22,6 +22,7 @@ const invoice: Invoice = {
     neq: null,
     contactName: 'Jean Tremblay',
     notes: null,
+    archivedAt: null,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
   },
@@ -35,6 +36,7 @@ const invoice: Invoice = {
   lines: [
     { id: 'l1', description: 'Consultation', quantity: 2, unitPriceCents: 5000, amountCents: 10000 },
   ],
+  archivedAt: null,
   createdAt: '2026-02-01T00:00:00.000Z',
   updatedAt: '2026-02-01T00:00:00.000Z',
 };

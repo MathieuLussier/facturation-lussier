@@ -44,6 +44,16 @@ export class ClientsController {
     return this.clients.update(id, dto);
   }
 
+  @Patch(':id/archive')
+  archive(@Param('id') id: string): Promise<Client> {
+    return this.clients.archive(id);
+  }
+
+  @Patch(':id/unarchive')
+  unarchive(@Param('id') id: string): Promise<Client> {
+    return this.clients.unarchive(id);
+  }
+
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param('id') id: string): Promise<void> {

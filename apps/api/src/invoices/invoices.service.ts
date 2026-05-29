@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import type {
   Client as DbClient,
   Contact as DbContact,
@@ -25,6 +25,7 @@ import { PrismaService } from '../prisma/prisma.service';
 interface ListParams {
   page?: number;
   pageSize?: number;
+  includeArchived?: boolean;
 }
 
 const DEFAULT_PAGE = 1;
@@ -60,6 +61,7 @@ function toClient(c: DbClient): Client {
     neq: c.neq,
     contactName: c.contactName,
     notes: c.notes,
+    archivedAt: c.archivedAt ? c.archivedAt.toISOString() : null,
     createdAt: c.createdAt.toISOString(),
     updatedAt: c.updatedAt.toISOString(),
   };
@@ -85,6 +87,7 @@ function toContact(c: DbContact): Contact {
     title: c.title,
     isBillingContact: c.isBillingContact,
     notes: c.notes,
+    archivedAt: c.archivedAt ? c.archivedAt.toISOString() : null,
     createdAt: c.createdAt.toISOString(),
     updatedAt: c.updatedAt.toISOString(),
   };
@@ -98,6 +101,7 @@ function toProject(p: DbProjectWithContacts): Project {
     status: p.status as ProjectStatus,
     notes: p.notes,
     billingContacts: (p.billingContacts ?? []).map(toContact),
+    archivedAt: p.archivedAt ? p.archivedAt.toISOString() : null,
     createdAt: p.createdAt.toISOString(),
     updatedAt: p.updatedAt.toISOString(),
   };
@@ -122,6 +126,8 @@ function toInvoice(row: InvoiceRow): Invoice {
     qstCents: row.qstCents,
     totalCents: row.totalCents,
     lines: (row.lines ?? []).map(toLine),
+    archivedAt: row.archivedAt ? row.archivedAt.toISOString() : null,
+    deletable: row.status === 'BROUILLON',
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -135,15 +141,17 @@ export class InvoicesService {
     const page = params.page ?? DEFAULT_PAGE;
     const pageSize = params.pageSize ?? DEFAULT_PAGE_SIZE;
     const db = this.prisma.client;
+    const where = { archivedAt: params.includeArchived ? undefined : null };
 
     const [rows, total] = await db.$transaction([
       db.invoice.findMany({
+        where,
         orderBy: { number: 'desc' },
         skip: (page - 1) * pageSize,
         take: pageSize,
         include: { client: true },
       }),
-      db.invoice.count(),
+      db.invoice.count({ where }),
     ]);
 
     return { items: rows.map(toInvoice), total, page, pageSize };
@@ -181,7 +189,7 @@ export class InvoicesService {
         _sum: { totalCents: true },
         where: { status: { not: 'ANNULEE' }, issueDate: { gte: monthStart } },
       }),
-      db.invoice.findMany({ orderBy: { number: 'desc' }, take: 5, include: { client: true } }),
+      db.invoice.findMany({ where: { archivedAt: null }, orderBy: { number: 'desc' }, take: 5, include: { client: true } }),
     ]);
 
     const countByStatus: Record<InvoiceStatus, number> = {
@@ -280,8 +288,33 @@ export class InvoicesService {
     return toInvoice(row);
   }
 
-  async remove(id: string): Promise<void> {
+  async archive(id: string): Promise<Invoice> {
     await this.findById(id);
+    const row = await this.prisma.client.invoice.update({
+      where: { id },
+      data: { archivedAt: new Date() },
+      include: INCLUDE_FULL,
+    });
+    return toInvoice(row);
+  }
+
+  async unarchive(id: string): Promise<Invoice> {
+    await this.findById(id);
+    const row = await this.prisma.client.invoice.update({
+      where: { id },
+      data: { archivedAt: null },
+      include: INCLUDE_FULL,
+    });
+    return toInvoice(row);
+  }
+
+  async remove(id: string): Promise<void> {
+    const invoice = await this.findById(id);
+    if (invoice.status !== 'BROUILLON') {
+      throw new ConflictException(
+        'Seules les factures en brouillon peuvent être supprimées. Archivez plutôt cette facture.',
+      );
+    }
     await this.prisma.client.invoice.delete({ where: { id } });
   }
 }

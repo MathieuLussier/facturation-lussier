@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { NotFoundException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { InvoicesService } from './invoices.service';
 import type { PrismaService } from '../prisma/prisma.service';
 
@@ -17,6 +17,7 @@ function makeClientRow() {
     neq: null,
     contactName: null,
     notes: null,
+    archivedAt: null,
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     updatedAt: new Date('2026-01-01T00:00:00.000Z'),
   };
@@ -28,6 +29,8 @@ function makeInvoiceRow(overrides: Record<string, unknown> = {}) {
     number: 1,
     status: 'BROUILLON',
     clientId: 'cl1',
+    projectId: null,
+    billingContactId: null,
     issueDate: new Date('2026-02-01T00:00:00.000Z'),
     dueDate: null,
     notes: null,
@@ -36,6 +39,7 @@ function makeInvoiceRow(overrides: Record<string, unknown> = {}) {
     qstCents: 998,
     totalCents: 11498,
     createdById: 'u1',
+    archivedAt: null,
     createdAt: new Date('2026-02-01T00:00:00.000Z'),
     updatedAt: new Date('2026-02-01T00:00:00.000Z'),
     client: makeClientRow(),
@@ -164,11 +168,97 @@ describe('InvoicesService', () => {
     expect(res.status).toBe('ENVOYEE');
   });
 
-  it('remove supprime après vérification', async () => {
+  it('remove supprime quand la facture est BROUILLON', async () => {
     const { prisma, invoice } = makePrisma();
-    invoice.findUnique.mockResolvedValue(makeInvoiceRow());
+    invoice.findUnique.mockResolvedValue(makeInvoiceRow({ status: 'BROUILLON' }));
     invoice.delete.mockResolvedValue(makeInvoiceRow());
     await new InvoicesService(prisma).remove('inv1');
     expect(invoice.delete).toHaveBeenCalledWith({ where: { id: 'inv1' } });
+  });
+
+  it("remove lève ConflictException si la facture n'est pas BROUILLON", async () => {
+    const { prisma, invoice } = makePrisma();
+    invoice.findUnique.mockResolvedValue(makeInvoiceRow({ status: 'ENVOYEE' }));
+    await expect(new InvoicesService(prisma).remove('inv1')).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    expect(invoice.delete).not.toHaveBeenCalled();
+  });
+
+  it('archive positionne archivedAt et retourne la facture', async () => {
+    const { prisma, invoice } = makePrisma();
+    const archived = makeInvoiceRow({ archivedAt: new Date('2026-03-01T00:00:00.000Z') });
+    invoice.findUnique.mockResolvedValue(makeInvoiceRow());
+    invoice.update.mockResolvedValue(archived);
+    const res = await new InvoicesService(prisma).archive('inv1');
+    const call = invoice.update.mock.calls[0][0];
+    expect(call.data.archivedAt).toBeInstanceOf(Date);
+    expect(res.archivedAt).toBe('2026-03-01T00:00:00.000Z');
+  });
+
+  it('unarchive efface archivedAt et retourne la facture', async () => {
+    const { prisma, invoice } = makePrisma();
+    invoice.findUnique.mockResolvedValue(makeInvoiceRow({ archivedAt: new Date() }));
+    invoice.update.mockResolvedValue(makeInvoiceRow({ archivedAt: null }));
+    const res = await new InvoicesService(prisma).unarchive('inv1');
+    const call = invoice.update.mock.calls[0][0];
+    expect(call.data.archivedAt).toBeNull();
+    expect(res.archivedAt).toBeNull();
+  });
+
+  it('list filtre archivedAt: null par défaut', async () => {
+    const { prisma, invoice } = makePrisma();
+    invoice.findMany.mockResolvedValue([makeInvoiceRow()]);
+    invoice.count.mockResolvedValue(1);
+    await new InvoicesService(prisma).list({});
+    const [findManyCall, countCall] = invoice.findMany.mock.calls[0][0]
+      ? [invoice.findMany.mock.calls[0][0], invoice.count.mock.calls[0][0]]
+      : [null, null];
+    expect(findManyCall?.where).toEqual({ archivedAt: null });
+    expect(countCall?.where).toEqual({ archivedAt: null });
+  });
+
+  it('list omet le filtre archivedAt quand includeArchived est vrai', async () => {
+    const { prisma, invoice } = makePrisma();
+    invoice.findMany.mockResolvedValue([makeInvoiceRow()]);
+    invoice.count.mockResolvedValue(1);
+    await new InvoicesService(prisma).list({ includeArchived: true });
+    const findManyArg = invoice.findMany.mock.calls[0][0];
+    expect(findManyArg?.where?.archivedAt).toBeUndefined();
+  });
+
+  it('toInvoice: deletable est vrai pour BROUILLON, faux sinon', async () => {
+    const { prisma, invoice } = makePrisma();
+    invoice.findUnique.mockResolvedValue(makeInvoiceRow({ status: 'BROUILLON' }));
+    const brouillon = await new InvoicesService(prisma).findById('inv1');
+    expect(brouillon.deletable).toBe(true);
+
+    invoice.findUnique.mockResolvedValue(makeInvoiceRow({ status: 'ENVOYEE' }));
+    const envoyee = await new InvoicesService(prisma).findById('inv1');
+    expect(envoyee.deletable).toBe(false);
+  });
+
+  it('stats: recent porte archivedAt: null, les agrégats non', async () => {
+    const { prisma, invoice } = makePrisma();
+    invoice.count
+      .mockResolvedValueOnce(0)
+      .mockResolvedValueOnce(1)
+      .mockResolvedValueOnce(2)
+      .mockResolvedValueOnce(0);
+    invoice.aggregate
+      .mockResolvedValueOnce({ _sum: { totalCents: 0 } })
+      .mockResolvedValueOnce({ _sum: { totalCents: 0 } })
+      .mockResolvedValueOnce({ _sum: { totalCents: 0 }, _count: { _all: 0 } })
+      .mockResolvedValueOnce({ _sum: { totalCents: 0 } });
+    invoice.findMany.mockResolvedValue([]);
+
+    await new InvoicesService(prisma).stats();
+
+    const recentArg = invoice.findMany.mock.calls[0][0];
+    expect(recentArg.where).toEqual({ archivedAt: null });
+
+    // Les agrégats count/aggregate ne doivent pas filtrer archivedAt
+    const payeeAggCall = invoice.aggregate.mock.calls[0][0];
+    expect(payeeAggCall.where).not.toHaveProperty('archivedAt');
   });
 });

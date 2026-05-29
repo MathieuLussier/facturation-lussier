@@ -23,8 +23,11 @@ export class ProjectsController {
   constructor(private readonly projects: ProjectsService) {}
 
   @Get()
-  list(@Query('companyId') companyId?: string): Promise<Project[]> {
-    return this.projects.list(companyId);
+  list(
+    @Query('companyId') companyId?: string,
+    @Query('includeArchived') includeArchived?: string,
+  ): Promise<Project[]> {
+    return this.projects.list(companyId, includeArchived === 'true');
   }
 
   @Get(':id')
@@ -52,6 +55,16 @@ export class ProjectsController {
       notes: dto.notes,
       billingContactIds: dto.billingContactIds,
     });
+  }
+
+  @Patch(':id/archive')
+  archive(@Param('id') id: string): Promise<Project> {
+    return this.projects.archive(id);
+  }
+
+  @Patch(':id/unarchive')
+  unarchive(@Param('id') id: string): Promise<Project> {
+    return this.projects.unarchive(id);
   }
 
   @Delete(':id')

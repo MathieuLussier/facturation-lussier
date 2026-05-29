@@ -70,6 +70,16 @@ export class InvoicesController {
     return this.invoices.updateStatus(id, dto.status);
   }
 
+  @Patch(':id/archive')
+  archive(@Param('id') id: string): Promise<Invoice> {
+    return this.invoices.archive(id);
+  }
+
+  @Patch(':id/unarchive')
+  unarchive(@Param('id') id: string): Promise<Invoice> {
+    return this.invoices.unarchive(id);
+  }
+
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param('id') id: string): Promise<void> {

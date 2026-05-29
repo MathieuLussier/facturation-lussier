@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { NotFoundException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { ContactsService } from './contacts.service';
 import type { PrismaService } from '../prisma/prisma.service';
 
@@ -13,8 +13,10 @@ function makeRow(overrides: Record<string, unknown> = {}) {
     title: null,
     isBillingContact: false,
     notes: null,
+    archivedAt: null,
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+    _count: { invoices: 0, projects: 0 },
     ...overrides,
   };
 }
@@ -30,14 +32,24 @@ function makePrisma() {
   const clientModel = {
     findUnique: jest.fn(),
   };
+  const invoiceModel = {
+    count: jest.fn().mockResolvedValue(0),
+  };
+  const projectModel = {
+    count: jest.fn().mockResolvedValue(0),
+  };
   const client = {
     contact: contactModel,
     client: clientModel,
+    invoice: invoiceModel,
+    project: projectModel,
   };
   return {
     prisma: { client } as unknown as PrismaService,
     contactModel,
     clientModel,
+    invoiceModel,
+    projectModel,
   };
 }
 
@@ -45,11 +57,15 @@ describe('ContactsService', () => {
   let service: ContactsService;
   let contactModel: ReturnType<typeof makePrisma>['contactModel'];
   let clientModel: ReturnType<typeof makePrisma>['clientModel'];
+  let invoiceModel: ReturnType<typeof makePrisma>['invoiceModel'];
+  let projectModel: ReturnType<typeof makePrisma>['projectModel'];
 
   beforeEach(() => {
     const p = makePrisma();
     contactModel = p.contactModel;
     clientModel = p.clientModel;
+    invoiceModel = p.invoiceModel;
+    projectModel = p.projectModel;
     service = new ContactsService(p.prisma);
   });
 
@@ -60,12 +76,14 @@ describe('ContactsService', () => {
       const res = await service.list('co1');
 
       expect(contactModel.findMany).toHaveBeenCalledWith({
-        where: { companyId: 'co1' },
+        where: { companyId: 'co1', archivedAt: null },
         orderBy: { name: 'asc' },
+        include: { _count: { select: { invoices: true, projects: true } } },
       });
       expect(res).toHaveLength(1);
       expect(res[0]).toMatchObject({ id: 'ct1', companyId: 'co1', name: 'Alice Martin' });
       expect(res[0].createdAt).toBe('2026-01-01T00:00:00.000Z');
+      expect(res[0].archivedAt).toBeNull();
     });
 
     it('retourne un tableau vide si aucun contact', async () => {
@@ -74,6 +92,30 @@ describe('ContactsService', () => {
       const res = await service.list('co1');
 
       expect(res).toEqual([]);
+    });
+
+    it("n'ajoute pas archivedAt:null au filtre quand includeArchived=true", async () => {
+      contactModel.findMany.mockResolvedValue([]);
+
+      await service.list('co1', true);
+
+      expect(contactModel.findMany).toHaveBeenCalledWith({
+        where: { companyId: 'co1' },
+        orderBy: { name: 'asc' },
+        include: { _count: { select: { invoices: true, projects: true } } },
+      });
+    });
+
+    it('calcule deletable depuis _count', async () => {
+      contactModel.findMany.mockResolvedValue([makeRow({ _count: { invoices: 0, projects: 0 } })]);
+      const res = await service.list('co1');
+      expect(res[0].deletable).toBe(true);
+    });
+
+    it('deletable=false si références présentes', async () => {
+      contactModel.findMany.mockResolvedValue([makeRow({ _count: { invoices: 1, projects: 0 } })]);
+      const res = await service.list('co1');
+      expect(res[0].deletable).toBe(false);
     });
   });
 
@@ -88,6 +130,17 @@ describe('ContactsService', () => {
       contactModel.findUnique.mockResolvedValue(null);
 
       await expect(service.findById('x')).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('inclut _count dans la requête', async () => {
+      contactModel.findUnique.mockResolvedValue(makeRow());
+
+      await service.findById('ct1');
+
+      expect(contactModel.findUnique).toHaveBeenCalledWith({
+        where: { id: 'ct1' },
+        include: { _count: { select: { invoices: true, projects: true } } },
+      });
     });
   });
 
@@ -151,13 +204,89 @@ describe('ContactsService', () => {
       expect(contactModel.delete).not.toHaveBeenCalled();
     });
 
-    it('supprime quand présent', async () => {
+    it('supprime quand présent et aucune référence', async () => {
       contactModel.findUnique.mockResolvedValue(makeRow());
       contactModel.delete.mockResolvedValue(makeRow());
+      invoiceModel.count.mockResolvedValue(0);
+      projectModel.count.mockResolvedValue(0);
 
       await service.remove('ct1');
 
       expect(contactModel.delete).toHaveBeenCalledWith({ where: { id: 'ct1' } });
+    });
+
+    it('lance ConflictException si référencé par des factures', async () => {
+      contactModel.findUnique.mockResolvedValue(makeRow());
+      invoiceModel.count.mockResolvedValue(2);
+      projectModel.count.mockResolvedValue(0);
+
+      await expect(service.remove('ct1')).rejects.toBeInstanceOf(ConflictException);
+      expect(contactModel.delete).not.toHaveBeenCalled();
+    });
+
+    it('lance ConflictException si référencé par des projets', async () => {
+      contactModel.findUnique.mockResolvedValue(makeRow());
+      invoiceModel.count.mockResolvedValue(0);
+      projectModel.count.mockResolvedValue(1);
+
+      await expect(service.remove('ct1')).rejects.toBeInstanceOf(ConflictException);
+      expect(contactModel.delete).not.toHaveBeenCalled();
+    });
+
+    it('le message ConflictException mentionne les comptes', async () => {
+      contactModel.findUnique.mockResolvedValue(makeRow());
+      invoiceModel.count.mockResolvedValue(3);
+      projectModel.count.mockResolvedValue(2);
+
+      const err = await service.remove('ct1').catch((e) => e);
+      expect(err).toBeInstanceOf(ConflictException);
+      expect((err as ConflictException).message).toContain('3 facture(s)');
+      expect((err as ConflictException).message).toContain('2 projet(s)');
+    });
+  });
+
+  describe('archive', () => {
+    it('lance NotFound si absent', async () => {
+      contactModel.findUnique.mockResolvedValue(null);
+
+      await expect(service.archive('x')).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('met archivedAt à une date', async () => {
+      const archived = makeRow({ archivedAt: new Date('2026-05-29T10:00:00.000Z') });
+      contactModel.findUnique.mockResolvedValue(makeRow());
+      contactModel.update.mockResolvedValue(archived);
+
+      const res = await service.archive('ct1');
+
+      expect(contactModel.update).toHaveBeenCalledWith({
+        where: { id: 'ct1' },
+        data: { archivedAt: expect.any(Date) },
+        include: { _count: { select: { invoices: true, projects: true } } },
+      });
+      expect(res.archivedAt).toBe('2026-05-29T10:00:00.000Z');
+    });
+  });
+
+  describe('unarchive', () => {
+    it('lance NotFound si absent', async () => {
+      contactModel.findUnique.mockResolvedValue(null);
+
+      await expect(service.unarchive('x')).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('remet archivedAt à null', async () => {
+      contactModel.findUnique.mockResolvedValue(makeRow({ archivedAt: new Date() }));
+      contactModel.update.mockResolvedValue(makeRow({ archivedAt: null }));
+
+      const res = await service.unarchive('ct1');
+
+      expect(contactModel.update).toHaveBeenCalledWith({
+        where: { id: 'ct1' },
+        data: { archivedAt: null },
+        include: { _count: { select: { invoices: true, projects: true } } },
+      });
+      expect(res.archivedAt).toBeNull();
     });
   });
 });

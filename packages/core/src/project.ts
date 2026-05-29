@@ -9,6 +9,10 @@ export interface Project {
   name: string;
   status: ProjectStatus;
   notes: string | null;
+  /** Date d'archivage (ISO) ; null si actif. */
+  archivedAt: string | null;
+  /** Calculé serveur : suppression définitive possible (aucune facture rattachée). */
+  deletable?: boolean;
   /** Contacts de facturation rattachés au projet (relation plusieurs-à-plusieurs). */
   billingContacts: Contact[];
   createdAt: string;

@@ -27,20 +27,17 @@ export function ClientDetailPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [tab, setTab] = useState<Tab>('infos');
+  const [showArchivedContacts, setShowArchivedContacts] = useState(false);
+  const [showArchivedProjects, setShowArchivedProjects] = useState(false);
 
   const load = useCallback(async (): Promise<void> => {
     if (!id) return;
     setLoading(true);
     setLoadError('');
     try {
-      const [c, ct, pr] = await Promise.all([
-        getClient(id),
-        listContacts(id),
-        listProjects({ companyId: id }),
-      ]);
-      setClient(c);
-      setContacts(ct);
-      setProjects(pr);
+      // Les listes contacts/projets sont chargées par leurs effets dédiés
+      // (refreshContacts/refreshProjects), qui gèrent aussi le filtre « archivés ».
+      setClient(await getClient(id));
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : 'Erreur de chargement.');
     } finally {
@@ -55,20 +52,28 @@ export function ClientDetailPage() {
   const refreshContacts = useCallback(async (): Promise<void> => {
     if (!id) return;
     try {
-      setContacts(await listContacts(id));
+      setContacts(await listContacts(id, { includeArchived: showArchivedContacts }));
     } catch (err) {
       notify(err instanceof Error ? err.message : 'Erreur de rafraîchissement.', 'error');
     }
-  }, [id, notify]);
+  }, [id, notify, showArchivedContacts]);
 
   const refreshProjects = useCallback(async (): Promise<void> => {
     if (!id) return;
     try {
-      setProjects(await listProjects({ companyId: id }));
+      setProjects(await listProjects({ companyId: id, includeArchived: showArchivedProjects }));
     } catch (err) {
       notify(err instanceof Error ? err.message : 'Erreur de rafraîchissement.', 'error');
     }
-  }, [id, notify]);
+  }, [id, notify, showArchivedProjects]);
+
+  useEffect(() => {
+    void refreshContacts();
+  }, [refreshContacts]);
+
+  useEffect(() => {
+    void refreshProjects();
+  }, [refreshProjects]);
 
   if (loading) {
     return <p className="p-4 text-sm text-muted">Chargement…</p>;
@@ -85,7 +90,7 @@ export function ClientDetailPage() {
     );
   }
 
-  const billingContacts = contacts.filter((c) => c.isBillingContact);
+  const billingContacts = contacts.filter((c) => !c.archivedAt && c.isBillingContact);
 
   return (
     <div className="space-y-6">
@@ -123,6 +128,8 @@ export function ClientDetailPage() {
         <ContactsTab
           companyId={client.id}
           contacts={contacts}
+          showArchived={showArchivedContacts}
+          onToggleArchived={() => setShowArchivedContacts((v) => !v)}
           onRefresh={() => void refreshContacts()}
         />
       )}
@@ -131,6 +138,8 @@ export function ClientDetailPage() {
           companyId={client.id}
           projects={projects}
           billingContacts={billingContacts}
+          showArchived={showArchivedProjects}
+          onToggleArchived={() => setShowArchivedProjects((v) => !v)}
           onRefresh={() => void refreshProjects()}
         />
       )}

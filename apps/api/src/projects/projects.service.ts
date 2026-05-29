@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import type {
   Contact as DbContact,
   Project as DbProject,
@@ -6,7 +6,10 @@ import type {
 import type { Contact, Project, CreateProjectRequest, UpdateProjectRequest } from '@facturation/core';
 import { PrismaService } from '../prisma/prisma.service';
 
-type DbProjectWithContacts = DbProject & { billingContacts: DbContact[] };
+type DbProjectWithContacts = DbProject & {
+  billingContacts: DbContact[];
+  _count?: { invoices: number };
+};
 
 /** Mappe une ligne Prisma Contact vers le type partagé. */
 function toContact(row: DbContact): Contact {
@@ -19,6 +22,7 @@ function toContact(row: DbContact): Contact {
     title: row.title,
     isBillingContact: row.isBillingContact,
     notes: row.notes,
+    archivedAt: row.archivedAt ? row.archivedAt.toISOString() : null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -32,9 +36,11 @@ function toProject(row: DbProjectWithContacts): Project {
     name: row.name,
     status: row.status as 'ACTIF' | 'TERMINE',
     notes: row.notes,
+    archivedAt: row.archivedAt ? row.archivedAt.toISOString() : null,
     billingContacts: row.billingContacts.map(toContact),
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
+    ...(row._count !== undefined ? { deletable: row._count.invoices === 0 } : {}),
   };
 }
 
@@ -42,11 +48,15 @@ function toProject(row: DbProjectWithContacts): Project {
 export class ProjectsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async list(companyId?: string): Promise<Project[]> {
-    const where = companyId ? { companyId } : {};
+  async list(companyId?: string, includeArchived?: boolean): Promise<Project[]> {
+    const baseWhere = companyId ? { companyId } : {};
+    const where = includeArchived ? baseWhere : { ...baseWhere, archivedAt: null };
     const rows = await this.prisma.client.project.findMany({
       where,
-      include: { billingContacts: true },
+      include: {
+        billingContacts: true,
+        _count: { select: { invoices: true } },
+      },
       orderBy: { name: 'asc' },
     });
     return rows.map(toProject);
@@ -55,11 +65,46 @@ export class ProjectsService {
   async findById(id: string): Promise<Project> {
     const row = await this.prisma.client.project.findUnique({
       where: { id },
-      include: { billingContacts: true },
+      include: {
+        billingContacts: true,
+        _count: { select: { invoices: true } },
+      },
     });
     if (!row) {
       throw new NotFoundException('Projet introuvable');
     }
+    return toProject(row);
+  }
+
+  async archive(id: string): Promise<Project> {
+    const existing = await this.prisma.client.project.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException('Projet introuvable');
+    }
+    const row = await this.prisma.client.project.update({
+      where: { id },
+      data: { archivedAt: new Date() },
+      include: {
+        billingContacts: true,
+        _count: { select: { invoices: true } },
+      },
+    });
+    return toProject(row);
+  }
+
+  async unarchive(id: string): Promise<Project> {
+    const existing = await this.prisma.client.project.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException('Projet introuvable');
+    }
+    const row = await this.prisma.client.project.update({
+      where: { id },
+      data: { archivedAt: null },
+      include: {
+        billingContacts: true,
+        _count: { select: { invoices: true } },
+      },
+    });
     return toProject(row);
   }
 
@@ -86,7 +131,10 @@ export class ProjectsService {
           ? { connect: contactIds.map((id) => ({ id })) }
           : undefined,
       },
-      include: { billingContacts: true },
+      include: {
+        billingContacts: true,
+        _count: { select: { invoices: true } },
+      },
     });
     return toProject(row);
   }
@@ -111,12 +159,21 @@ export class ProjectsService {
           ? { billingContacts: { set: data.billingContactIds.map((cid) => ({ id: cid })) } }
           : {}),
       },
-      include: { billingContacts: true },
+      include: {
+        billingContacts: true,
+        _count: { select: { invoices: true } },
+      },
     });
     return toProject(row);
   }
 
   async remove(id: string): Promise<void> {
+    const invoiceCount = await this.prisma.client.invoice.count({ where: { projectId: id } });
+    if (invoiceCount > 0) {
+      throw new ConflictException(
+        `Impossible de supprimer ce projet : ${invoiceCount} facture(s) y sont rattachée(s). Archivez-le plutôt.`,
+      );
+    }
     const existing = await this.prisma.client.project.findUnique({ where: { id } });
     if (!existing) {
       throw new NotFoundException('Projet introuvable');

@@ -2,7 +2,13 @@ import { type FormEvent, useState } from 'react';
 import { Badge, Button, Card, Input, Modal } from '@facturation/ui';
 import type { Contact, CreateContactRequest } from '@facturation/core';
 import { ApiError } from '../../lib/api';
-import { createContact, deleteContact, updateContact } from '../../lib/contacts';
+import {
+  archiveContact,
+  createContact,
+  deleteContact,
+  unarchiveContact,
+  updateContact,
+} from '../../lib/contacts';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/Confirm';
 
@@ -40,10 +46,18 @@ function contactPayload(f: ContactFields, companyId: string): CreateContactReque
 interface ContactsTabProps {
   companyId: string;
   contacts: Contact[];
+  showArchived: boolean;
+  onToggleArchived: () => void;
   onRefresh: () => void;
 }
 
-export function ContactsTab({ companyId, contacts, onRefresh }: ContactsTabProps) {
+export function ContactsTab({
+  companyId,
+  contacts,
+  showArchived,
+  onToggleArchived,
+  onRefresh,
+}: ContactsTabProps) {
   const { notify } = useToast();
   const confirm = useConfirm();
   const [open, setOpen] = useState(false);
@@ -118,10 +132,41 @@ export function ContactsTab({ companyId, contacts, onRefresh }: ContactsTabProps
     }
   };
 
+  const archive = async (c: Contact): Promise<void> => {
+    try {
+      await archiveContact(c.id);
+      onRefresh();
+      notify('Contact archivé', 'success');
+    } catch (err) {
+      notify(err instanceof Error ? err.message : 'Erreur lors de l\'archivage.', 'error');
+    }
+  };
+
+  const unarchive = async (c: Contact): Promise<void> => {
+    try {
+      await unarchiveContact(c.id);
+      onRefresh();
+      notify('Contact désarchivé', 'success');
+    } catch (err) {
+      notify(err instanceof Error ? err.message : 'Erreur lors du désarchivage.', 'error');
+    }
+  };
+
   return (
     <>
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted">{contacts.length} contact(s)</p>
+        <div className="flex items-center gap-4">
+          <p className="text-sm text-muted">{contacts.length} contact(s)</p>
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-muted select-none">
+            <input
+              type="checkbox"
+              checked={showArchived}
+              onChange={onToggleArchived}
+              className="h-4 w-4 rounded border-border accent-brand"
+            />
+            Afficher les archivés
+          </label>
+        </div>
         <Button size="sm" onClick={openCreate}>
           Nouveau contact
         </Button>
@@ -141,6 +186,7 @@ export function ContactsTab({ companyId, contacts, onRefresh }: ContactsTabProps
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-medium text-fg">{c.name}</span>
                     {c.isBillingContact && <Badge tone="brand">Facturation</Badge>}
+                    {c.archivedAt && <Badge tone="warning">Archivé</Badge>}
                   </div>
                   <p className="truncate text-muted">
                     {[c.title, c.email, c.phone].filter(Boolean).join(' · ') || '—'}
@@ -150,9 +196,20 @@ export function ContactsTab({ companyId, contacts, onRefresh }: ContactsTabProps
                   <Button variant="secondary" size="sm" onClick={() => openEdit(c)}>
                     Modifier
                   </Button>
-                  <Button variant="danger" size="sm" onClick={() => void remove(c)}>
-                    Supprimer
-                  </Button>
+                  {c.archivedAt ? (
+                    <Button variant="secondary" size="sm" onClick={() => void unarchive(c)}>
+                      Désarchiver
+                    </Button>
+                  ) : (
+                    <Button variant="secondary" size="sm" onClick={() => void archive(c)}>
+                      Archiver
+                    </Button>
+                  )}
+                  {c.deletable === true && (
+                    <Button variant="danger" size="sm" onClick={() => void remove(c)}>
+                      Supprimer
+                    </Button>
+                  )}
                 </div>
               </li>
             ))}

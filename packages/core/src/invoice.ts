@@ -38,6 +38,10 @@ export interface Invoice extends InvoiceTotals {
   issueDate: string;
   dueDate: string | null;
   notes: string | null;
+  /** Date d'archivage (ISO) ; null si actif. */
+  archivedAt: string | null;
+  /** Calculé serveur : supprimable seulement si statut BROUILLON. */
+  deletable?: boolean;
   lines: InvoiceLine[];
   createdAt: string;
   updatedAt: string;

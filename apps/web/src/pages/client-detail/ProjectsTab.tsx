@@ -2,7 +2,13 @@ import { type FormEvent, useState } from 'react';
 import { Badge, Button, Card, Input, Modal, type BadgeTone } from '@facturation/ui';
 import type { Contact, CreateProjectRequest, Project, ProjectStatus } from '@facturation/core';
 import { ApiError } from '../../lib/api';
-import { createProject, deleteProject, updateProject } from '../../lib/projects';
+import {
+  archiveProject,
+  createProject,
+  deleteProject,
+  unarchiveProject,
+  updateProject,
+} from '../../lib/projects';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/Confirm';
 
@@ -27,10 +33,19 @@ interface ProjectsTabProps {
   companyId: string;
   projects: Project[];
   billingContacts: Contact[];
+  showArchived: boolean;
+  onToggleArchived: () => void;
   onRefresh: () => void;
 }
 
-export function ProjectsTab({ companyId, projects, billingContacts, onRefresh }: ProjectsTabProps) {
+export function ProjectsTab({
+  companyId,
+  projects,
+  billingContacts,
+  showArchived,
+  onToggleArchived,
+  onRefresh,
+}: ProjectsTabProps) {
   const { notify } = useToast();
   const confirm = useConfirm();
   const [open, setOpen] = useState(false);
@@ -115,10 +130,41 @@ export function ProjectsTab({ companyId, projects, billingContacts, onRefresh }:
     }
   };
 
+  const archive = async (p: Project): Promise<void> => {
+    try {
+      await archiveProject(p.id);
+      onRefresh();
+      notify('Projet archivé', 'success');
+    } catch (err) {
+      notify(err instanceof Error ? err.message : "Erreur lors de l'archivage.", 'error');
+    }
+  };
+
+  const unarchive = async (p: Project): Promise<void> => {
+    try {
+      await unarchiveProject(p.id);
+      onRefresh();
+      notify('Projet désarchivé', 'success');
+    } catch (err) {
+      notify(err instanceof Error ? err.message : 'Erreur lors du désarchivage.', 'error');
+    }
+  };
+
   return (
     <>
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted">{projects.length} projet(s)</p>
+        <div className="flex items-center gap-4">
+          <p className="text-sm text-muted">{projects.length} projet(s)</p>
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-muted select-none">
+            <input
+              type="checkbox"
+              checked={showArchived}
+              onChange={onToggleArchived}
+              className="h-4 w-4 rounded border-border accent-brand"
+            />
+            Afficher les archivés
+          </label>
+        </div>
         <Button size="sm" onClick={openCreate}>
           Nouveau projet
         </Button>
@@ -138,6 +184,7 @@ export function ProjectsTab({ companyId, projects, billingContacts, onRefresh }:
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-medium text-fg">{p.name}</span>
                     <Badge tone={statusTone(p.status)}>{STATUS_LABEL[p.status]}</Badge>
+                    {p.archivedAt && <Badge tone="warning">Archivé</Badge>}
                   </div>
                   {p.billingContacts.length > 0 && (
                     <p className="truncate text-muted">
@@ -149,9 +196,20 @@ export function ProjectsTab({ companyId, projects, billingContacts, onRefresh }:
                   <Button variant="secondary" size="sm" onClick={() => openEdit(p)}>
                     Modifier
                   </Button>
-                  <Button variant="danger" size="sm" onClick={() => void remove(p)}>
-                    Supprimer
-                  </Button>
+                  {p.archivedAt ? (
+                    <Button variant="secondary" size="sm" onClick={() => void unarchive(p)}>
+                      Désarchiver
+                    </Button>
+                  ) : (
+                    <Button variant="secondary" size="sm" onClick={() => void archive(p)}>
+                      Archiver
+                    </Button>
+                  )}
+                  {p.deletable === true && (
+                    <Button variant="danger" size="sm" onClick={() => void remove(p)}>
+                      Supprimer
+                    </Button>
+                  )}
                 </div>
               </li>
             ))}

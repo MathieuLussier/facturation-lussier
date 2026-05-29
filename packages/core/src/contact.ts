@@ -10,6 +10,10 @@ export interface Contact {
   /** true si ce contact est un contact de facturation. */
   isBillingContact: boolean;
   notes: string | null;
+  /** Date d'archivage (ISO) ; null si actif. */
+  archivedAt: string | null;
+  /** Calculé serveur : suppression définitive possible (aucune référence). */
+  deletable?: boolean;
   createdAt: string;
   updatedAt: string;
 }

@@ -23,8 +23,11 @@ export class ContactsController {
   constructor(private readonly contacts: ContactsService) {}
 
   @Get()
-  list(@Query('companyId') companyId: string): Promise<Contact[]> {
-    return this.contacts.list(companyId);
+  list(
+    @Query('companyId') companyId: string,
+    @Query('includeArchived') includeArchived?: string,
+  ): Promise<Contact[]> {
+    return this.contacts.list(companyId, includeArchived === 'true');
   }
 
   @Get(':id')
@@ -41,6 +44,16 @@ export class ContactsController {
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdateContactDto): Promise<Contact> {
     return this.contacts.update(id, dto);
+  }
+
+  @Patch(':id/archive')
+  archive(@Param('id') id: string): Promise<Contact> {
+    return this.contacts.archive(id);
+  }
+
+  @Patch(':id/unarchive')
+  unarchive(@Param('id') id: string): Promise<Contact> {
+    return this.contacts.unarchive(id);
   }
 
   @Delete(':id')

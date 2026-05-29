@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Button, buttonClasses, Card } from '@facturation/ui';
+import { Badge, Button, buttonClasses, Card } from '@facturation/ui';
 import { formatCents, type Invoice, type InvoiceStatus } from '@facturation/core';
-import { listInvoices, updateInvoiceStatus } from '../lib/invoices';
+import { archiveInvoice, listInvoices, unarchiveInvoice, updateInvoiceStatus } from '../lib/invoices';
 import { useToast } from '../components/Toast';
 import { StatusSelect } from '../components/StatusSelect';
 
@@ -15,12 +15,13 @@ export function InvoicesPage() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showArchived, setShowArchived] = useState(false);
 
-  const fetchPage = useCallback(async (p: number): Promise<void> => {
+  const fetchPage = useCallback(async (p: number, includeArchived: boolean): Promise<void> => {
     setLoading(true);
     setError('');
     try {
-      const res = await listInvoices({ page: p, pageSize: PAGE_SIZE });
+      const res = await listInvoices({ page: p, pageSize: PAGE_SIZE, includeArchived });
       setItems(res.items);
       setTotal(res.total);
       setPage(res.page);
@@ -32,8 +33,8 @@ export function InvoicesPage() {
   }, []);
 
   useEffect(() => {
-    void fetchPage(1);
-  }, [fetchPage]);
+    void fetchPage(1, showArchived);
+  }, [fetchPage, showArchived]);
 
   const changeStatus = async (id: string, status: InvoiceStatus): Promise<void> => {
     try {
@@ -44,6 +45,18 @@ export function InvoicesPage() {
       notify('Statut mis à jour', 'success');
     } catch (err) {
       notify(err instanceof Error ? err.message : 'Erreur lors de la mise à jour.', 'error');
+    }
+  };
+
+  const toggleArchive = async (inv: Invoice): Promise<void> => {
+    try {
+      const updated = inv.archivedAt
+        ? await unarchiveInvoice(inv.id)
+        : await archiveInvoice(inv.id);
+      setItems((prev) => prev.map((i) => (i.id === inv.id ? updated : i)));
+      notify(inv.archivedAt ? 'Facture désarchivée' : 'Facture archivée', 'success');
+    } catch (err) {
+      notify(err instanceof Error ? err.message : "Erreur lors de l'archivage.", 'error');
     }
   };
 
@@ -70,6 +83,19 @@ export function InvoicesPage() {
         </div>
       )}
 
+      <div className="flex items-center gap-2">
+        <input
+          id="show-archived"
+          type="checkbox"
+          className="h-4 w-4 rounded border-border accent-brand"
+          checked={showArchived}
+          onChange={(e) => setShowArchived(e.target.checked)}
+        />
+        <label htmlFor="show-archived" className="text-sm text-muted select-none cursor-pointer">
+          Afficher les archivés
+        </label>
+      </div>
+
       <Card>
         {loading && (
           <p className="p-4 text-sm text-muted">Chargement…</p>
@@ -93,8 +119,9 @@ export function InvoicesPage() {
                   className="flex min-w-0 flex-1 items-center justify-between gap-3 py-3 text-sm hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                 >
                   <div className="min-w-0">
-                    <p className="font-medium text-fg">
+                    <p className="flex items-center gap-2 font-medium text-fg">
                       Facture #{inv.number} — {inv.client?.companyName ?? '—'}
+                      {inv.archivedAt && <Badge tone="warning">Archivé</Badge>}
                     </p>
                     <p className="text-muted">{inv.issueDate.slice(0, 10)}</p>
                   </div>
@@ -106,6 +133,13 @@ export function InvoicesPage() {
                   value={inv.status}
                   onChange={(s) => void changeStatus(inv.id, s)}
                 />
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => void toggleArchive(inv)}
+                >
+                  {inv.archivedAt ? 'Désarchiver' : 'Archiver'}
+                </Button>
               </li>
             ))}
           </ul>
@@ -120,7 +154,7 @@ export function InvoicesPage() {
               variant="secondary"
               size="sm"
               disabled={loading || page <= 1}
-              onClick={() => void fetchPage(page - 1)}
+              onClick={() => void fetchPage(page - 1, showArchived)}
             >
               Précédent
             </Button>
@@ -128,7 +162,7 @@ export function InvoicesPage() {
               variant="secondary"
               size="sm"
               disabled={loading || page >= pageCount}
-              onClick={() => void fetchPage(page + 1)}
+              onClick={() => void fetchPage(page + 1, showArchived)}
             >
               Suivant
             </Button>

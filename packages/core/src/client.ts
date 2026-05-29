@@ -16,6 +16,10 @@ export interface Client {
   neq: string | null;
   contactName: string | null;
   notes: string | null;
+  /** Date d'archivage (ISO) ; null si actif. */
+  archivedAt: string | null;
+  /** Calculé serveur : suppression définitive possible (aucune donnée rattachée). */
+  deletable?: boolean;
   createdAt: string;
   updatedAt: string;
 }

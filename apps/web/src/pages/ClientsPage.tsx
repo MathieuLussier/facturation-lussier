@@ -1,9 +1,9 @@
 import { type FormEvent, useCallback, useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Button, Card, Input, Modal } from '@facturation/ui';
+import { Badge, Button, Card, Input, Modal } from '@facturation/ui';
 import type { Client, CreateClientRequest } from '@facturation/core';
 import { ApiError } from '../lib/api';
-import { createClient, deleteClient, listClients, updateClient } from '../lib/clients';
+import { archiveClient, createClient, deleteClient, listClients, unarchiveClient, updateClient } from '../lib/clients';
 import { useToast } from '../components/Toast';
 import { useConfirm } from '../components/Confirm';
 
@@ -71,6 +71,7 @@ export function ClientsPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
+  const [showArchived, setShowArchived] = useState(false);
   const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState('');
 
@@ -80,11 +81,11 @@ export function ClientsPage() {
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const fetchPage = useCallback(async (p: number, q: string): Promise<void> => {
+  const fetchPage = useCallback(async (p: number, q: string, archived: boolean): Promise<void> => {
     setLoading(true);
     setListError('');
     try {
-      const res = await listClients({ page: p, pageSize: PAGE_SIZE, search: q });
+      const res = await listClients({ page: p, pageSize: PAGE_SIZE, search: q, includeArchived: archived });
       setItems(res.items);
       setTotal(res.total);
       setPage(res.page);
@@ -96,8 +97,8 @@ export function ClientsPage() {
   }, []);
 
   useEffect(() => {
-    void fetchPage(1, '');
-  }, [fetchPage]);
+    void fetchPage(1, '', showArchived);
+  }, [fetchPage, showArchived]);
 
   // Ouvre le modal de création si le param ?new est présent
   useEffect(() => {
@@ -162,7 +163,7 @@ export function ClientsPage() {
         await createClient(payload);
       }
       setModalOpen(false);
-      await fetchPage(editingId ? page : 1, search);
+      await fetchPage(editingId ? page : 1, search, showArchived);
       notify(editingId ? 'Client mis à jour' : 'Client créé', 'success');
       setEditingId(null);
     } catch (err) {
@@ -181,10 +182,30 @@ export function ClientsPage() {
     if (!ok) return;
     try {
       await deleteClient(c.id);
-      await fetchPage(page, search);
+      await fetchPage(page, search, showArchived);
       notify('Client supprimé', 'success');
     } catch (err) {
       setListError(err instanceof Error ? err.message : 'Erreur lors de la suppression.');
+    }
+  };
+
+  const archive = async (c: Client): Promise<void> => {
+    try {
+      await archiveClient(c.id);
+      await fetchPage(page, search, showArchived);
+      notify('Entreprise archivée', 'success');
+    } catch (err) {
+      setListError(err instanceof Error ? err.message : 'Erreur lors de l\'archivage.');
+    }
+  };
+
+  const unarchive = async (c: Client): Promise<void> => {
+    try {
+      await unarchiveClient(c.id);
+      await fetchPage(page, search, showArchived);
+      notify('Entreprise désarchivée', 'success');
+    } catch (err) {
+      setListError(err instanceof Error ? err.message : 'Erreur lors du désarchivage.');
     }
   };
 
@@ -203,7 +224,7 @@ export function ClientsPage() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              void fetchPage(1, search);
+              void fetchPage(1, search, showArchived);
             }}
             className="flex items-end gap-2"
           >
@@ -219,6 +240,15 @@ export function ClientsPage() {
               Rechercher
             </Button>
           </form>
+          <label className="flex items-center gap-2 text-sm text-fg">
+            <input
+              type="checkbox"
+              checked={showArchived}
+              onChange={(e) => setShowArchived(e.target.checked)}
+              className="h-4 w-4 rounded border-border accent-brand"
+            />
+            Afficher les archivés
+          </label>
         </div>
 
         {loading && <p className="p-4 text-sm text-muted">Chargement…</p>}
@@ -244,12 +274,15 @@ export function ClientsPage() {
             {items.map((c) => (
               <li key={c.id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
                 <div className="min-w-0">
-                  <Link
-                    to={`/clients/${c.id}`}
-                    className="block truncate font-medium text-fg hover:text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-                  >
-                    {c.companyName}
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      to={`/clients/${c.id}`}
+                      className="block truncate font-medium text-fg hover:text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                    >
+                      {c.companyName}
+                    </Link>
+                    {c.archivedAt && <Badge tone="warning">Archivé</Badge>}
+                  </div>
                   <p className="truncate text-muted">
                     {[c.contactName, c.email, c.city].filter(Boolean).join(' · ') || '—'}
                   </p>
@@ -258,9 +291,20 @@ export function ClientsPage() {
                   <Button variant="secondary" size="sm" onClick={() => openEdit(c)}>
                     Modifier
                   </Button>
-                  <Button variant="danger" size="sm" onClick={() => void remove(c)}>
-                    Supprimer
-                  </Button>
+                  {c.archivedAt ? (
+                    <Button variant="secondary" size="sm" onClick={() => void unarchive(c)}>
+                      Désarchiver
+                    </Button>
+                  ) : (
+                    <Button variant="secondary" size="sm" onClick={() => void archive(c)}>
+                      Archiver
+                    </Button>
+                  )}
+                  {c.deletable === true && (
+                    <Button variant="danger" size="sm" onClick={() => void remove(c)}>
+                      Supprimer
+                    </Button>
+                  )}
                 </div>
               </li>
             ))}
@@ -276,7 +320,7 @@ export function ClientsPage() {
               variant="secondary"
               size="sm"
               disabled={loading || page <= 1}
-              onClick={() => void fetchPage(page - 1, search)}
+              onClick={() => void fetchPage(page - 1, search, showArchived)}
             >
               Précédent
             </Button>
@@ -284,7 +328,7 @@ export function ClientsPage() {
               variant="secondary"
               size="sm"
               disabled={loading || page >= pageCount}
-              onClick={() => void fetchPage(page + 1, search)}
+              onClick={() => void fetchPage(page + 1, search, showArchived)}
             >
               Suivant
             </Button>

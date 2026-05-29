@@ -81,9 +81,12 @@ export function InvoiceFormPage() {
     };
   }, [clientId, selectedProject]);
 
+  // Projets dont l'entreprise est active (présente dans la liste déjà filtrée côté serveur).
+  const selectableProjects = projects.filter((p) => clients.some((c) => c.id === p.companyId));
+
   const billingContactOptions: Contact[] = selectedProject
-    ? selectedProject.billingContacts
-    : companyContacts.filter((c) => c.isBillingContact);
+    ? selectedProject.billingContacts.filter((c) => !c.archivedAt)
+    : companyContacts.filter((c) => c.isBillingContact && !c.archivedAt);
 
   const companyName = (id: string): string =>
     clients.find((c) => c.id === id)?.companyName ?? '—';
@@ -173,7 +176,7 @@ export function InvoiceFormPage() {
                 className={SELECT_CLASS}
               >
                 <option value="">— Aucun projet —</option>
-                {projects.map((p) => (
+                {selectableProjects.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name} — {companyName(p.companyId)}
                   </option>

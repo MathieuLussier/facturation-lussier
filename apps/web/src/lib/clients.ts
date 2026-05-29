@@ -10,6 +10,8 @@ export interface ListClientsParams {
   page?: number;
   pageSize?: number;
   search?: string;
+  /** Inclure les entreprises archivées (masquées par défaut). */
+  includeArchived?: boolean;
 }
 
 /** Construit la query string pour GET /clients. Pure, testable. */
@@ -18,6 +20,7 @@ export function buildClientsQuery(params: ListClientsParams): string {
   if (params.page) sp.set('page', String(params.page));
   if (params.pageSize) sp.set('pageSize', String(params.pageSize));
   if (params.search && params.search.trim()) sp.set('search', params.search.trim());
+  if (params.includeArchived) sp.set('includeArchived', 'true');
   const qs = sp.toString();
   return qs ? `?${qs}` : '';
 }
@@ -40,4 +43,12 @@ export function updateClient(id: string, data: UpdateClientRequest): Promise<Cli
 
 export function deleteClient(id: string): Promise<void> {
   return apiFetch<void>(`/clients/${id}`, { method: 'DELETE' });
+}
+
+export function archiveClient(id: string): Promise<Client> {
+  return apiFetch<Client>(`/clients/${id}/archive`, { method: 'PATCH' });
+}
+
+export function unarchiveClient(id: string): Promise<Client> {
+  return apiFetch<Client>(`/clients/${id}/unarchive`, { method: 'PATCH' });
 }
