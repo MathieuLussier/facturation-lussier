@@ -3,6 +3,7 @@ import { Button, Card, Input } from '@facturation/ui';
 import type { UpsertIssuerRequest } from '@facturation/core';
 import { ApiError } from '../lib/api';
 import { getIssuer, upsertIssuer } from '../lib/issuer';
+import { useToast } from '../components/Toast';
 
 interface IssuerFields {
   legalName: string;
@@ -55,10 +56,10 @@ function toPayload(f: IssuerFields): UpsertIssuerRequest {
 }
 
 export function IssuerPage() {
+  const { notify } = useToast();
   const [fields, setFields] = useState<IssuerFields>(EMPTY);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -96,7 +97,6 @@ export function IssuerPage() {
   const submit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     setError('');
-    setSuccess('');
     if (!fields.legalName.trim()) {
       setError('La raison sociale est requise.');
       return;
@@ -104,9 +104,9 @@ export function IssuerPage() {
     setSubmitting(true);
     try {
       await upsertIssuer(toPayload(fields));
-      setSuccess('Profil de l’entreprise enregistré.');
+      notify('Profil enregistré', 'success');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Erreur lors de l’enregistrement.");
+      notify(err instanceof ApiError ? err.message : "Erreur lors de l'enregistrement.", 'error');
     } finally {
       setSubmitting(false);
     }
@@ -131,14 +131,6 @@ export function IssuerPage() {
               className="mb-4 rounded-lg border border-danger/40 bg-danger-soft px-4 py-3 text-sm text-danger"
             >
               {error}
-            </div>
-          )}
-          {success && (
-            <div
-              role="status"
-              className="mb-4 rounded-lg border border-success/40 bg-success-soft px-4 py-3 text-sm text-success"
-            >
-              {success}
             </div>
           )}
 

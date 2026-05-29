@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Badge, Button, Card } from '@facturation/ui';
+import { Button, Card } from '@facturation/ui';
 import { formatCents, type Invoice, type InvoiceStatus } from '@facturation/core';
 import {
   deleteInvoice,
@@ -8,13 +8,15 @@ import {
   getInvoice,
   updateInvoiceStatus,
 } from '../lib/invoices';
-import { INVOICE_STATUS_LABEL, INVOICE_STATUS_TONE } from '../lib/invoice-status';
-
-const STATUSES: InvoiceStatus[] = ['BROUILLON', 'ENVOYEE', 'PAYEE', 'ANNULEE'];
+import { useToast } from '../components/Toast';
+import { useConfirm } from '../components/Confirm';
+import { StatusSelect } from '../components/StatusSelect';
 
 export function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { notify } = useToast();
+  const confirm = useConfirm();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -42,8 +44,10 @@ export function InvoiceDetailPage() {
     setBusy(true);
     try {
       setInvoice(await updateInvoiceStatus(id, status));
+      notify('Statut mis à jour', 'success');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur lors du changement de statut.');
+      const msg = err instanceof Error ? err.message : 'Erreur lors du changement de statut.';
+      notify(msg, 'error');
     } finally {
       setBusy(false);
     }
@@ -54,18 +58,22 @@ export function InvoiceDetailPage() {
     try {
       await downloadInvoicePdf(invoice.id, invoice.number);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur lors du téléchargement du PDF.');
+      const msg = err instanceof Error ? err.message : 'Erreur lors du téléchargement du PDF.';
+      notify(msg, 'error');
     }
   };
 
   const remove = async (): Promise<void> => {
-    if (!id || !window.confirm('Supprimer cette facture ?')) return;
+    if (!id) return;
+    if (!(await confirm({ message: 'Supprimer cette facture ?', tone: 'danger', confirmLabel: 'Supprimer' }))) return;
     setBusy(true);
     try {
       await deleteInvoice(id);
+      notify('Facture supprimée', 'success');
       navigate('/invoices');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur lors de la suppression.');
+      const msg = err instanceof Error ? err.message : 'Erreur lors de la suppression.';
+      notify(msg, 'error');
       setBusy(false);
     }
   };
@@ -73,10 +81,16 @@ export function InvoiceDetailPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
-        <div>
+        <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold tracking-tight text-fg">
             {invoice ? `Facture #${invoice.number}` : 'Facture'}
           </h1>
+          {invoice && (
+            <StatusSelect
+              value={invoice.status}
+              onChange={(s) => void changeStatus(s as InvoiceStatus)}
+            />
+          )}
         </div>
         <Link
           to="/invoices"
@@ -97,20 +111,15 @@ export function InvoiceDetailPage() {
       {invoice && (
         <>
           <Card padded>
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div className="text-sm space-y-1">
-                <p className="font-medium text-fg">{invoice.client?.companyName ?? '—'}</p>
-                {invoice.client?.email && (
-                  <p className="text-muted">{invoice.client.email}</p>
-                )}
-                <p className="mt-2 text-muted">Émise le {invoice.issueDate.slice(0, 10)}</p>
-                {invoice.dueDate && (
-                  <p className="text-muted">Échéance : {invoice.dueDate.slice(0, 10)}</p>
-                )}
-              </div>
-              <Badge tone={INVOICE_STATUS_TONE[invoice.status]}>
-                {INVOICE_STATUS_LABEL[invoice.status]}
-              </Badge>
+            <div className="text-sm space-y-1">
+              <p className="font-medium text-fg">{invoice.client?.companyName ?? '—'}</p>
+              {invoice.client?.email && (
+                <p className="text-muted">{invoice.client.email}</p>
+              )}
+              <p className="mt-2 text-muted">Émise le {invoice.issueDate.slice(0, 10)}</p>
+              {invoice.dueDate && (
+                <p className="text-muted">Échéance : {invoice.dueDate.slice(0, 10)}</p>
+              )}
             </div>
           </Card>
 
@@ -163,29 +172,13 @@ export function InvoiceDetailPage() {
             </Card>
           )}
 
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm text-muted">Statut :</span>
-              {STATUSES.map((s) => (
-                <Button
-                  key={s}
-                  size="sm"
-                  variant="secondary"
-                  disabled={busy || s === invoice.status}
-                  onClick={() => void changeStatus(s)}
-                >
-                  {INVOICE_STATUS_LABEL[s]}
-                </Button>
-              ))}
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="primary" disabled={busy} onClick={() => void downloadPdf()}>
-                Télécharger le PDF
-              </Button>
-              <Button variant="danger" disabled={busy} onClick={() => void remove()}>
-                Supprimer
-              </Button>
-            </div>
+          <div className="flex items-center justify-end gap-2">
+            <Button variant="primary" disabled={busy} onClick={() => void downloadPdf()}>
+              Télécharger le PDF
+            </Button>
+            <Button variant="danger" disabled={busy} onClick={() => void remove()}>
+              Supprimer
+            </Button>
           </div>
         </>
       )}

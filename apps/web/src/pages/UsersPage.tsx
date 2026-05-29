@@ -2,6 +2,7 @@ import { type FormEvent, useCallback, useEffect, useState } from 'react';
 import { Badge, Button, Card, Input, Modal } from '@facturation/ui';
 import type { AuthUser, CreateUserRequest, Role } from '@facturation/core';
 import { ApiError, createUser, listUsers } from '../lib/api';
+import { useToast } from '../components/Toast';
 
 interface CreateUserFields {
   email: string;
@@ -34,6 +35,8 @@ function validateCreateForm(fields: CreateUserFields): Record<string, string> {
 }
 
 export function UsersPage() {
+  const { notify } = useToast();
+
   const [users, setUsers] = useState<AuthUser[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [listError, setListError] = useState('');
@@ -41,7 +44,6 @@ export function UsersPage() {
   const [fields, setFields] = useState<CreateUserFields>(INITIAL_FIELDS);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState('');
-  const [formSuccess, setFormSuccess] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -66,7 +68,6 @@ export function UsersPage() {
     setFields(INITIAL_FIELDS);
     setFieldErrors({});
     setFormError('');
-    setFormSuccess('');
     setOpen(true);
   };
 
@@ -97,8 +98,8 @@ export function UsersPage() {
       };
       const created = await createUser(body);
       setUsers((prev) => [...prev, created]);
-      setFormSuccess(`Utilisateur « ${created.name} » créé avec succès.`);
       setOpen(false);
+      notify(`Utilisateur « ${created.name} » créé`, 'success');
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
         setFormError('Cette adresse e-mail est déjà utilisée.');
@@ -119,15 +120,6 @@ export function UsersPage() {
         </div>
         <Button onClick={openCreate}>Nouvel utilisateur</Button>
       </div>
-
-      {formSuccess && (
-        <div
-          role="status"
-          className="rounded-lg border border-success/40 bg-success-soft px-4 py-3 text-sm text-success"
-        >
-          {formSuccess}
-        </div>
-      )}
 
       <Card>
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
@@ -154,7 +146,12 @@ export function UsersPage() {
         )}
 
         {!loadingUsers && !listError && users.length === 0 && (
-          <p className="p-4 text-sm text-muted">Aucun utilisateur.</p>
+          <div className="py-12 text-center">
+            <p className="text-sm text-muted">Aucun utilisateur pour l'instant.</p>
+            <Button variant="secondary" size="sm" className="mt-4" onClick={openCreate}>
+              Créer le premier utilisateur
+            </Button>
+          </div>
         )}
 
         {!loadingUsers && users.length > 0 && (

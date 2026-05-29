@@ -1,8 +1,11 @@
 import { type FormEvent, useCallback, useEffect, useState } from 'react';
-import { Button, Card, Input } from '@facturation/ui';
+import { useSearchParams } from 'react-router-dom';
+import { Button, Card, Input, Modal } from '@facturation/ui';
 import type { Client, CreateClientRequest } from '@facturation/core';
 import { ApiError } from '../lib/api';
 import { createClient, deleteClient, listClients, updateClient } from '../lib/clients';
+import { useToast } from '../components/Toast';
+import { useConfirm } from '../components/Confirm';
 
 interface ClientFields {
   companyName: string;
@@ -60,6 +63,10 @@ function toPayload(f: ClientFields): CreateClientRequest {
 }
 
 export function ClientsPage() {
+  const { notify } = useToast();
+  const confirm = useConfirm();
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const [items, setItems] = useState<Client[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -69,7 +76,7 @@ export function ClientsPage() {
 
   const [fields, setFields] = useState<ClientFields>(EMPTY);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [showForm, setShowForm] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -92,13 +99,24 @@ export function ClientsPage() {
     void fetchPage(1, '');
   }, [fetchPage]);
 
+  // Ouvre le modal de création si le param ?new est présent
+  useEffect(() => {
+    if (searchParams.has('new')) {
+      setEditingId(null);
+      setFields(EMPTY);
+      setFormError('');
+      setModalOpen(true);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
+
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const openCreate = () => {
     setEditingId(null);
     setFields(EMPTY);
     setFormError('');
-    setShowForm(true);
+    setModalOpen(true);
   };
 
   const openEdit = (c: Client) => {
@@ -116,7 +134,13 @@ export function ClientsPage() {
       notes: c.notes ?? '',
     });
     setFormError('');
-    setShowForm(true);
+    setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    if (submitting) return;
+    setModalOpen(false);
+    setEditingId(null);
   };
 
   const change = (key: keyof ClientFields, value: string) =>
@@ -137,9 +161,9 @@ export function ClientsPage() {
       } else {
         await createClient(payload);
       }
-      setShowForm(false);
-      setFields(EMPTY);
+      setModalOpen(false);
       await fetchPage(editingId ? page : 1, search);
+      notify(editingId ? 'Client mis à jour' : 'Client créé', 'success');
       setEditingId(null);
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : "Erreur lors de l'enregistrement.");
@@ -149,10 +173,16 @@ export function ClientsPage() {
   };
 
   const remove = async (c: Client): Promise<void> => {
-    if (!window.confirm(`Supprimer le client « ${c.companyName} » ?`)) return;
+    const ok = await confirm({
+      message: `Supprimer le client « ${c.companyName} » ?`,
+      tone: 'danger',
+      confirmLabel: 'Supprimer',
+    });
+    if (!ok) return;
     try {
       await deleteClient(c.id);
       await fetchPage(page, search);
+      notify('Client supprimé', 'success');
     } catch (err) {
       setListError(err instanceof Error ? err.message : 'Erreur lors de la suppression.');
     }
@@ -203,7 +233,10 @@ export function ClientsPage() {
         )}
 
         {!loading && !listError && items.length === 0 && (
-          <p className="p-4 text-sm text-muted">Aucun client.</p>
+          <div className="py-12 text-center">
+            <p className="mb-4 text-sm text-muted">Aucun client.</p>
+            <Button onClick={openCreate}>Ajouter le premier client</Button>
+          </div>
         )}
 
         {!loading && items.length > 0 && (
@@ -254,75 +287,70 @@ export function ClientsPage() {
         </div>
       </Card>
 
-      {showForm && (
-        <Card padded>
-          <h2 className="mb-4 font-semibold text-fg">
-            {editingId ? 'Modifier le client' : 'Nouveau client'}
-          </h2>
+      <Modal
+        open={modalOpen}
+        onClose={closeModal}
+        title={editingId ? 'Modifier le client' : 'Nouveau client'}
+      >
+        {formError && (
+          <div
+            role="alert"
+            className="mb-4 rounded-lg border border-danger/40 bg-danger-soft px-4 py-3 text-sm text-danger"
+          >
+            {formError}
+          </div>
+        )}
 
-          {formError && (
-            <div
-              role="alert"
-              className="mb-4 rounded-lg border border-danger/40 bg-danger-soft px-4 py-3 text-sm text-danger"
-            >
-              {formError}
-            </div>
-          )}
-
-          <form onSubmit={(e) => void submit(e)} noValidate className="space-y-4">
-            <Input
-              id="client-companyName"
-              label="Raison sociale *"
-              type="text"
-              value={fields.companyName}
-              onChange={(e) => change('companyName', e.target.value)}
-              disabled={submitting}
-            />
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {TEXT_FIELDS.map((f) => (
-                <Input
-                  key={f.key}
-                  id={`client-${f.key}`}
-                  label={f.label}
-                  type={f.type ?? 'text'}
-                  value={fields[f.key]}
-                  onChange={(e) => change(f.key, e.target.value)}
-                  disabled={submitting}
-                />
-              ))}
-            </div>
-            <div className="flex flex-col gap-1">
-              <label htmlFor="client-notes" className="text-sm font-medium text-fg">
-                Notes
-              </label>
-              <textarea
-                id="client-notes"
-                value={fields.notes}
-                onChange={(e) => change('notes', e.target.value)}
+        <form onSubmit={(e) => void submit(e)} noValidate className="space-y-4">
+          <Input
+            id="client-companyName"
+            label="Raison sociale *"
+            type="text"
+            value={fields.companyName}
+            onChange={(e) => change('companyName', e.target.value)}
+            disabled={submitting}
+          />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {TEXT_FIELDS.map((f) => (
+              <Input
+                key={f.key}
+                id={`client-${f.key}`}
+                label={f.label}
+                type={f.type ?? 'text'}
+                value={fields[f.key]}
+                onChange={(e) => change(f.key, e.target.value)}
                 disabled={submitting}
-                rows={3}
-                className="block w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
               />
-            </div>
-            <div className="flex gap-2">
-              <Button type="submit" disabled={submitting}>
-                {submitting ? 'Enregistrement…' : editingId ? 'Enregistrer' : 'Créer le client'}
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => {
-                  setShowForm(false);
-                  setEditingId(null);
-                }}
-                disabled={submitting}
-              >
-                Annuler
-              </Button>
-            </div>
-          </form>
-        </Card>
-      )}
+            ))}
+          </div>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="client-notes" className="text-sm font-medium text-fg">
+              Notes
+            </label>
+            <textarea
+              id="client-notes"
+              value={fields.notes}
+              onChange={(e) => change('notes', e.target.value)}
+              disabled={submitting}
+              rows={3}
+              className="block w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={closeModal}
+              disabled={submitting}
+            >
+              Annuler
+            </Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? 'Enregistrement…' : 'Enregistrer'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

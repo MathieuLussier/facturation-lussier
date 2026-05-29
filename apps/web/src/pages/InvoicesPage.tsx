@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Badge, Button, buttonClasses, Card } from '@facturation/ui';
-import { formatCents, type Invoice } from '@facturation/core';
-import { listInvoices } from '../lib/invoices';
-import { INVOICE_STATUS_LABEL, INVOICE_STATUS_TONE } from '../lib/invoice-status';
+import { Button, buttonClasses, Card } from '@facturation/ui';
+import { formatCents, type Invoice, type InvoiceStatus } from '@facturation/core';
+import { listInvoices, updateInvoiceStatus } from '../lib/invoices';
+import { useToast } from '../components/Toast';
+import { StatusSelect } from '../components/StatusSelect';
 
 const PAGE_SIZE = 10;
 
 export function InvoicesPage() {
+  const { notify } = useToast();
   const [items, setItems] = useState<Invoice[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -32,6 +34,18 @@ export function InvoicesPage() {
   useEffect(() => {
     void fetchPage(1);
   }, [fetchPage]);
+
+  const changeStatus = async (id: string, status: InvoiceStatus): Promise<void> => {
+    try {
+      await updateInvoiceStatus(id, status);
+      setItems((prev) =>
+        prev.map((inv) => (inv.id === id ? { ...inv, status } : inv)),
+      );
+      notify('Statut mis à jour', 'success');
+    } catch (err) {
+      notify(err instanceof Error ? err.message : 'Erreur lors de la mise à jour.', 'error');
+    }
+  };
 
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -62,16 +76,21 @@ export function InvoicesPage() {
         )}
 
         {!loading && !error && items.length === 0 && (
-          <p className="p-4 text-sm text-muted">Aucune facture.</p>
+          <div className="py-12 text-center">
+            <p className="mb-4 text-sm text-muted">Aucune facture pour le moment.</p>
+            <Link to="/invoices/new" className={buttonClasses('primary')}>
+              Créer la première facture
+            </Link>
+          </div>
         )}
 
         {!loading && items.length > 0 && (
           <ul className="divide-y divide-border">
             {items.map((inv) => (
-              <li key={inv.id}>
+              <li key={inv.id} className="flex items-center justify-between gap-3 px-4">
                 <Link
                   to={`/invoices/${inv.id}`}
-                  className="flex items-center justify-between gap-3 px-4 py-3 text-sm hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                  className="flex min-w-0 flex-1 items-center justify-between gap-3 py-3 text-sm hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                 >
                   <div className="min-w-0">
                     <p className="font-medium text-fg">
@@ -79,13 +98,14 @@ export function InvoicesPage() {
                     </p>
                     <p className="text-muted">{inv.issueDate.slice(0, 10)}</p>
                   </div>
-                  <div className="flex shrink-0 items-center gap-3">
-                    <span className="font-medium text-fg">{formatCents(inv.totalCents)}</span>
-                    <Badge tone={INVOICE_STATUS_TONE[inv.status]}>
-                      {INVOICE_STATUS_LABEL[inv.status]}
-                    </Badge>
-                  </div>
+                  <span className="shrink-0 font-medium text-fg">
+                    {formatCents(inv.totalCents)}
+                  </span>
                 </Link>
+                <StatusSelect
+                  value={inv.status}
+                  onChange={(s) => void changeStatus(inv.id, s)}
+                />
               </li>
             ))}
           </ul>

@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { Button } from '@facturation/ui';
 import { useAuth } from '../auth/AuthContext';
 import { ThemeToggle } from './ThemeToggle';
@@ -96,7 +96,21 @@ export function AppLayout() {
               ))}
             </nav>
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-2">
+            <Link
+              to="/invoices/new"
+              className="hidden items-center rounded-lg bg-brand px-3 py-1.5 text-xs font-medium text-brand-fg transition-colors hover:opacity-90 sm:inline-flex"
+            >
+              + Facture
+            </Link>
+            <Link
+              to="/clients?new=1"
+              className="hidden items-center rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium text-fg transition-colors hover:bg-surface-2 sm:inline-flex"
+            >
+              + Client
+            </Link>
+            <ThemeToggle />
+          </div>
         </header>
 
         <main className="flex-1 px-4 py-6 sm:px-8 sm:py-8">
