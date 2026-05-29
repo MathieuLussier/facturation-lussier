@@ -15,8 +15,6 @@ interface ClientFields {
   city: string;
   province: string;
   postalCode: string;
-  neq: string;
-  contactName: string;
   notes: string;
 }
 
@@ -28,8 +26,6 @@ const EMPTY: ClientFields = {
   city: '',
   province: 'QC',
   postalCode: '',
-  neq: '',
-  contactName: '',
   notes: '',
 };
 
@@ -42,8 +38,6 @@ const TEXT_FIELDS: { key: keyof ClientFields; label: string; type?: string }[] =
   { key: 'city', label: 'Ville' },
   { key: 'province', label: 'Province' },
   { key: 'postalCode', label: 'Code postal' },
-  { key: 'neq', label: 'NEQ' },
-  { key: 'contactName', label: 'Personne-ressource' },
 ];
 
 function toPayload(f: ClientFields): CreateClientRequest {
@@ -56,8 +50,6 @@ function toPayload(f: ClientFields): CreateClientRequest {
     city: t(f.city),
     province: t(f.province),
     postalCode: t(f.postalCode),
-    neq: t(f.neq),
-    contactName: t(f.contactName),
     notes: t(f.notes),
   };
 }
@@ -130,8 +122,6 @@ export function ClientsPage() {
       city: c.city ?? '',
       province: c.province ?? '',
       postalCode: c.postalCode ?? '',
-      neq: c.neq ?? '',
-      contactName: c.contactName ?? '',
       notes: c.notes ?? '',
     });
     setFormError('');
@@ -151,7 +141,7 @@ export function ClientsPage() {
     e.preventDefault();
     setFormError('');
     if (!fields.companyName.trim()) {
-      setFormError('La raison sociale est requise.');
+      setFormError('Le nom est requis.');
       return;
     }
     setSubmitting(true);
@@ -232,7 +222,7 @@ export function ClientsPage() {
               id="client-search"
               label="Rechercher"
               type="search"
-              placeholder="Raison sociale…"
+              placeholder="Nom…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -284,7 +274,7 @@ export function ClientsPage() {
                     {c.archivedAt && <Badge tone="warning">Archivé</Badge>}
                   </div>
                   <p className="truncate text-muted">
-                    {[c.contactName, c.email, c.city].filter(Boolean).join(' · ') || '—'}
+                    {[c.email, c.city].filter(Boolean).join(' · ') || '—'}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
@@ -353,7 +343,7 @@ export function ClientsPage() {
         <form onSubmit={(e) => void submit(e)} noValidate className="space-y-4">
           <Input
             id="client-companyName"
-            label="Raison sociale *"
+            label="Nom *"
             type="text"
             value={fields.companyName}
             onChange={(e) => change('companyName', e.target.value)}

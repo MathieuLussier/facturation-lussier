@@ -17,7 +17,6 @@ const INFOS_FIELDS: { key: keyof UpdateClientRequest; label: string; type?: stri
   { key: 'city', label: 'Ville' },
   { key: 'province', label: 'Province' },
   { key: 'postalCode', label: 'Code postal' },
-  { key: 'neq', label: 'NEQ' },
 ];
 
 export function InfosTab({ client, onUpdated }: InfosTabProps) {
@@ -36,7 +35,6 @@ export function InfosTab({ client, onUpdated }: InfosTabProps) {
       city: client.city ?? '',
       province: client.province ?? '',
       postalCode: client.postalCode ?? '',
-      neq: client.neq ?? '',
       notes: client.notes ?? '',
     });
     setFormError('');
@@ -49,7 +47,7 @@ export function InfosTab({ client, onUpdated }: InfosTabProps) {
   const submit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     if (!String(fields.companyName ?? '').trim()) {
-      setFormError('La raison sociale est requise.');
+      setFormError('Le nom est requis.');
       return;
     }
     setSubmitting(true);
@@ -79,14 +77,13 @@ export function InfosTab({ client, onUpdated }: InfosTabProps) {
       <Card padded>
         <div className="flex items-start justify-between gap-4">
           <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {row('Raison sociale', client.companyName)}
+            {row('Nom', client.companyName)}
             {row('Courriel', client.email)}
             {row('Téléphone', client.phone)}
             {row('Adresse', client.addressLine)}
             {row('Ville', client.city)}
             {row('Province', client.province)}
             {row('Code postal', client.postalCode)}
-            {row('NEQ', client.neq)}
             {row('Notes', client.notes)}
           </dl>
           <Button variant="secondary" size="sm" onClick={openEdit}>
@@ -107,7 +104,7 @@ export function InfosTab({ client, onUpdated }: InfosTabProps) {
         <form onSubmit={(e) => void submit(e)} noValidate className="space-y-4">
           <Input
             id="info-companyName"
-            label="Raison sociale *"
+            label="Nom *"
             value={String(fields.companyName ?? '')}
             onChange={(e) => change('companyName', e.target.value)}
             disabled={submitting}
