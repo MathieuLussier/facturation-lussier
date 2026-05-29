@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { NotFoundException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { ClientsService } from './clients.service';
 import type { PrismaService } from '../prisma/prisma.service';
 
@@ -33,20 +33,24 @@ function makePrisma() {
     update: jest.fn(),
     delete: jest.fn(),
   };
+  const invoice = { count: jest.fn().mockResolvedValue(0) };
   const client = {
     client: model,
+    invoice,
     $transaction: jest.fn((ops: Promise<unknown>[]) => Promise.all(ops)),
   };
-  return { prisma: { client } as unknown as PrismaService, model };
+  return { prisma: { client } as unknown as PrismaService, model, invoice };
 }
 
 describe('ClientsService', () => {
   let service: ClientsService;
   let model: ReturnType<typeof makePrisma>['model'];
+  let invoice: ReturnType<typeof makePrisma>['invoice'];
 
   beforeEach(() => {
     const p = makePrisma();
     model = p.model;
+    invoice = p.invoice;
     service = new ClientsService(p.prisma);
   });
 
@@ -133,13 +137,22 @@ describe('ClientsService', () => {
       expect(model.delete).not.toHaveBeenCalled();
     });
 
-    it('supprime quand présent', async () => {
+    it('supprime quand présent et sans facture rattachée', async () => {
       model.findUnique.mockResolvedValue(makeRow());
+      invoice.count.mockResolvedValue(0);
       model.delete.mockResolvedValue(makeRow());
 
       await service.remove('c1');
 
       expect(model.delete).toHaveBeenCalledWith({ where: { id: 'c1' } });
+    });
+
+    it('lance Conflict si des factures sont rattachées (sans appeler delete)', async () => {
+      model.findUnique.mockResolvedValue(makeRow());
+      invoice.count.mockResolvedValue(2);
+
+      await expect(service.remove('c1')).rejects.toBeInstanceOf(ConflictException);
+      expect(model.delete).not.toHaveBeenCalled();
     });
   });
 });

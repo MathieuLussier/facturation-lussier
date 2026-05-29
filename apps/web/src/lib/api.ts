@@ -129,7 +129,19 @@ export async function apiFetch<T>(
   }
 
   if (!response.ok) {
-    throw new ApiError(response.status, httpErrorMessage(response.status));
+    // Privilégie le message renvoyé par le serveur (NestJS) si présent.
+    let message = httpErrorMessage(response.status);
+    try {
+      const body = (await response.json()) as { message?: string | string[] };
+      if (Array.isArray(body.message)) {
+        message = body.message.join(', ');
+      } else if (typeof body.message === 'string' && body.message.trim()) {
+        message = body.message;
+      }
+    } catch {
+      /* pas de corps JSON exploitable */
+    }
+    throw new ApiError(response.status, message);
   }
 
   // 204 No Content

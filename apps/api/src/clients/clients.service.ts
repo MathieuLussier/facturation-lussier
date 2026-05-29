@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Client as DbClient } from '@prisma/client';
 import type {
   Client,
@@ -85,6 +85,12 @@ export class ClientsService {
 
   async remove(id: string): Promise<void> {
     await this.findById(id); // 404 si absent
+    const invoiceCount = await this.prisma.client.invoice.count({ where: { clientId: id } });
+    if (invoiceCount > 0) {
+      throw new ConflictException(
+        `Impossible de supprimer ce client : ${invoiceCount} facture(s) y sont rattachée(s).`,
+      );
+    }
     await this.prisma.client.client.delete({ where: { id } });
   }
 }
