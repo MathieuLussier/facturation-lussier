@@ -30,6 +30,30 @@ function parseQty(v: string): number {
   return Number.parseFloat(v.replace(',', '.')) || 0;
 }
 
+/** Délais de paiement proposés ('' = aucune échéance, 'custom' = date manuelle). */
+const PAYMENT_TERMS: { value: string; label: string }[] = [
+  { value: '', label: 'Aucune échéance' },
+  { value: '30', label: 'Net 30 jours' },
+  { value: '45', label: 'Net 45 jours' },
+  { value: '60', label: 'Net 60 jours' },
+  { value: '90', label: 'Net 90 jours' },
+  { value: 'custom', label: 'Date personnalisée' },
+];
+
+/** Date du jour au format YYYY-MM-DD (local, sans décalage de fuseau). */
+function todayYmd(): string {
+  const t = new Date();
+  return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+}
+
+/** baseYmd (ou aujourd'hui) + N jours → YYYY-MM-DD, en calcul local. */
+function addDays(baseYmd: string, days: number): string {
+  const parts = (baseYmd || todayYmd()).split('-');
+  const dt = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+  dt.setDate(dt.getDate() + days);
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+}
+
 export function InvoiceFormPage() {
   const navigate = useNavigate();
   const [clients, setClients] = useState<Client[]>([]);
@@ -41,6 +65,7 @@ export function InvoiceFormPage() {
   const [billingContactId, setBillingContactId] = useState('');
   const [issueDate, setIssueDate] = useState('');
   const [dueDate, setDueDate] = useState('');
+  const [dueTerm, setDueTerm] = useState(''); // '' | '30' | '45' | '60' | '90' | 'custom'
   const [notes, setNotes] = useState('');
   const [lines, setLines] = useState<LineDraft[]>([{ ...EMPTY_LINE }]);
   const [error, setError] = useState('');
@@ -242,17 +267,50 @@ export function InvoiceFormPage() {
               label="Date d'émission"
               type="date"
               value={issueDate}
-              onChange={(e) => setIssueDate(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value;
+                setIssueDate(v);
+                // Recalcule l'échéance si un délai « Net N » est sélectionné.
+                if (dueTerm && dueTerm !== 'custom') setDueDate(addDays(v, Number(dueTerm)));
+              }}
               disabled={submitting}
             />
-            <Input
-              id="inv-dueDate"
-              label="Échéance"
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-              disabled={submitting}
-            />
+            <div className="flex flex-col gap-1">
+              <label htmlFor="inv-dueTerm" className="text-sm font-medium text-fg">
+                Échéance
+              </label>
+              <select
+                id="inv-dueTerm"
+                value={dueTerm}
+                onChange={(e) => {
+                  const term = e.target.value;
+                  setDueTerm(term);
+                  if (term === '') setDueDate('');
+                  else if (term !== 'custom') setDueDate(addDays(issueDate, Number(term)));
+                }}
+                disabled={submitting}
+                className={SELECT_CLASS}
+              >
+                {PAYMENT_TERMS.map((t) => (
+                  <option key={t.value} value={t.value}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+              {dueTerm === 'custom' && (
+                <input
+                  id="inv-dueDate"
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  disabled={submitting}
+                  className={`${SELECT_CLASS} mt-1`}
+                />
+              )}
+              {dueTerm !== '' && dueTerm !== 'custom' && dueDate && (
+                <p className="text-xs text-muted">Échéance le {dueDate}</p>
+              )}
+            </div>
           </div>
         </Card>
 
