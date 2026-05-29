@@ -91,7 +91,12 @@ Construit en solo (Lead), commits `b4ae097` (backend) + `251fcc0` (frontend).
 - [ ] Paiements en ligne (Stripe) + suivi de statut de paiement
 - [ ] Rappels / relances automatiques
 - [ ] Rôles plus fins / portail client
-- [ ] Tableau de bord (CA, impayés, échéances)
+- [x] Tableau de bord (CA, impayés, échéances) — `ceea1ab` (GET /invoices/stats + Dashboard)
+
+## ✅ UX & design (livré)
+- [x] Design system clair/sombre + coquille app + composants (Button/Input/Card/Badge/Modal/Toast/StatusSelect)
+- [x] UX moderne : clients en modal, statut pastille-menu (liste + détail), toasts, confirmations modales, actions rapides, états vides
+- [x] Marque « Lussier Facturation » + logo (favicons, monogramme barre latérale/connexion, logo PDF)
 
 ---
 
