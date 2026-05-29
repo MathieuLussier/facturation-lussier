@@ -17,6 +17,7 @@ function makePrisma() {
       user: {
         findUnique: jest.fn(),
         create: jest.fn(),
+        update: jest.fn(),
       },
       refreshToken: {
         findUnique: jest.fn(),
@@ -462,6 +463,44 @@ describe('AuthService', () => {
 
       // Les refresh tokens doivent etre distincts grace au jti
       expect(result1.refreshToken).not.toBe(result2.refreshToken);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // revokeUserTokens
+  // -------------------------------------------------------------------------
+
+  describe('revokeUserTokens', () => {
+    it('révoque tous les refresh tokens actifs de l’utilisateur', async () => {
+      (prisma.client.refreshToken.updateMany as jest.Mock).mockResolvedValue({ count: 2 });
+
+      await service.revokeUserTokens('user-id-123');
+
+      expect(prisma.client.refreshToken.updateMany).toHaveBeenCalledWith({
+        where: { userId: 'user-id-123', revokedAt: null },
+        data: expect.objectContaining({ revokedAt: expect.any(Date) }),
+      });
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // setUserPassword
+  // -------------------------------------------------------------------------
+
+  describe('setUserPassword', () => {
+    it('hache le nouveau mot de passe, met à jour l’utilisateur et révoque ses sessions', async () => {
+      (prisma.client.user.update as jest.Mock).mockResolvedValue(makeDbUser());
+      (prisma.client.refreshToken.updateMany as jest.Mock).mockResolvedValue({ count: 1 });
+
+      await service.setUserPassword('user-id-123', 'NouveauMotDePasse1!');
+
+      const updateCall = (prisma.client.user.update as jest.Mock).mock.calls[0][0];
+      expect(updateCall.where).toEqual({ id: 'user-id-123' });
+      expect(updateCall.data.passwordHash).not.toBe('NouveauMotDePasse1!');
+      expect(updateCall.data.passwordHash).toMatch(/^\$2b\$/);
+      expect(prisma.client.refreshToken.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { userId: 'user-id-123', revokedAt: null } }),
+      );
     });
   });
 });

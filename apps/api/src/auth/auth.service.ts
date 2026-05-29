@@ -246,6 +246,31 @@ export class AuthService {
     return this.toAuthUser(user);
   }
 
+  // ---------------------------------------------------------------------------
+  // Opérations admin sur les comptes
+  // ---------------------------------------------------------------------------
+
+  /** Révoque tous les refresh tokens actifs d'un utilisateur (coupe ses sessions). */
+  async revokeUserTokens(userId: string): Promise<void> {
+    await this.prisma.client.refreshToken.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  }
+
+  /**
+   * Définit un nouveau mot de passe (réinitialisation ADMIN) et révoque les
+   * sessions en cours de l'utilisateur.
+   */
+  async setUserPassword(userId: string, newPassword: string): Promise<void> {
+    const passwordHash = await this.hashPassword(newPassword);
+    await this.prisma.client.user.update({
+      where: { id: userId },
+      data: { passwordHash },
+    });
+    await this.revokeUserTokens(userId);
+  }
+
   toAuthUser(user: {
     id: string;
     email: string;

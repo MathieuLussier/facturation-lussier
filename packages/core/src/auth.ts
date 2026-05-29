@@ -24,6 +24,11 @@ export interface AuthUser {
   name: string;
   role: Role;
   isActive: boolean;
+  /**
+   * Calculé serveur (vues ADMIN /users) : suppression définitive possible
+   * (l'utilisateur n'a créé aucune facture ni entreprise). Absent ailleurs.
+   */
+  deletable?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -72,4 +77,9 @@ export interface UpdateUserRequest {
   name?: string;
   role?: Role;
   isActive?: boolean;
+}
+
+/** Corps de la réinitialisation de mot de passe par un ADMIN. */
+export interface ResetPasswordRequest {
+  password: string;
 }

@@ -1,51 +1,45 @@
-import { type FormEvent, useCallback, useEffect, useState } from 'react';
-import { Badge, Button, Card, Input, Modal } from '@facturation/ui';
-import type { AuthUser, CreateUserRequest, Role } from '@facturation/core';
-import { ApiError, createUser, listUsers } from '../lib/api';
+import { useCallback, useEffect, useState } from 'react';
+import { Badge, Button, Card } from '@facturation/ui';
+import type { AuthUser } from '@facturation/core';
+import { deleteUser, listUsers, updateUser } from '../lib/api';
 import { useToast } from '../components/Toast';
+import { useConfirm } from '../components/Confirm';
+import { useAuth } from '../auth/AuthContext';
+import { UserFormModal } from './users/UserFormModal';
+import { ResetPasswordModal } from './users/ResetPasswordModal';
 
-interface CreateUserFields {
-  email: string;
-  name: string;
-  password: string;
-  role: Role;
+// ---------------------------------------------------------------------------
+// Row-action modal state
+// ---------------------------------------------------------------------------
+
+type RowAction =
+  | { type: 'edit'; user: AuthUser }
+  | { type: 'resetPassword'; user: AuthUser }
+  | null;
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function isLastActiveAdmin(user: AuthUser, activeAdminCount: number): boolean {
+  return user.role === 'ADMIN' && user.isActive && activeAdminCount <= 1;
 }
 
-const INITIAL_FIELDS: CreateUserFields = {
-  email: '',
-  name: '',
-  password: '',
-  role: 'MEMBER',
-};
-
-function validateCreateForm(fields: CreateUserFields): Record<string, string> {
-  const errors: Record<string, string> = {};
-  if (!fields.email.trim()) {
-    errors.email = "L'adresse e-mail est requise.";
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.email)) {
-    errors.email = 'Adresse e-mail invalide.';
-  }
-  if (!fields.name.trim()) {
-    errors.name = 'Le nom est requis.';
-  }
-  if (fields.password.length < 8) {
-    errors.password = 'Le mot de passe doit contenir au moins 8 caractères.';
-  }
-  return errors;
-}
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
 
 export function UsersPage() {
   const { notify } = useToast();
+  const confirm = useConfirm();
+  const { user: currentUser } = useAuth();
 
   const [users, setUsers] = useState<AuthUser[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [listError, setListError] = useState('');
 
-  const [fields, setFields] = useState<CreateUserFields>(INITIAL_FIELDS);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [formError, setFormError] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [open, setOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [rowAction, setRowAction] = useState<RowAction>(null);
 
   const fetchUsers = useCallback(async (): Promise<void> => {
     setLoadingUsers(true);
@@ -64,52 +58,67 @@ export function UsersPage() {
     void fetchUsers();
   }, [fetchUsers]);
 
-  const openCreate = (): void => {
-    setFields(INITIAL_FIELDS);
-    setFieldErrors({});
-    setFormError('');
-    setOpen(true);
-  };
+  // Derived counts
+  const activeAdminCount = users.filter((u) => u.role === 'ADMIN' && u.isActive).length;
 
-  const handleFieldChange = (key: keyof CreateUserFields, value: string): void => {
-    setFields((prev) => ({ ...prev, [key]: value }));
-    setFieldErrors((prev) => {
-      const updated = { ...prev };
-      delete updated[key];
-      return updated;
-    });
-  };
+  // ---------------------------------------------------------------------------
+  // Row action handlers
+  // ---------------------------------------------------------------------------
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
-    e.preventDefault();
-    setFormError('');
-
-    const errors = validateCreateForm(fields);
-    setFieldErrors(errors);
-    if (Object.keys(errors).length > 0) return;
-
-    setSubmitting(true);
+  const handleToggleActive = async (user: AuthUser): Promise<void> => {
     try {
-      const body: CreateUserRequest = {
-        email: fields.email.trim(),
-        name: fields.name.trim(),
-        password: fields.password,
-        role: fields.role,
-      };
-      const created = await createUser(body);
-      setUsers((prev) => [...prev, created]);
-      setOpen(false);
-      notify(`Utilisateur « ${created.name} » créé`, 'success');
+      const updated = await updateUser(user.id, { isActive: !user.isActive });
+      setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
+      notify(
+        updated.isActive ? `« ${updated.name} » réactivé` : `« ${updated.name} » désactivé`,
+        'success',
+      );
     } catch (err) {
-      if (err instanceof ApiError && err.status === 409) {
-        setFormError('Cette adresse e-mail est déjà utilisée.');
-      } else {
-        setFormError(err instanceof Error ? err.message : 'Erreur lors de la création.');
-      }
-    } finally {
-      setSubmitting(false);
+      notify(err instanceof Error ? err.message : 'Erreur lors de la mise à jour.', 'error');
     }
   };
+
+  const handleDelete = async (user: AuthUser): Promise<void> => {
+    const confirmed = await confirm({
+      tone: 'danger',
+      confirmLabel: 'Supprimer',
+      message: `Supprimer l'utilisateur « ${user.name} » ?`,
+    });
+    if (!confirmed) return;
+
+    try {
+      await deleteUser(user.id);
+      setUsers((prev) => prev.filter((u) => u.id !== user.id));
+      notify(`Utilisateur « ${user.name} » supprimé`, 'success');
+    } catch (err) {
+      notify(err instanceof Error ? err.message : 'Erreur lors de la suppression.', 'error');
+    }
+  };
+
+  // ---------------------------------------------------------------------------
+  // Modal callbacks
+  // ---------------------------------------------------------------------------
+
+  const handleCreated = (created: AuthUser): void => {
+    setUsers((prev) => [...prev, created]);
+    setCreateOpen(false);
+    notify(`Utilisateur « ${created.name} » créé`, 'success');
+  };
+
+  const handleUpdated = (updated: AuthUser): void => {
+    setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
+    setRowAction(null);
+    notify('Utilisateur modifié', 'success');
+  };
+
+  const handlePasswordReset = (): void => {
+    setRowAction(null);
+    notify('Mot de passe réinitialisé', 'success');
+  };
+
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
 
   return (
     <div className="space-y-6">
@@ -118,7 +127,7 @@ export function UsersPage() {
           <h1 className="text-2xl font-bold tracking-tight text-fg">Utilisateurs</h1>
           <p className="text-sm text-muted">Réservé aux administrateurs</p>
         </div>
-        <Button onClick={openCreate}>Nouvel utilisateur</Button>
+        <Button onClick={() => setCreateOpen(true)}>Nouvel utilisateur</Button>
       </div>
 
       <Card>
@@ -148,7 +157,12 @@ export function UsersPage() {
         {!loadingUsers && !listError && users.length === 0 && (
           <div className="py-12 text-center">
             <p className="text-sm text-muted">Aucun utilisateur pour l'instant.</p>
-            <Button variant="secondary" size="sm" className="mt-4" onClick={openCreate}>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="mt-4"
+              onClick={() => setCreateOpen(true)}
+            >
               Créer le premier utilisateur
             </Button>
           </div>
@@ -156,102 +170,114 @@ export function UsersPage() {
 
         {!loadingUsers && users.length > 0 && (
           <ul className="divide-y divide-border">
-            {users.map((u) => (
-              <li key={u.id} className="flex items-center justify-between px-4 py-3 text-sm">
-                <div>
-                  <p className="font-medium text-fg">{u.name}</p>
-                  <p className="text-muted">{u.email}</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Badge tone={u.role === 'ADMIN' ? 'brand' : 'neutral'}>{u.role}</Badge>
-                  <Badge tone={u.isActive ? 'success' : 'danger'}>
-                    {u.isActive ? 'Actif' : 'Inactif'}
-                  </Badge>
-                </div>
-              </li>
-            ))}
+            {users.map((u) => {
+              const isSelf = u.id === currentUser?.id;
+              const lastAdmin = isLastActiveAdmin(u, activeAdminCount);
+              const canDeactivate = !isSelf && !lastAdmin;
+              const deactivateTitle = isSelf
+                ? 'Vous ne pouvez pas désactiver votre propre compte.'
+                : lastAdmin
+                  ? 'Impossible de désactiver le dernier administrateur actif.'
+                  : undefined;
+
+              return (
+                <li
+                  key={u.id}
+                  className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm"
+                >
+                  <div className="min-w-0">
+                    <p className="font-medium text-fg">{u.name}</p>
+                    <p className="text-muted">{u.email}</p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Status badges */}
+                    <Badge tone={u.role === 'ADMIN' ? 'brand' : 'neutral'}>{u.role}</Badge>
+                    <Badge tone={u.isActive ? 'success' : 'danger'}>
+                      {u.isActive ? 'Actif' : 'Inactif'}
+                    </Badge>
+
+                    {/* Actions */}
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setRowAction({ type: 'edit', user: u })}
+                    >
+                      Modifier
+                    </Button>
+
+                    {u.isActive ? (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled={!canDeactivate}
+                        title={deactivateTitle}
+                        onClick={() => void handleToggleActive(u)}
+                      >
+                        Désactiver
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => void handleToggleActive(u)}
+                      >
+                        Réactiver
+                      </Button>
+                    )}
+
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setRowAction({ type: 'resetPassword', user: u })}
+                    >
+                      Mot de passe
+                    </Button>
+
+                    {u.deletable === true && !isSelf && (
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => void handleDelete(u)}
+                      >
+                        Supprimer
+                      </Button>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </Card>
 
-      <Modal open={open} onClose={() => setOpen(false)} title="Nouvel utilisateur">
-        {formError && (
-          <div
-            role="alert"
-            className="mb-4 rounded-lg border border-danger/40 bg-danger-soft px-4 py-3 text-sm text-danger"
-          >
-            {formError}
-          </div>
-        )}
+      {/* Create modal */}
+      <UserFormModal
+        mode="create"
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreated={handleCreated}
+        onUpdated={() => undefined}
+      />
 
-        <form onSubmit={(e) => void handleSubmit(e)} noValidate className="space-y-4">
-          <Input
-            id="create-name"
-            label="Nom complet"
-            type="text"
-            autoComplete="name"
-            placeholder="Alice Dupont"
-            value={fields.name}
-            onChange={(e) => handleFieldChange('name', e.target.value)}
-            error={fieldErrors.name}
-            disabled={submitting}
-          />
+      {/* Edit modal */}
+      <UserFormModal
+        mode="edit"
+        user={rowAction?.type === 'edit' ? rowAction.user : undefined}
+        open={rowAction?.type === 'edit'}
+        onClose={() => setRowAction(null)}
+        onCreated={() => undefined}
+        onUpdated={handleUpdated}
+      />
 
-          <Input
-            id="create-email"
-            label="Adresse e-mail"
-            type="email"
-            autoComplete="off"
-            placeholder="alice@exemple.com"
-            value={fields.email}
-            onChange={(e) => handleFieldChange('email', e.target.value)}
-            error={fieldErrors.email}
-            disabled={submitting}
-          />
-
-          <Input
-            id="create-password"
-            label="Mot de passe"
-            type="password"
-            autoComplete="new-password"
-            placeholder="••••••••"
-            value={fields.password}
-            onChange={(e) => handleFieldChange('password', e.target.value)}
-            error={fieldErrors.password}
-            disabled={submitting}
-          />
-
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="create-role" className="text-sm font-medium text-fg">
-              Rôle
-            </label>
-            <select
-              id="create-role"
-              value={fields.role}
-              onChange={(e) => handleFieldChange('role', e.target.value as Role)}
-              disabled={submitting}
-              className="block w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
-            >
-              <option value="MEMBER">MEMBER</option>
-              <option value="ADMIN">ADMIN</option>
-            </select>
-          </div>
-
-          <div className="flex justify-end gap-2 pt-2">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => setOpen(false)}
-              disabled={submitting}
-            >
-              Annuler
-            </Button>
-            <Button type="submit" disabled={submitting}>
-              {submitting ? 'Création…' : "Créer l'utilisateur"}
-            </Button>
-          </div>
-        </form>
-      </Modal>
+      {/* Reset password modal */}
+      <ResetPasswordModal
+        userId={rowAction?.type === 'resetPassword' ? rowAction.user.id : ''}
+        userName={rowAction?.type === 'resetPassword' ? rowAction.user.name : ''}
+        open={rowAction?.type === 'resetPassword'}
+        onClose={() => setRowAction(null)}
+        onSuccess={handlePasswordReset}
+      />
     </div>
   );
 }

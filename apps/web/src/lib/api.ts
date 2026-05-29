@@ -4,6 +4,7 @@ import type {
   CreateUserRequest,
   LoginRequest,
   MeResponse,
+  ResetPasswordRequest,
   UpdateUserRequest,
 } from '@facturation/core';
 
@@ -228,4 +229,15 @@ export async function updateUser(id: string, data: UpdateUserRequest): Promise<A
 /** DELETE /api/users/:id */
 export async function deleteUser(id: string): Promise<void> {
   return apiFetch<void>(`/users/${id}`, { method: 'DELETE' });
+}
+
+/** PATCH /api/users/:id/password */
+export async function resetUserPassword(
+  id: string,
+  password: ResetPasswordRequest['password'],
+): Promise<void> {
+  return apiFetch<void>(`/users/${id}/password`, {
+    method: 'PATCH',
+    body: JSON.stringify({ password } satisfies ResetPasswordRequest),
+  });
 }

@@ -9,6 +9,7 @@ export type {
   MeResponse,
   CreateUserRequest,
   UpdateUserRequest,
+  ResetPasswordRequest,
 } from './auth';
 
 export type {
