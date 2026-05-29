@@ -34,7 +34,7 @@ async function main(): Promise<void> {
       },
     });
 
-    console.log(`Admin créé / mis à jour : ${admin.email} (id: ${admin.id})`);
+    console.log(`Admin prêt : ${admin.email}`);
   } finally {
     await prisma.$disconnect();
   }

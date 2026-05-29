@@ -31,15 +31,15 @@
       (source unique `refreshTtlSeconds`), M1 (erreurs TS corrigées → type-check vert)
 - [x] **`.env.example` complété** (et `VITE_API_URL` inutilisé retiré — L2)
 - [x] `build` + `type-check` + `lint` + `test` (102) **tous verts** ; smoke live OK
-- [ ] **Commit** `feat: authentification multi-utilisateurs` (en attente d'accord)
-- [ ] Enregistrer les patterns d'auth dans la **mémoire ruflo** (`namespace patterns`)
+- [x] **Commit** `feat: authentification multi-utilisateurs` (`4f22c52` sur `master`)
+- [x] Patterns d'auth enregistrés dans la **mémoire ruflo** (`namespace patterns`)
 
 ### Suivi post-revue (MEDIUM/LOW — non bloquant)
-- [ ] M2 : rate-limit aussi sur `/auth/refresh`
-- [ ] M4 : transaction Prisma autour de `deleteMany`+`create` dans `generateTokenPair`
-- [ ] M5 : sortir `toAuthUser` du couplage `UsersService`↔`AuthService`
-- [ ] M6 : remplacer `console.log` (main.ts, seed.ts) par le Logger NestJS
-- [ ] L1 : `@MaxLength` sur email/name/password des DTOs (bcrypt ≤ 72 o)
+- [x] M2 : rate-limit aussi sur `/auth/refresh`
+- [x] M4 : transaction Prisma atomique dans `generateTokenPair`
+- [x] M6 : `console.log` remplacé (Logger NestJS ; seed n'expose plus l'id)
+- [x] L1 : `@MaxLength` sur les DTOs (email/name 255, password 128)
+- [ ] M5 : sortir `toAuthUser` du couplage `UsersService`↔`AuthService` (refacto mineure)
 - [ ] L3/L4 : documenter idempotence logout / clarifier le retour de `generateTokenPair`
 
 ---

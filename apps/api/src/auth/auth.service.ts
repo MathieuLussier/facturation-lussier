@@ -193,18 +193,19 @@ export class AuthService {
       },
     );
 
-    // Nettoyer les tokens expirés de manière opportuniste
-    await this.prisma.client.refreshToken.deleteMany({
-      where: { userId, expiresAt: { lt: new Date() } },
-    });
-
-    // Stocker le hash du refresh token
+    // Stocker le hash du refresh token + nettoyer les tokens expirés de façon ATOMIQUE
+    // (transaction : on ne perd pas le nouveau token si le cleanup échoue, et inversement).
     const tokenHash = hashToken(refreshToken);
     const expiresAt = new Date(Date.now() + this.refreshTtl * 1000);
 
-    await this.prisma.client.refreshToken.create({
-      data: { userId, tokenHash, expiresAt },
-    });
+    await this.prisma.client.$transaction([
+      this.prisma.client.refreshToken.deleteMany({
+        where: { userId, expiresAt: { lt: new Date() } },
+      }),
+      this.prisma.client.refreshToken.create({
+        data: { userId, tokenHash, expiresAt },
+      }),
+    ]);
 
     return {
       tokens: { accessToken, expiresInSec: this.accessTtl },

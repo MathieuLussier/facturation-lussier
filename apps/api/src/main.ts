@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const cookieParser = require('cookie-parser') as (options?: import('cookie-parser').CookieParseOptions) => import('express').RequestHandler;
@@ -43,7 +43,7 @@ async function bootstrap(): Promise<void> {
 
   const port = Number(process.env.API_PORT ?? 3000);
   await app.listen(port);
-  console.log(`API prête sur http://localhost:${port} (docs: /api/docs)`);
+  Logger.log(`API prête sur http://localhost:${port} (docs: /api/docs)`, 'Bootstrap');
 }
 
 void bootstrap();

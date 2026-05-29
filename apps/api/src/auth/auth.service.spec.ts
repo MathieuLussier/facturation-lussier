@@ -25,6 +25,7 @@ function makePrisma() {
         updateMany: jest.fn(),
         deleteMany: jest.fn(),
       },
+      $transaction: jest.fn((ops: unknown[]) => Promise.resolve(ops)),
     },
   } as unknown as PrismaService;
 }
