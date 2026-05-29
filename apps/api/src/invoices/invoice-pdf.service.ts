@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import PDFDocument from 'pdfkit';
+import * as path from 'path';
 import {
   formatCents,
   type Invoice,
@@ -14,6 +15,9 @@ const STATUS_LABEL: Record<InvoiceStatus, string> = {
   ANNULEE: 'Annulée',
 };
 
+// Logo PNG copié dans dist via nest-cli (assets) ; résolu relativement au fichier compilé.
+const LOGO_PATH = path.join(__dirname, 'logo.png');
+
 @Injectable()
 export class InvoicePdfService {
   /** Génère le PDF d'une facture (en-tête émetteur + TPS/TVQ, lignes, totaux). */
@@ -25,6 +29,13 @@ export class InvoicePdfService {
       doc.on('end', () => resolve(Buffer.concat(chunks)));
       doc.on('error', reject);
     });
+
+    // Logo (haut-droite) — optionnel
+    try {
+      doc.image(LOGO_PATH, 497, 50, { width: 48 });
+    } catch {
+      /* logo absent : on continue sans */
+    }
 
     // En-tête de l'émetteur
     doc.font('Helvetica-Bold').fontSize(18).text(issuer?.legalName ?? 'Lussier Facturation');
