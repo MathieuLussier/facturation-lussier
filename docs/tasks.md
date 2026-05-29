@@ -44,19 +44,16 @@
 
 ---
 
-## Prochain jalon — Clients (B2B) de bout en bout
+## ✅ Jalon livré — Clients (B2B) de bout en bout
 
-Première donnée métier ; pose les patterns CRUD réutilisés ensuite.
+Construit en solo (Lead), commits `b4ae097` (backend) + `251fcc0` (frontend).
 
-- [ ] **architect** : modèle Prisma `Client` (raison sociale, courriel, téléphone, adresse, NEQ,
-      contact, notes, champs d'audit `createdById`), DTO/types dans `packages/core`, contrat REST,
-      règles de validation.
-- [ ] **coder-api** : `ClientsModule` NestJS (CRUD, `class-validator`, Swagger, pagination, recherche),
-      réservé aux utilisateurs authentifiés ; migration.
-- [ ] **coder-web** : pages liste (tri/recherche/pagination) + formulaire création/édition + suppression,
-      client API typé, routes protégées.
-- [ ] **tester** : unit (service/validation) + e2e (CRUD vs DB) + web ; ≥ 80 %.
-- [ ] **reviewer** : qualité + sécurité (autorisation, validation, fuite de données) → **commit**.
+- [x] Modèle Prisma `Client` (raison sociale, coordonnées, NEQ, contact, notes, audit `createdById`) + migration
+- [x] `ClientsModule` NestJS : CRUD + liste paginée + recherche insensible, DTOs validés, protégé (auth)
+- [x] Types partagés `@facturation/core` (`Client`, `Create/UpdateClientRequest`, `Paginated<T>`)
+- [x] UI : `ClientsPage` (liste paginée, recherche, création/édition, suppression) + route `/clients` + lien accueil
+- [x] Tests : 9 unit service + 3 web (114 au total) ; smoke live CRUD OK
+- [ ] **Followup** : e2e Clients (CRUD vs DB réelle) ; tri par colonnes
 
 ---
 
