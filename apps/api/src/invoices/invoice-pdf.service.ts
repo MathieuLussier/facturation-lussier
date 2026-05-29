@@ -27,7 +27,7 @@ export class InvoicePdfService {
     });
 
     // En-tête de l'émetteur
-    doc.font('Helvetica-Bold').fontSize(18).text(issuer?.legalName ?? 'Facturation Lussier');
+    doc.font('Helvetica-Bold').fontSize(18).text(issuer?.legalName ?? 'Lussier Facturation');
     doc.font('Helvetica').fontSize(9).fillColor('#555555');
     const issuerLines = [
       issuer?.addressLine,

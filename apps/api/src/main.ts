@@ -33,7 +33,7 @@ async function bootstrap(): Promise<void> {
 
   // Documentation Swagger
   const swaggerConfig = new DocumentBuilder()
-    .setTitle('API Facturation Lussier')
+    .setTitle('API — Lussier Facturation')
     .setDescription("Documentation de l'API de facturation")
     .setVersion('0.0.0')
     .addBearerAuth()
