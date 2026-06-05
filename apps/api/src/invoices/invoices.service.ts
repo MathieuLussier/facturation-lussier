@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import type {
   Client as DbClient,
   Contact as DbContact,
@@ -17,8 +18,10 @@ import {
   type InvoiceStats,
   type InvoiceStatus,
   type Paginated,
+  type PaymentMethod,
   type Project,
   type ProjectStatus,
+  type UpdateInvoiceRequest,
 } from '@facturation/core';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -115,6 +118,9 @@ function toInvoice(row: InvoiceRow): Invoice {
   return {
     id: row.id,
     number: row.number,
+    reference: row.reference ?? null,
+    sequenceYear: row.sequenceYear ?? null,
+    sequenceNo: row.sequenceNo ?? null,
     status: row.status as InvoiceStatus,
     clientId: row.clientId,
     client: row.client ? toClient(row.client) : undefined,
@@ -125,6 +131,8 @@ function toInvoice(row: InvoiceRow): Invoice {
     issueDate: row.issueDate.toISOString(),
     dueDate: row.dueDate ? row.dueDate.toISOString() : null,
     notes: row.notes,
+    paidAt: row.paidAt ? row.paidAt.toISOString() : null,
+    paymentMethod: (row.paymentMethod as PaymentMethod | null) ?? null,
     subtotalCents: row.subtotalCents,
     gstCents: row.gstCents,
     qstCents: row.qstCents,
@@ -132,6 +140,7 @@ function toInvoice(row: InvoiceRow): Invoice {
     lines: (row.lines ?? []).map(toLine),
     archivedAt: row.archivedAt ? row.archivedAt.toISOString() : null,
     deletable: row.status === 'BROUILLON',
+    editable: row.status === 'BROUILLON' || row.status === 'ENVOYEE',
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -286,13 +295,155 @@ export class InvoicesService {
     return toInvoice(row);
   }
 
-  async updateStatus(id: string, status: InvoiceStatus): Promise<Invoice> {
-    await this.findById(id);
+  /**
+   * Met à jour le statut d'une facture. Deux responsabilités fusionnées :
+   *  - Numérotation : la 1re transition BROUILLON→ENVOYEE assigne la référence
+   *    officielle « FAC-AAAA-NNNN » sans trou (compteur transactionnel).
+   *  - Paiement : passer à PAYEE enregistre paidAt + mode (requis) ; quitter
+   *    PAYEE efface ces champs.
+   */
+  async updateStatus(
+    id: string,
+    status: InvoiceStatus,
+    paidAt?: string,
+    paymentMethod?: PaymentMethod,
+  ): Promise<Invoice> {
+    const current = await this.findById(id);
+
+    // Champs de paiement selon la cible.
+    let paymentData: { paidAt: Date | null; paymentMethod: PaymentMethod | null };
+    if (status === 'PAYEE') {
+      if (!paymentMethod) {
+        throw new BadRequestException('La méthode de paiement est requise pour marquer une facture payée.');
+      }
+      paymentData = { paidAt: paidAt ? new Date(paidAt) : new Date(), paymentMethod };
+    } else {
+      paymentData = { paidAt: null, paymentMethod: null };
+    }
+
+    // Finalisation (assignation de la référence) à la 1re mise en « Envoyée ».
+    const needsNumber =
+      status === 'ENVOYEE' && current.status === 'BROUILLON' && current.reference === null;
+    if (needsNumber) {
+      return this.finalizeToEnvoyee(id);
+    }
+
     const row = await this.prisma.client.invoice.update({
       where: { id },
-      data: { status },
+      data: { status, ...paymentData },
       include: INCLUDE_FULL,
     });
+    return toInvoice(row);
+  }
+
+  /**
+   * Assigne la référence officielle « FAC-AAAA-NNNN » et passe la facture en
+   * « Envoyée », dans une transaction sérialisable (numérotation sans trou).
+   * Réutilisé par {@link updateStatus} et par l'envoi par courriel.
+   */
+  async finalizeToEnvoyee(id: string): Promise<Invoice> {
+    const year = new Date().getFullYear();
+    const row = await this.prisma.client.$transaction(
+      async (tx) => {
+        await tx.$executeRaw`
+          INSERT INTO invoice_sequences ("year", "lastNumber")
+          VALUES (${year}, 0)
+          ON CONFLICT ("year") DO NOTHING
+        `;
+        const result = await tx.$queryRaw<Array<{ lastNumber: number }>>`
+          UPDATE invoice_sequences
+          SET "lastNumber" = "lastNumber" + 1
+          WHERE "year" = ${year}
+          RETURNING "lastNumber"
+        `;
+        const sequenceNo = Number(result[0].lastNumber);
+        const reference = `FAC-${year}-${String(sequenceNo).padStart(4, '0')}`;
+        return tx.invoice.update({
+          where: { id },
+          data: {
+            status: 'ENVOYEE',
+            sequenceYear: year,
+            sequenceNo,
+            reference,
+            paidAt: null,
+            paymentMethod: null,
+          },
+          include: INCLUDE_FULL,
+        });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+    return toInvoice(row);
+  }
+
+  /**
+   * Édite le contenu d'une facture (client/projet/contact/dates/notes/lignes).
+   * Autorisé seulement en BROUILLON ou ENVOYEE ; les totaux sont recalculés et
+   * les lignes intégralement remplacées.
+   */
+  async update(id: string, data: UpdateInvoiceRequest): Promise<Invoice> {
+    const current = await this.findById(id);
+    if (current.status === 'PAYEE' || current.status === 'ANNULEE') {
+      throw new ConflictException('Cette facture ne peut plus être modifiée.');
+    }
+
+    const db = this.prisma.client;
+    let clientId = current.clientId;
+
+    // Un projet fourni détermine l'entreprise ; sinon on prend le client fourni.
+    if (data.projectId) {
+      const project = await db.project.findUnique({ where: { id: data.projectId } });
+      if (!project) {
+        throw new NotFoundException('Projet introuvable');
+      }
+      clientId = project.companyId;
+    } else if (data.clientId) {
+      clientId = data.clientId;
+    }
+
+    const client = await db.client.findUnique({ where: { id: clientId } });
+    if (!client) {
+      throw new NotFoundException('Client introuvable');
+    }
+
+    if (data.billingContactId) {
+      const contact = await db.contact.findUnique({ where: { id: data.billingContactId } });
+      if (!contact || contact.companyId !== clientId) {
+        throw new BadRequestException("Le contact de facturation n'appartient pas à l'entreprise");
+      }
+    }
+
+    const totals = computeInvoiceTotals(data.lines);
+
+    const row = await db.$transaction(async (tx) => {
+      await tx.invoiceLine.deleteMany({ where: { invoiceId: id } });
+      return tx.invoice.update({
+        where: { id },
+        data: {
+          clientId,
+          projectId: data.projectId ?? null,
+          billingContactId: data.billingContactId ?? null,
+          issueDate: data.issueDate ? new Date(data.issueDate) : undefined,
+          dueDate: data.dueDate ? new Date(data.dueDate) : null,
+          notes: data.notes ?? null,
+          subtotalCents: totals.subtotalCents,
+          gstCents: totals.gstCents,
+          qstCents: totals.qstCents,
+          totalCents: totals.totalCents,
+          lines: {
+            create: data.lines.map((l, index) => ({
+              description: l.description,
+              quantity: l.quantity,
+              unitPriceCents: l.unitPriceCents,
+              amountCents: computeLineAmountCents(l.quantity, l.unitPriceCents),
+              position: index,
+            })),
+          },
+        },
+        include: INCLUDE_FULL,
+      });
+    });
+
     return toInvoice(row);
   }
 

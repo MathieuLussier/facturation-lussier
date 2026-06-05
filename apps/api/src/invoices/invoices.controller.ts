@@ -20,6 +20,7 @@ import { InvoicesService } from './invoices.service';
 import { InvoicePdfService } from './invoice-pdf.service';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
 import { ListInvoicesQuery } from './dto/list-invoices.query';
+import { UpdateInvoiceDto } from './dto/update-invoice.dto';
 import { UpdateInvoiceStatusDto } from './dto/update-invoice-status.dto';
 
 @ApiTags('Invoices')
@@ -65,9 +66,14 @@ export class InvoicesController {
     return this.invoices.create(dto, user.id);
   }
 
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() dto: UpdateInvoiceDto): Promise<Invoice> {
+    return this.invoices.update(id, dto);
+  }
+
   @Patch(':id/status')
   setStatus(@Param('id') id: string, @Body() dto: UpdateInvoiceStatusDto): Promise<Invoice> {
-    return this.invoices.updateStatus(id, dto.status);
+    return this.invoices.updateStatus(id, dto.status, dto.paidAt, dto.paymentMethod);
   }
 
   @Patch(':id/archive')

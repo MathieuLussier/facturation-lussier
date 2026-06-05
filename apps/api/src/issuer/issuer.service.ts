@@ -16,6 +16,7 @@ function toIssuer(row: DbIssuer): IssuerProfile {
     country: row.country,
     gstNumber: row.gstNumber,
     qstNumber: row.qstNumber,
+    logoPath: row.logoPath,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };

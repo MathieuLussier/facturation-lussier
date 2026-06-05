@@ -5,6 +5,9 @@ import type { Invoice, IssuerProfile } from '@facturation/core';
 const invoice: Invoice = {
   id: 'inv1',
   number: 42,
+  reference: 'FAC-2026-0042',
+  sequenceYear: 2026,
+  sequenceNo: 42,
   status: 'ENVOYEE',
   clientId: 'c1',
   projectId: null,
@@ -30,6 +33,8 @@ const invoice: Invoice = {
   issueDate: '2026-02-01T00:00:00.000Z',
   dueDate: null,
   notes: 'Merci de votre confiance.',
+  paidAt: null,
+  paymentMethod: null,
   subtotalCents: 10000,
   gstCents: 500,
   qstCents: 998,
@@ -54,6 +59,7 @@ const issuer: IssuerProfile = {
   country: 'Canada',
   gstNumber: '123456789RT0001',
   qstNumber: '1234567890TQ0001',
+  logoPath: null,
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
 };
