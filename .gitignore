@@ -40,3 +40,6 @@ Thumbs.db
 # Editor
 .idea/
 *.local
+
+# Logos téléversés (servis à l'exécution)
+apps/api/uploads/

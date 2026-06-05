@@ -1,4 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import * as fs from 'fs';
+import * as path from 'path';
 import type { IssuerProfile as DbIssuer } from '@prisma/client';
 import type { IssuerProfile, UpsertIssuerRequest } from '@facturation/core';
 import { PrismaService } from '../prisma/prisma.service';
@@ -37,6 +39,31 @@ export class IssuerService {
     const row = existing
       ? await this.prisma.client.issuerProfile.update({ where: { id: existing.id }, data })
       : await this.prisma.client.issuerProfile.create({ data });
+    return toIssuer(row);
+  }
+
+  /**
+   * Enregistre le chemin du logo téléversé sur le profil émetteur (singleton).
+   * Supprime l'ancien fichier au passage. Le profil doit déjà exister.
+   */
+  async updateLogo(logoPath: string): Promise<IssuerProfile> {
+    const existing = await this.prisma.client.issuerProfile.findFirst();
+    if (!existing) {
+      throw new NotFoundException(
+        "Profil émetteur non configuré. Enregistrez d'abord les coordonnées de l'entreprise.",
+      );
+    }
+    if (existing.logoPath && existing.logoPath !== logoPath) {
+      try {
+        fs.unlinkSync(path.resolve(existing.logoPath));
+      } catch {
+        /* ancien logo déjà absent : on ignore */
+      }
+    }
+    const row = await this.prisma.client.issuerProfile.update({
+      where: { id: existing.id },
+      data: { logoPath },
+    });
     return toIssuer(row);
   }
 }

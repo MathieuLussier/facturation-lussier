@@ -1,11 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import PDFDocument from 'pdfkit';
 import * as path from 'path';
+import * as fs from 'fs';
 import {
   formatCents,
   type Invoice,
   type InvoiceStatus,
   type IssuerProfile,
+  type PaymentMethod,
 } from '@facturation/core';
 
 const STATUS_LABEL: Record<InvoiceStatus, string> = {
@@ -15,8 +17,38 @@ const STATUS_LABEL: Record<InvoiceStatus, string> = {
   ANNULEE: 'Annulée',
 };
 
-// Logo PNG copié dans dist via nest-cli (assets) ; résolu relativement au fichier compilé.
-const LOGO_PATH = path.join(__dirname, 'logo.png');
+const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
+  VIREMENT: 'Virement bancaire',
+  CHEQUE: 'Chèque',
+  CARTE: 'Carte',
+  COMPTANT: 'Comptant',
+  AUTRE: 'Autre',
+};
+
+/**
+ * Résout le chemin du logo à afficher : logo téléversé de l'émetteur, sinon
+ * logo statique compilé, sinon aucun. (PDFKit ne gère que PNG/JPEG.)
+ */
+function resolveLogoPath(issuer: IssuerProfile | null): string | null {
+  if (issuer?.logoPath) {
+    const abs = path.isAbsolute(issuer.logoPath)
+      ? issuer.logoPath
+      : path.join(process.cwd(), issuer.logoPath);
+    if (fs.existsSync(abs)) {
+      return abs;
+    }
+  }
+  const fallback = path.join(__dirname, 'logo.png');
+  return fs.existsSync(fallback) ? fallback : null;
+}
+
+/** Une facture ENVOYEE dont l'échéance est dépassée est « en retard ». */
+function isOverdue(invoice: Invoice): boolean {
+  if (invoice.status !== 'ENVOYEE' || !invoice.dueDate) {
+    return false;
+  }
+  return new Date(invoice.dueDate) < new Date();
+}
 
 @Injectable()
 export class InvoicePdfService {
@@ -30,11 +62,14 @@ export class InvoicePdfService {
       doc.on('error', reject);
     });
 
-    // Logo (haut-droite) — optionnel
-    try {
-      doc.image(LOGO_PATH, 497, 50, { width: 48 });
-    } catch {
-      /* logo absent : on continue sans */
+    // Logo (haut-droite) — optionnel (logo émetteur téléversé ou statique)
+    const logoPath = resolveLogoPath(issuer);
+    if (logoPath) {
+      try {
+        doc.image(logoPath, 497, 50, { width: 48 });
+      } catch {
+        /* format non supporté / fichier corrompu : on continue sans */
+      }
     }
 
     // En-tête de l'émetteur
@@ -51,14 +86,26 @@ export class InvoicePdfService {
     issuerLines.forEach((l) => doc.text(l));
     doc.fillColor('#000000');
 
-    // Titre
+    // Titre (référence officielle « FAC-AAAA-NNNN » ou « BROUILLON » si non finalisée)
     doc.moveDown(1.2);
-    doc.font('Helvetica-Bold').fontSize(16).text(`FACTURE #${invoice.number}`);
+    doc.font('Helvetica-Bold').fontSize(16).text(`FACTURE ${invoice.reference ?? 'BROUILLON'}`);
     doc.font('Helvetica').fontSize(9).fillColor('#555555');
     doc.text(`Statut : ${STATUS_LABEL[invoice.status]}`);
     doc.text(`Date d'émission : ${invoice.issueDate.slice(0, 10)}`);
     if (invoice.dueDate) {
       doc.text(`Échéance : ${invoice.dueDate.slice(0, 10)}`);
+    }
+    if (invoice.status === 'PAYEE' && invoice.paidAt) {
+      const mode = invoice.paymentMethod ? ` par ${PAYMENT_METHOD_LABEL[invoice.paymentMethod]}` : '';
+      doc.fillColor('#157347').text(`Payée le ${invoice.paidAt.slice(0, 10)}${mode}`).fillColor('#555555');
+    }
+    if (isOverdue(invoice)) {
+      doc
+        .font('Helvetica-Bold')
+        .fillColor('#cc0000')
+        .text('PAIEMENT EN RETARD')
+        .font('Helvetica')
+        .fillColor('#555555');
     }
     doc.fillColor('#000000');
 
@@ -130,6 +177,14 @@ export class InvoicePdfService {
       doc.font('Helvetica').fillColor('#555555').fontSize(9);
       doc.text(`Notes : ${invoice.notes}`, 50, y + 20, { width: 500 });
     }
+
+    // Mentions légales (Québec) — pied de page
+    const legal =
+      'Montants en dollars canadiens (CAD). Facture assujettie à la TPS (5 %) et à la TVQ (9,975 %).' +
+      (issuer?.legalName ? ` Veuillez libeller votre paiement à l'ordre de ${issuer.legalName}.` : '');
+    doc.font('Helvetica').fontSize(8).fillColor('#999999');
+    doc.text(legal, 50, doc.page.height - 70, { width: 500, align: 'center' });
+    doc.fillColor('#000000');
 
     doc.end();
     return done;

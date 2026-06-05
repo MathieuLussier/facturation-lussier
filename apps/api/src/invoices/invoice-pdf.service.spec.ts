@@ -75,4 +75,17 @@ describe('InvoicePdfService', () => {
     const buf = await new InvoicePdfService().generate(invoice, null);
     expect(buf.subarray(0, 5).toString('latin1')).toBe('%PDF-');
   });
+
+  it('génère un PDF valide pour un brouillon (sans référence)', async () => {
+    const brouillon: Invoice = { ...invoice, status: 'BROUILLON', reference: null, sequenceYear: null, sequenceNo: null };
+    const buf = await new InvoicePdfService().generate(brouillon, issuer);
+    expect(buf.subarray(0, 5).toString('latin1')).toBe('%PDF-');
+    expect(buf.length).toBeGreaterThan(500);
+  });
+
+  it('génère un PDF valide pour une facture payée', async () => {
+    const payee: Invoice = { ...invoice, status: 'PAYEE', paidAt: '2026-03-01T00:00:00.000Z', paymentMethod: 'CHEQUE' };
+    const buf = await new InvoicePdfService().generate(payee, issuer);
+    expect(buf.subarray(0, 5).toString('latin1')).toBe('%PDF-');
+  });
 });

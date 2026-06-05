@@ -59,7 +59,7 @@ export class InvoicesController {
     const buffer = await this.pdf.generate(invoice, issuer);
     res.set({
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="facture-${invoice.number}.pdf"`,
+      'Content-Disposition': `attachment; filename="facture-${invoice.reference ?? invoice.number}.pdf"`,
       'Content-Length': String(buffer.length),
     });
     res.send(buffer);

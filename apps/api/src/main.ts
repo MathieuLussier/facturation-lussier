@@ -5,6 +5,9 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const cookieParser = require('cookie-parser') as (options?: import('cookie-parser').CookieParseOptions) => import('express').RequestHandler;
 import helmet from 'helmet';
+import express from 'express';
+import { existsSync, mkdirSync } from 'fs';
+import { join } from 'path';
 import { AppModule } from './app.module';
 
 async function bootstrap(): Promise<void> {
@@ -15,6 +18,13 @@ async function bootstrap(): Promise<void> {
 
   // Cookies (requis pour le refresh token httpOnly)
   app.use(cookieParser());
+
+  // Fichiers téléversés (logo émetteur) servis publiquement sous /uploads.
+  const uploadsDir = join(process.cwd(), 'uploads');
+  if (!existsSync(uploadsDir)) {
+    mkdirSync(uploadsDir, { recursive: true });
+  }
+  app.use('/uploads', express.static(uploadsDir));
 
   // CORS — autorise les credentials (cookie refresh_token)
   app.enableCors({
