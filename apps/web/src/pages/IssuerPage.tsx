@@ -1,8 +1,8 @@
-import { type FormEvent, useEffect, useState } from 'react';
+import { type ChangeEvent, type FormEvent, useEffect, useState } from 'react';
 import { Button, Card, Input } from '@facturation/ui';
 import type { UpsertIssuerRequest } from '@facturation/core';
 import { ApiError } from '../lib/api';
-import { getIssuer, upsertIssuer } from '../lib/issuer';
+import { getIssuer, issuerLogoUrl, uploadIssuerLogo, upsertIssuer } from '../lib/issuer';
 import { useToast } from '../components/Toast';
 
 interface IssuerFields {
@@ -61,6 +61,8 @@ export function IssuerPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [logoUploading, setLogoUploading] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -79,6 +81,7 @@ export function IssuerPage() {
             gstNumber: issuer.gstNumber ?? '',
             qstNumber: issuer.qstNumber ?? '',
           });
+          if (issuer.logoPath) setLogoUrl(issuerLogoUrl(issuer.logoPath));
         }
       } catch (err) {
         if (active) setError(err instanceof Error ? err.message : 'Erreur de chargement.');
@@ -93,6 +96,22 @@ export function IssuerPage() {
 
   const change = (key: keyof IssuerFields, value: string) =>
     setFields((prev) => ({ ...prev, [key]: value }));
+
+  const handleLogoUpload = async (e: ChangeEvent<HTMLInputElement>): Promise<void> => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLogoUploading(true);
+    try {
+      const updated = await uploadIssuerLogo(file);
+      if (updated.logoPath) setLogoUrl(issuerLogoUrl(updated.logoPath));
+      notify('Logo mis à jour', 'success');
+    } catch (err) {
+      notify(err instanceof ApiError ? err.message : 'Erreur lors du téléversement du logo.', 'error');
+    } finally {
+      setLogoUploading(false);
+      e.target.value = '';
+    }
+  };
 
   const submit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
@@ -124,6 +143,7 @@ export function IssuerPage() {
       {loading ? (
         <p className="text-sm text-muted">Chargement…</p>
       ) : (
+        <>
         <Card padded>
           {error && (
             <div
@@ -161,6 +181,30 @@ export function IssuerPage() {
             </Button>
           </form>
         </Card>
+
+        <Card padded>
+          <h2 className="text-sm font-semibold text-fg">Logo de la facture</h2>
+          <p className="mt-1 text-xs text-muted">PNG ou JPG, 2 Mo maximum. Affiché en en-tête du PDF.</p>
+          {logoUrl && (
+            <img
+              src={logoUrl}
+              alt="Logo actuel"
+              className="mt-3 max-h-20 rounded-md border border-border bg-surface-2 object-contain p-2"
+            />
+          )}
+          <label className="mt-3 flex flex-col gap-2">
+            <span className="text-sm text-muted">Sélectionner un fichier</span>
+            <input
+              type="file"
+              accept="image/png,image/jpeg"
+              disabled={logoUploading}
+              onChange={(e) => void handleLogoUpload(e)}
+              className="text-sm text-fg file:mr-3 file:rounded-lg file:border-0 file:bg-brand file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-brand-fg hover:file:opacity-90 disabled:opacity-50"
+            />
+          </label>
+          {logoUploading && <p className="mt-2 text-xs text-muted">Téléversement…</p>}
+        </Card>
+        </>
       )}
     </div>
   );

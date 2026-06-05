@@ -108,7 +108,10 @@ export async function apiFetch<T>(
   const token = getAccessToken();
 
   const headers = new Headers(options.headers);
-  headers.set('Content-Type', 'application/json');
+  // Ne pas forcer le Content-Type pour FormData : le navigateur fixe la frontière multipart.
+  if (!(options.body instanceof FormData)) {
+    headers.set('Content-Type', 'application/json');
+  }
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
   }
