@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Button, Card, Input } from '@facturation/ui';
 import {
   computeInvoiceTotals,
@@ -14,7 +14,7 @@ import { ApiError } from '../lib/api';
 import { listClients } from '../lib/clients';
 import { listContacts } from '../lib/contacts';
 import { listProjects } from '../lib/projects';
-import { createInvoice, dollarsToCents } from '../lib/invoices';
+import { centsToInput, createInvoice, dollarsToCents, getInvoice, updateInvoice } from '../lib/invoices';
 
 interface LineDraft {
   description: string;
@@ -56,6 +56,8 @@ function addDays(baseYmd: string, days: number): string {
 
 export function InvoiceFormPage() {
   const navigate = useNavigate();
+  const { id } = useParams<{ id?: string }>();
+  const isEdit = Boolean(id);
   const [clients, setClients] = useState<Client[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [companyContacts, setCompanyContacts] = useState<Contact[]>([]);
@@ -82,6 +84,41 @@ export function InvoiceFormPage() {
       }
     })();
   }, []);
+
+  // Mode édition : précharge la facture existante dans le formulaire.
+  useEffect(() => {
+    if (!isEdit || !id) return;
+    let active = true;
+    void (async () => {
+      try {
+        const inv = await getInvoice(id);
+        if (!active) return;
+        if (inv.projectId) setProjectId(inv.projectId);
+        else setClientId(inv.clientId);
+        setBillingContactId(inv.billingContactId ?? '');
+        setIssueDate(inv.issueDate.slice(0, 10));
+        if (inv.dueDate) {
+          setDueTerm('custom');
+          setDueDate(inv.dueDate.slice(0, 10));
+        }
+        setNotes(inv.notes ?? '');
+        setLines(
+          inv.lines.length > 0
+            ? inv.lines.map((l) => ({
+                description: l.description,
+                quantity: String(l.quantity),
+                unitPrice: centsToInput(l.unitPriceCents),
+              }))
+            : [{ ...EMPTY_LINE }],
+        );
+      } catch (err) {
+        if (active) setError(err instanceof Error ? err.message : 'Erreur de chargement.');
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [isEdit, id]);
 
   const selectedProject = projectId ? (projects.find((p) => p.id === projectId) ?? null) : null;
   const effectiveClientId = selectedProject ? selectedProject.companyId : clientId;
@@ -158,10 +195,10 @@ export function InvoiceFormPage() {
           unitPriceCents: dollarsToCents(l.unitPrice),
         })),
       };
-      const inv = await createInvoice(payload);
+      const inv = isEdit && id ? await updateInvoice(id, payload) : await createInvoice(payload);
       navigate(`/invoices/${inv.id}`);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Erreur lors de la création.');
+      setError(err instanceof ApiError ? err.message : "Erreur lors de l'enregistrement.");
     } finally {
       setSubmitting(false);
     }
@@ -170,7 +207,9 @@ export function InvoiceFormPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold tracking-tight">Nouvelle facture</h1>
+        <h1 className="text-2xl font-bold tracking-tight">
+          {isEdit ? 'Modifier la facture' : 'Nouvelle facture'}
+        </h1>
         <Link
           to="/invoices"
           className="text-sm text-muted hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
@@ -416,7 +455,13 @@ export function InvoiceFormPage() {
         </Card>
 
         <Button type="submit" disabled={submitting}>
-          {submitting ? 'Création…' : 'Créer la facture'}
+          {isEdit
+            ? submitting
+              ? 'Enregistrement…'
+              : 'Enregistrer'
+            : submitting
+              ? 'Création…'
+              : 'Créer la facture'}
         </Button>
       </form>
     </div>

@@ -8,6 +8,8 @@ const STATUSES: InvoiceStatus[] = ['BROUILLON', 'ENVOYEE', 'PAYEE', 'ANNULEE'];
 interface StatusSelectProps {
   value: InvoiceStatus;
   onChange: (status: InvoiceStatus) => void;
+  /** Intercepte le passage à PAYEE (pour saisir date + mode de paiement). */
+  onPayeeRequest?: () => void;
   disabled?: boolean;
 }
 
@@ -15,7 +17,7 @@ interface StatusSelectProps {
  * Pastille de statut cliquable façon « apps modernes » : le badge ouvre un
  * menu déroulant pour changer le statut. Utilisable en liste et en détail.
  */
-export function StatusSelect({ value, onChange, disabled }: StatusSelectProps) {
+export function StatusSelect({ value, onChange, onPayeeRequest, disabled }: StatusSelectProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -70,7 +72,12 @@ export function StatusSelect({ value, onChange, disabled }: StatusSelectProps) {
                 e.preventDefault();
                 e.stopPropagation();
                 setOpen(false);
-                if (s !== value) onChange(s);
+                if (s === value) return;
+                if (s === 'PAYEE' && onPayeeRequest) {
+                  onPayeeRequest();
+                } else {
+                  onChange(s);
+                }
               }}
               className={`flex w-full items-center justify-between rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-surface-2 ${
                 s === value ? 'text-brand' : 'text-fg'

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, buttonClasses } from '@facturation/ui';
-import type { Invoice, InvoiceStatus } from '@facturation/core';
+import type { Invoice, InvoiceStatus, PaymentMethod } from '@facturation/core';
 import {
   archiveInvoice,
   listInvoices,
@@ -10,6 +10,8 @@ import {
 } from '../lib/invoices';
 import { useToast } from '../components/Toast';
 import { InvoiceTable } from './invoices/InvoiceTable';
+import { PaymentModal } from '../components/PaymentModal';
+import { SendInvoiceModal } from './invoices/SendInvoiceModal';
 import type { InvoiceGroupBy } from '../lib/invoice-view';
 
 type FilterChip = InvoiceStatus | 'overdue' | 'all';
@@ -39,6 +41,8 @@ export function InvoicesPage() {
   const [activeFilter, setActiveFilter] = useState<FilterChip>('all');
   const [groupBy, setGroupBy] = useState<InvoiceGroupBy>('none');
   const [hitLimit, setHitLimit] = useState(false);
+  const [pendingPayeeId, setPendingPayeeId] = useState<string | null>(null);
+  const [reminderInvoice, setReminderInvoice] = useState<Invoice | null>(null);
 
   const fetchInvoices = useCallback(
     async (filter: FilterChip, includeArchived: boolean): Promise<void> => {
@@ -74,17 +78,25 @@ export function InvoicesPage() {
     setActiveFilter(chip);
   };
 
-  const changeStatus = async (id: string, status: InvoiceStatus): Promise<void> => {
+  const changeStatus = async (
+    id: string,
+    status: InvoiceStatus,
+    paidAt?: string,
+    paymentMethod?: PaymentMethod,
+  ): Promise<void> => {
     try {
-      await updateInvoiceStatus(id, status);
-      setItems((prev) => prev.map((inv) => (inv.id === id ? { ...inv, status } : inv)));
+      const updated = await updateInvoiceStatus(id, status, paidAt, paymentMethod);
+      setItems((prev) => prev.map((inv) => (inv.id === id ? updated : inv)));
       notify('Statut mis à jour', 'success');
     } catch (err) {
-      notify(
-        err instanceof Error ? err.message : 'Erreur lors de la mise à jour.',
-        'error',
-      );
+      notify(err instanceof Error ? err.message : 'Erreur lors de la mise à jour.', 'error');
     }
+  };
+
+  const handlePaymentConfirm = (paidAt: string, paymentMethod: PaymentMethod): void => {
+    const id = pendingPayeeId;
+    setPendingPayeeId(null);
+    if (id) void changeStatus(id, 'PAYEE', paidAt, paymentMethod);
   };
 
   const toggleArchive = async (inv: Invoice): Promise<void> => {
@@ -208,10 +220,27 @@ export function InvoicesPage() {
             items={items}
             groupBy={groupBy}
             onStatusChange={(id, status) => void changeStatus(id, status)}
+            onPayeeRequest={(id) => setPendingPayeeId(id)}
+            onSendReminder={(inv) => setReminderInvoice(inv)}
             onToggleArchive={(inv) => void toggleArchive(inv)}
           />
         )}
       </Card>
+
+      <PaymentModal
+        open={pendingPayeeId !== null}
+        onClose={() => setPendingPayeeId(null)}
+        onConfirm={handlePaymentConfirm}
+      />
+      {reminderInvoice && (
+        <SendInvoiceModal
+          open
+          mode="remind"
+          invoice={reminderInvoice}
+          onClose={() => setReminderInvoice(null)}
+          onSent={() => notify('Rappel envoyé', 'success')}
+        />
+      )}
     </div>
   );
 }

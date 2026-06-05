@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Invoice } from '@facturation/core';
 import {
   formatInvoiceNumber,
+  formatInvoiceRef,
   groupInvoices,
   relativeDueLabel,
 } from './invoice-view';
@@ -14,6 +15,9 @@ function makeInvoice(overrides: Partial<Invoice> & { id: string }): Invoice {
   return {
     id: overrides.id,
     number: overrides.number ?? 1,
+    reference: overrides.reference ?? null,
+    sequenceYear: overrides.sequenceYear ?? null,
+    sequenceNo: overrides.sequenceNo ?? null,
     status: overrides.status ?? 'BROUILLON',
     clientId: overrides.clientId ?? 'client-1',
     client: overrides.client,
@@ -23,6 +27,8 @@ function makeInvoice(overrides: Partial<Invoice> & { id: string }): Invoice {
     dueDate: overrides.dueDate ?? null,
     notes: null,
     archivedAt: null,
+    paidAt: overrides.paidAt ?? null,
+    paymentMethod: overrides.paymentMethod ?? null,
     subtotalCents: overrides.subtotalCents ?? 10000,
     gstCents: overrides.gstCents ?? 500,
     qstCents: overrides.qstCents ?? 997,
@@ -54,6 +60,20 @@ describe('formatInvoiceNumber', () => {
 
   it('handles numbers greater than 4 digits', () => {
     expect(formatInvoiceNumber(10000)).toBe('FAC-10000');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// formatInvoiceRef
+// ---------------------------------------------------------------------------
+
+describe('formatInvoiceRef', () => {
+  it('retourne la référence officielle si présente', () => {
+    expect(formatInvoiceRef(makeInvoice({ id: 'i1', reference: 'FAC-2026-0001' }))).toBe('FAC-2026-0001');
+  });
+
+  it('retourne « Brouillon » sans référence', () => {
+    expect(formatInvoiceRef(makeInvoice({ id: 'i1', reference: null }))).toBe('Brouillon');
   });
 });
 

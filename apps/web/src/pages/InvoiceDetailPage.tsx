@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Badge, Button, Card } from '@facturation/ui';
-import { formatCents, type Invoice, type InvoiceStatus } from '@facturation/core';
+import { formatCents, type Invoice, type InvoiceStatus, type PaymentMethod } from '@facturation/core';
 import {
   archiveInvoice,
   deleteInvoice,
@@ -13,6 +13,15 @@ import {
 import { useToast } from '../components/Toast';
 import { useConfirm } from '../components/Confirm';
 import { StatusSelect } from '../components/StatusSelect';
+import { PaymentModal } from '../components/PaymentModal';
+import { SendInvoiceModal } from './invoices/SendInvoiceModal';
+import { PAYMENT_METHOD_LABEL } from '../lib/payment-method';
+
+/** Une facture ENVOYEE dont l'échéance est dépassée est « en retard ». */
+function isOverdue(invoice: Invoice): boolean {
+  if (invoice.status !== 'ENVOYEE' || !invoice.dueDate) return false;
+  return new Date(invoice.dueDate) < new Date();
+}
 
 export function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -23,6 +32,11 @@ export function InvoiceDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [sendModal, setSendModal] = useState<{ open: boolean; mode: 'send' | 'remind' }>({
+    open: false,
+    mode: 'send',
+  });
 
   const load = useCallback(async (): Promise<void> => {
     if (!id) return;
@@ -41,11 +55,15 @@ export function InvoiceDetailPage() {
     void load();
   }, [load]);
 
-  const changeStatus = async (status: InvoiceStatus): Promise<void> => {
+  const changeStatus = async (
+    status: InvoiceStatus,
+    paidAt?: string,
+    paymentMethod?: PaymentMethod,
+  ): Promise<void> => {
     if (!id) return;
     setBusy(true);
     try {
-      setInvoice(await updateInvoiceStatus(id, status));
+      setInvoice(await updateInvoiceStatus(id, status, paidAt, paymentMethod));
       notify('Statut mis à jour', 'success');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erreur lors du changement de statut.';
@@ -55,10 +73,15 @@ export function InvoiceDetailPage() {
     }
   };
 
+  const handlePaymentConfirm = (paidAt: string, paymentMethod: PaymentMethod): void => {
+    setPaymentModalOpen(false);
+    void changeStatus('PAYEE', paidAt, paymentMethod);
+  };
+
   const downloadPdf = async (): Promise<void> => {
     if (!invoice) return;
     try {
-      await downloadInvoicePdf(invoice.id, invoice.number);
+      await downloadInvoicePdf(invoice.id, invoice.reference ?? invoice.number);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erreur lors du téléchargement du PDF.';
       notify(msg, 'error');
@@ -102,14 +125,16 @@ export function InvoiceDetailPage() {
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold tracking-tight text-fg">
-            {invoice ? `Facture #${invoice.number}` : 'Facture'}
+            {invoice ? (invoice.reference ? `Facture ${invoice.reference}` : 'Brouillon') : 'Facture'}
           </h1>
           {invoice && (
             <StatusSelect
               value={invoice.status}
               onChange={(s) => void changeStatus(s as InvoiceStatus)}
+              onPayeeRequest={() => setPaymentModalOpen(true)}
             />
           )}
+          {invoice && isOverdue(invoice) && <Badge tone="danger">En retard</Badge>}
           {invoice?.archivedAt && <Badge tone="warning">Archivé</Badge>}
         </div>
         <Link
@@ -138,7 +163,15 @@ export function InvoiceDetailPage() {
               )}
               <p className="mt-2 text-muted">Émise le {invoice.issueDate.slice(0, 10)}</p>
               {invoice.dueDate && (
-                <p className="text-muted">Échéance : {invoice.dueDate.slice(0, 10)}</p>
+                <p className={isOverdue(invoice) ? 'font-medium text-danger' : 'text-muted'}>
+                  Échéance : {invoice.dueDate.slice(0, 10)}
+                </p>
+              )}
+              {invoice.status === 'PAYEE' && invoice.paidAt && (
+                <p className="text-success">
+                  Payée le {invoice.paidAt.slice(0, 10)}
+                  {invoice.paymentMethod ? ` — ${PAYMENT_METHOD_LABEL[invoice.paymentMethod]}` : ''}
+                </p>
               )}
             </div>
           </Card>
@@ -192,7 +225,34 @@ export function InvoiceDetailPage() {
             </Card>
           )}
 
-          <div className="flex items-center justify-end gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {invoice.editable && (
+              <Button
+                variant="secondary"
+                disabled={busy}
+                onClick={() => navigate(`/invoices/${invoice.id}/edit`)}
+              >
+                Modifier
+              </Button>
+            )}
+            {(invoice.status === 'BROUILLON' || invoice.status === 'ENVOYEE') && (
+              <Button
+                variant="secondary"
+                disabled={busy}
+                onClick={() => setSendModal({ open: true, mode: 'send' })}
+              >
+                Envoyer par courriel
+              </Button>
+            )}
+            {invoice.status === 'ENVOYEE' && (
+              <Button
+                variant="secondary"
+                disabled={busy}
+                onClick={() => setSendModal({ open: true, mode: 'remind' })}
+              >
+                Envoyer un rappel
+              </Button>
+            )}
             <Button variant="primary" disabled={busy} onClick={() => void downloadPdf()}>
               Télécharger le PDF
             </Button>
@@ -205,6 +265,23 @@ export function InvoiceDetailPage() {
               </Button>
             )}
           </div>
+
+          <PaymentModal
+            open={paymentModalOpen}
+            onClose={() => setPaymentModalOpen(false)}
+            onConfirm={handlePaymentConfirm}
+            busy={busy}
+          />
+          <SendInvoiceModal
+            open={sendModal.open}
+            mode={sendModal.mode}
+            invoice={invoice}
+            onClose={() => setSendModal((s) => ({ ...s, open: false }))}
+            onSent={() => {
+              notify(sendModal.mode === 'send' ? 'Facture envoyée par courriel' : 'Rappel envoyé', 'success');
+              void load();
+            }}
+          />
         </>
       )}
     </div>

@@ -125,7 +125,7 @@ export function HomePage() {
                   >
                     <div className="min-w-0">
                       <p className="font-medium text-fg">
-                        #{inv.number} — {inv.client?.companyName ?? '—'}
+                        {inv.reference ?? 'Brouillon'} — {inv.client?.companyName ?? '—'}
                       </p>
                       <p className="text-muted">{inv.issueDate.slice(0, 10)}</p>
                     </div>

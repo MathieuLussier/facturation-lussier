@@ -4,6 +4,10 @@ import type {
   InvoiceStats,
   InvoiceStatus,
   Paginated,
+  PaymentMethod,
+  SendInvoiceRequest,
+  SendInvoiceResponse,
+  UpdateInvoiceRequest,
 } from '@facturation/core';
 import { ApiError, apiFetch, buildApiPath, getAccessToken, httpErrorMessage } from './api';
 
@@ -57,10 +61,44 @@ export function createInvoice(data: CreateInvoiceRequest): Promise<Invoice> {
   return apiFetch<Invoice>('/invoices', { method: 'POST', body: JSON.stringify(data) });
 }
 
-export function updateInvoiceStatus(id: string, status: InvoiceStatus): Promise<Invoice> {
+/** Édite le contenu d'une facture (BROUILLON ou ENVOYEE). */
+export function updateInvoice(id: string, data: UpdateInvoiceRequest): Promise<Invoice> {
+  return apiFetch<Invoice>(`/invoices/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+/**
+ * Change le statut d'une facture. Pour PAYEE, fournir paidAt + paymentMethod
+ * (la facture est marquée payée avec date + mode).
+ */
+export function updateInvoiceStatus(
+  id: string,
+  status: InvoiceStatus,
+  paidAt?: string,
+  paymentMethod?: PaymentMethod,
+): Promise<Invoice> {
   return apiFetch<Invoice>(`/invoices/${id}/status`, {
     method: 'PATCH',
-    body: JSON.stringify({ status }),
+    body: JSON.stringify({
+      status,
+      ...(paidAt ? { paidAt } : {}),
+      ...(paymentMethod ? { paymentMethod } : {}),
+    }),
+  });
+}
+
+/** Envoie la facture par courriel (PDF joint). Finalise un brouillon (FAC-AAAA + ENVOYEE). */
+export function sendInvoice(id: string, data: SendInvoiceRequest): Promise<SendInvoiceResponse> {
+  return apiFetch<SendInvoiceResponse>(`/invoices/${id}/send`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+/** Envoie un rappel de paiement par courriel (facture ENVOYEE). */
+export function sendInvoiceReminder(id: string, data: SendInvoiceRequest): Promise<{ sent: boolean }> {
+  return apiFetch<{ sent: boolean }>(`/invoices/${id}/remind`, {
+    method: 'POST',
+    body: JSON.stringify(data),
   });
 }
 
@@ -77,7 +115,7 @@ export function unarchiveInvoice(id: string): Promise<Invoice> {
 }
 
 /** Télécharge le PDF d'une facture (fetch authentifié → blob → téléchargement navigateur). */
-export async function downloadInvoicePdf(id: string, number: number): Promise<void> {
+export async function downloadInvoicePdf(id: string, refOrNumber: string | number): Promise<void> {
   const token = getAccessToken();
   const res = await fetch(buildApiPath(`/invoices/${id}/pdf`), {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -90,7 +128,7 @@ export async function downloadInvoicePdf(id: string, number: number): Promise<vo
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `facture-${number}.pdf`;
+  a.download = `facture-${refOrNumber}.pdf`;
   document.body.appendChild(a);
   a.click();
   a.remove();

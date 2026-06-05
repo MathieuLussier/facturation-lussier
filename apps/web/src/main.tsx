@@ -50,6 +50,7 @@ createRoot(rootElement).render(
             <Route path="/invoices" element={<InvoicesPage />} />
             <Route path="/invoices/new" element={<InvoiceFormPage />} />
             <Route path="/invoices/:id" element={<InvoiceDetailPage />} />
+            <Route path="/invoices/:id/edit" element={<InvoiceFormPage />} />
             <Route
               path="/issuer"
               element={

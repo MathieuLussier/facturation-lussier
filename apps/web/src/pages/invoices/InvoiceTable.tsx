@@ -4,7 +4,7 @@ import { Badge, Button } from '@facturation/ui';
 import { formatCents, type Invoice, type InvoiceStatus } from '@facturation/core';
 import { StatusSelect } from '../../components/StatusSelect';
 import {
-  formatInvoiceNumber,
+  formatInvoiceRef,
   groupInvoices,
   relativeDueLabel,
   type InvoiceGroupBy,
@@ -14,6 +14,8 @@ interface InvoiceTableProps {
   items: Invoice[];
   groupBy: InvoiceGroupBy;
   onStatusChange: (id: string, status: InvoiceStatus) => void;
+  onPayeeRequest: (id: string) => void;
+  onSendReminder: (inv: Invoice) => void;
   onToggleArchive: (inv: Invoice) => void;
 }
 
@@ -21,6 +23,8 @@ export function InvoiceTable({
   items,
   groupBy,
   onStatusChange,
+  onPayeeRequest,
+  onSendReminder,
   onToggleArchive,
 }: InvoiceTableProps) {
   const navigate = useNavigate();
@@ -72,6 +76,8 @@ export function InvoiceTable({
                 onToggleCollapse={() => toggleCollapse(group.key)}
                 today={today}
                 onStatusChange={onStatusChange}
+                onPayeeRequest={onPayeeRequest}
+                onSendReminder={onSendReminder}
                 onToggleArchive={onToggleArchive}
                 onRowClick={(id) => navigate(`/invoices/${id}`)}
               />
@@ -104,6 +110,8 @@ interface GroupRowsProps {
   onToggleCollapse: () => void;
   today: Date;
   onStatusChange: (id: string, status: InvoiceStatus) => void;
+  onPayeeRequest: (id: string) => void;
+  onSendReminder: (inv: Invoice) => void;
   onToggleArchive: (inv: Invoice) => void;
   onRowClick: (id: string) => void;
 }
@@ -115,6 +123,8 @@ function GroupRows({
   onToggleCollapse,
   today,
   onStatusChange,
+  onPayeeRequest,
+  onSendReminder,
   onToggleArchive,
   onRowClick,
 }: GroupRowsProps) {
@@ -147,6 +157,8 @@ function GroupRows({
             inv={inv}
             today={today}
             onStatusChange={onStatusChange}
+            onPayeeRequest={onPayeeRequest}
+            onSendReminder={onSendReminder}
             onToggleArchive={onToggleArchive}
             onRowClick={onRowClick}
           />
@@ -163,11 +175,21 @@ interface InvoiceRowProps {
   inv: Invoice;
   today: Date;
   onStatusChange: (id: string, status: InvoiceStatus) => void;
+  onPayeeRequest: (id: string) => void;
+  onSendReminder: (inv: Invoice) => void;
   onToggleArchive: (inv: Invoice) => void;
   onRowClick: (id: string) => void;
 }
 
-function InvoiceRow({ inv, today, onStatusChange, onToggleArchive, onRowClick }: InvoiceRowProps) {
+function InvoiceRow({
+  inv,
+  today,
+  onStatusChange,
+  onPayeeRequest,
+  onSendReminder,
+  onToggleArchive,
+  onRowClick,
+}: InvoiceRowProps) {
   const dueLabel = relativeDueLabel(inv.dueDate, inv.status, today);
 
   return (
@@ -175,9 +197,11 @@ function InvoiceRow({ inv, today, onStatusChange, onToggleArchive, onRowClick }:
       className="cursor-pointer border-b border-border transition-colors hover:bg-surface-2"
       onClick={() => onRowClick(inv.id)}
     >
-      <td className="px-4 py-2.5 whitespace-nowrap font-medium text-fg">
+      <td className="px-4 py-2.5 whitespace-nowrap font-medium">
         <span className="flex items-center gap-2">
-          {formatInvoiceNumber(inv.number)}
+          <span className={inv.reference ? 'text-fg' : 'italic text-muted'}>
+            {formatInvoiceRef(inv)}
+          </span>
           {inv.archivedAt && <Badge tone="warning">Archivé</Badge>}
         </span>
       </td>
@@ -203,23 +227,28 @@ function InvoiceRow({ inv, today, onStatusChange, onToggleArchive, onRowClick }:
         {formatCents(inv.totalCents)}
       </td>
 
-      <td
-        className="px-4 py-2.5"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <StatusSelect
-          value={inv.status}
-          onChange={(s) => onStatusChange(inv.id, s)}
-        />
+      <td className="px-4 py-2.5" onClick={(e) => e.stopPropagation()}>
+        <div className="flex flex-col items-start gap-1">
+          <StatusSelect
+            value={inv.status}
+            onChange={(s) => onStatusChange(inv.id, s)}
+            onPayeeRequest={() => onPayeeRequest(inv.id)}
+          />
+          {dueLabel.overdue && <Badge tone="danger">En retard</Badge>}
+        </div>
       </td>
 
-      <td
-        className="px-4 py-2.5"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <Button variant="secondary" size="sm" onClick={() => onToggleArchive(inv)}>
-          {inv.archivedAt ? 'Désarchiver' : 'Archiver'}
-        </Button>
+      <td className="px-4 py-2.5" onClick={(e) => e.stopPropagation()}>
+        <div className="flex flex-col items-start gap-1">
+          <Button variant="secondary" size="sm" onClick={() => onToggleArchive(inv)}>
+            {inv.archivedAt ? 'Désarchiver' : 'Archiver'}
+          </Button>
+          {dueLabel.overdue && (
+            <Button variant="secondary" size="sm" onClick={() => onSendReminder(inv)}>
+              Rappel
+            </Button>
+          )}
+        </div>
       </td>
     </tr>
   );

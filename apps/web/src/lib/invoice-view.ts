@@ -1,7 +1,16 @@
 import type { Invoice, InvoiceStatus } from '@facturation/core';
 import { INVOICE_STATUS_LABEL } from './invoice-status';
 
-/** Formate un numéro de facture en « FAC-0001 ». */
+/**
+ * Référence affichée d'une facture : « FAC-AAAA-NNNN » si finalisée, sinon « Brouillon ».
+ * Réexporté depuis @facturation/core (source de vérité partagée API ↔ front).
+ */
+export { formatInvoiceRef } from '@facturation/core';
+
+/**
+ * @deprecated Utiliser {@link formatInvoiceRef}. Formate un numéro interne en « FAC-0001 ».
+ * Conservé pour compatibilité (tests).
+ */
 export function formatInvoiceNumber(n: number): string {
   return `FAC-${String(n).padStart(4, '0')}`;
 }
