@@ -16,6 +16,8 @@ export interface IssuerProfile {
   gstNumber: string | null;
   /** Numéro d'inscription TVQ. */
   qstNumber: string | null;
+  /** Chemin relatif du logo téléversé (ex. « uploads/logo-….png ») ; null si absent. */
+  logoPath: string | null;
   createdAt: string;
   updatedAt: string;
 }

@@ -24,6 +24,8 @@ export type {
 
 export type { IssuerProfile, UpsertIssuerRequest } from './issuer';
 
+export type { Product, CreateProductRequest, UpdateProductRequest } from './product';
+
 export type { Contact, CreateContactRequest, UpdateContactRequest } from './contact';
 
 export type {
@@ -39,14 +41,19 @@ export {
   computeLineAmountCents,
   computeInvoiceTotals,
   formatCents,
+  formatInvoiceRef,
 } from './invoice';
 export type {
   Invoice,
   InvoiceLine,
   InvoiceStatus,
+  PaymentMethod,
   InvoiceTotals,
   InvoiceStats,
   CreateInvoiceLineInput,
   CreateInvoiceRequest,
+  UpdateInvoiceRequest,
   UpdateInvoiceStatusRequest,
+  SendInvoiceRequest,
+  SendInvoiceResponse,
 } from './invoice';

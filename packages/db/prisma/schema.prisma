@@ -109,6 +109,8 @@ model IssuerProfile {
   country     String?  @default("Canada")
   gstNumber   String?
   qstNumber   String?
+  /** Chemin relatif du logo téléversé (ex. "uploads/logo-….png") ; affiché sur le PDF. */
+  logoPath    String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -126,10 +128,24 @@ enum InvoiceStatus {
   ANNULEE
 }
 
+/** Mode d'encaissement enregistré lorsqu'une facture est marquée payée. */
+enum PaymentMethod {
+  VIREMENT
+  CHEQUE
+  CARTE
+  COMPTANT
+  AUTRE
+}
+
 model Invoice {
   id            String        @id @default(cuid())
   number        Int           @unique @default(autoincrement())
   status        InvoiceStatus @default(BROUILLON)
+  /** Référence officielle « FAC-AAAA-NNNN », assignée à la finalisation (1re envoi). Null tant que brouillon. */
+  reference     String?       @unique
+  /** Année et rang du compteur de la référence (null tant que brouillon). */
+  sequenceYear  Int?
+  sequenceNo    Int?
   clientId         String
   client           Client        @relation(fields: [clientId], references: [id], onDelete: Restrict)
   projectId        String?
@@ -140,6 +156,9 @@ model Invoice {
   dueDate       DateTime?
   notes         String?
   archivedAt    DateTime?
+  /** Encaissement (« marquer payée ») : date + mode. Null hors statut PAYEE. */
+  paidAt        DateTime?
+  paymentMethod PaymentMethod?
   subtotalCents Int           @default(0)
   gstCents      Int           @default(0)
   qstCents      Int           @default(0)
@@ -154,6 +173,14 @@ model Invoice {
   @@index([projectId])
   @@index([archivedAt])
   @@map("invoices")
+}
+
+/** Compteur de numérotation sans trou, une ligne par année (incrémenté en transaction). */
+model InvoiceSequence {
+  year       Int @id
+  lastNumber Int @default(0)
+
+  @@map("invoice_sequences")
 }
 
 model InvoiceLine {
@@ -218,4 +245,25 @@ model Project {
 
   @@index([companyId])
   @@map("projects")
+}
+
+// ---------------------------------------------------------------------------
+// Catalogue de produits / services (lignes de facture réutilisables)
+// ---------------------------------------------------------------------------
+
+model Product {
+  id             String    @id @default(cuid())
+  name           String
+  description    String?
+  unitPriceCents Int
+  /** Unité libre : « heure », « forfait », « unité », etc. */
+  unit           String?
+  isActive       Boolean   @default(true)
+  archivedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([archivedAt])
+  @@index([name])
+  @@map("products")
 }
