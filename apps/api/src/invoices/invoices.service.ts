@@ -1,4 +1,10 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type {
   Client as DbClient,
@@ -10,6 +16,7 @@ import type {
 import {
   computeInvoiceTotals,
   computeLineAmountCents,
+  formatCents,
   type Client,
   type Contact,
   type CreateInvoiceRequest,
@@ -21,9 +28,14 @@ import {
   type PaymentMethod,
   type Project,
   type ProjectStatus,
+  type SendInvoiceRequest,
+  type SendInvoiceResponse,
   type UpdateInvoiceRequest,
 } from '@facturation/core';
 import { PrismaService } from '../prisma/prisma.service';
+import { IssuerService } from '../issuer/issuer.service';
+import { MailService } from '../mail/mail.service';
+import { InvoicePdfService } from './invoice-pdf.service';
 
 interface ListParams {
   page?: number;
@@ -144,6 +156,32 @@ function toInvoice(row: InvoiceRow): Invoice {
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
+}
+
+/** Référence lisible d'une facture pour les courriels (réf. officielle ou n° interne). */
+function invoiceRefLabel(invoice: Invoice): string {
+  return invoice.reference ?? `#${invoice.number}`;
+}
+
+/** Corps par défaut d'un courriel d'envoi de facture (si l'utilisateur n'en saisit pas). */
+function defaultSendBody(invoice: Invoice): string {
+  return (
+    `Bonjour,\n\n` +
+    `Veuillez trouver ci-joint la facture ${invoiceRefLabel(invoice)} ` +
+    `d'un montant de ${formatCents(invoice.totalCents)}.\n\n` +
+    `N'hésitez pas à nous contacter pour toute question.\n\nCordialement`
+  );
+}
+
+/** Corps par défaut d'un courriel de rappel (facture en attente de paiement). */
+function defaultReminderBody(invoice: Invoice): string {
+  const echeance = invoice.dueDate ? ` (échéance : ${invoice.dueDate.slice(0, 10)})` : '';
+  return (
+    `Bonjour,\n\n` +
+    `Nous vous rappelons que la facture ${invoiceRefLabel(invoice)} ` +
+    `d'un montant de ${formatCents(invoice.totalCents)} est toujours en attente de règlement${echeance}.\n\n` +
+    `Merci de régulariser cette situation.\n\nCordialement`
+  );
 }
 
 @Injectable()
@@ -445,6 +483,69 @@ export class InvoicesService {
     });
 
     return toInvoice(row);
+  }
+
+  /**
+   * Envoie la facture par courriel (PDF en pièce jointe). Si elle est en
+   * brouillon, elle est d'abord finalisée (référence officielle + ENVOYEE) pour
+   * que le PDF porte le bon numéro. Les services PDF/émetteur/mail sont fournis
+   * par le contrôleur (le service factures ne dépend que de Prisma).
+   */
+  async sendInvoice(
+    id: string,
+    dto: SendInvoiceRequest,
+    pdf: InvoicePdfService,
+    issuerService: IssuerService,
+    mail: MailService,
+  ): Promise<SendInvoiceResponse> {
+    if (!mail.isConfigured) {
+      throw new ServiceUnavailableException(
+        "L'envoi de courriels n'est pas configuré (SMTP). Renseignez les variables SMTP_* dans .env.",
+      );
+    }
+    let invoice = await this.findById(id);
+    if (invoice.status === 'BROUILLON') {
+      invoice = await this.finalizeToEnvoyee(id);
+    }
+    const issuer = await issuerService.get();
+    const buffer = await pdf.generate(invoice, issuer);
+    await mail.sendInvoiceEmail({
+      to: dto.to,
+      subject: dto.subject,
+      body: dto.body && dto.body.trim() ? dto.body : defaultSendBody(invoice),
+      pdfBuffer: buffer,
+      attachmentName: `facture-${invoice.reference ?? invoice.number}.pdf`,
+    });
+    return { sent: true, newStatus: invoice.status };
+  }
+
+  /** Envoie un rappel de paiement (facture ENVOYEE uniquement ; sans changement de statut). */
+  async sendReminder(
+    id: string,
+    dto: SendInvoiceRequest,
+    pdf: InvoicePdfService,
+    issuerService: IssuerService,
+    mail: MailService,
+  ): Promise<{ sent: boolean }> {
+    if (!mail.isConfigured) {
+      throw new ServiceUnavailableException(
+        "L'envoi de courriels n'est pas configuré (SMTP). Renseignez les variables SMTP_* dans .env.",
+      );
+    }
+    const invoice = await this.findById(id);
+    if (invoice.status !== 'ENVOYEE') {
+      throw new BadRequestException('Seules les factures envoyées peuvent faire l’objet d’un rappel.');
+    }
+    const issuer = await issuerService.get();
+    const buffer = await pdf.generate(invoice, issuer);
+    await mail.sendInvoiceEmail({
+      to: dto.to,
+      subject: dto.subject,
+      body: dto.body && dto.body.trim() ? dto.body : defaultReminderBody(invoice),
+      pdfBuffer: buffer,
+      attachmentName: `facture-${invoice.reference ?? invoice.number}.pdf`,
+    });
+    return { sent: true };
   }
 
   async archive(id: string): Promise<Invoice> {

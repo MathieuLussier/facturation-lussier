@@ -1,7 +1,15 @@
 import 'reflect-metadata';
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { InvoicesService } from './invoices.service';
 import type { PrismaService } from '../prisma/prisma.service';
+import type { InvoicePdfService } from './invoice-pdf.service';
+import type { IssuerService } from '../issuer/issuer.service';
+import type { MailService } from '../mail/mail.service';
 
 function makeClientRow() {
   return {
@@ -427,5 +435,64 @@ describe('InvoicesService', () => {
     invoice.update.mockResolvedValue(makeInvoiceRow({ status: 'PAYEE', reference: 'FAC-2026-0001', paymentMethod: 'VIREMENT' }));
     await new InvoicesService(prisma).updateStatus('inv1', 'PAYEE', undefined, 'VIREMENT');
     expect(queryRaw).not.toHaveBeenCalled();
+  });
+
+  // --- Envoi par courriel ------------------------------------------------
+
+  function fakePdf() {
+    return { generate: jest.fn().mockResolvedValue(Buffer.from('pdf')) } as unknown as InvoicePdfService;
+  }
+  function fakeIssuer() {
+    return { get: jest.fn().mockResolvedValue(null) } as unknown as IssuerService;
+  }
+  function fakeMail(configured = true) {
+    return {
+      isConfigured: configured,
+      sendInvoiceEmail: jest.fn().mockResolvedValue(undefined),
+    } as unknown as MailService;
+  }
+
+  it('sendInvoice finalise un brouillon puis envoie le courriel', async () => {
+    const { prisma, invoice } = makePrisma();
+    invoice.findUnique.mockResolvedValue(makeInvoiceRow({ status: 'BROUILLON', reference: null }));
+    invoice.update.mockResolvedValue(makeInvoiceRow({ status: 'ENVOYEE', reference: 'FAC-2026-0001' }));
+    const mail = fakeMail();
+    const res = await new InvoicesService(prisma).sendInvoice(
+      'inv1',
+      { to: 'a@b.com', subject: 'Facture' },
+      fakePdf(),
+      fakeIssuer(),
+      mail,
+    );
+    expect(res).toEqual({ sent: true, newStatus: 'ENVOYEE' });
+    expect(mail.sendInvoiceEmail).toHaveBeenCalledTimes(1);
+  });
+
+  it('sendInvoice lève 503 si le courriel n’est pas configuré', async () => {
+    const { prisma, invoice } = makePrisma();
+    invoice.findUnique.mockResolvedValue(makeInvoiceRow());
+    await expect(
+      new InvoicesService(prisma).sendInvoice(
+        'inv1',
+        { to: 'a@b.com', subject: 'S' },
+        fakePdf(),
+        fakeIssuer(),
+        fakeMail(false),
+      ),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
+  });
+
+  it('sendReminder rejette une facture non ENVOYEE', async () => {
+    const { prisma, invoice } = makePrisma();
+    invoice.findUnique.mockResolvedValue(makeInvoiceRow({ status: 'BROUILLON' }));
+    await expect(
+      new InvoicesService(prisma).sendReminder(
+        'inv1',
+        { to: 'a@b.com', subject: 'Rappel' },
+        fakePdf(),
+        fakeIssuer(),
+        fakeMail(),
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 });

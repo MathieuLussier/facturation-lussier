@@ -12,14 +12,17 @@ import {
   Res,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import type { Response } from 'express';
-import type { AuthUser, Invoice, InvoiceStats, Paginated } from '@facturation/core';
+import type { AuthUser, Invoice, InvoiceStats, Paginated, SendInvoiceResponse } from '@facturation/core';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { IssuerService } from '../issuer/issuer.service';
+import { MailService } from '../mail/mail.service';
 import { InvoicesService } from './invoices.service';
 import { InvoicePdfService } from './invoice-pdf.service';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
 import { ListInvoicesQuery } from './dto/list-invoices.query';
+import { SendInvoiceDto } from './dto/send-invoice.dto';
 import { UpdateInvoiceDto } from './dto/update-invoice.dto';
 import { UpdateInvoiceStatusDto } from './dto/update-invoice-status.dto';
 
@@ -30,6 +33,7 @@ export class InvoicesController {
     private readonly invoices: InvoicesService,
     private readonly issuer: IssuerService,
     private readonly pdf: InvoicePdfService,
+    private readonly mail: MailService,
   ) {}
 
   @Get()
@@ -64,6 +68,19 @@ export class InvoicesController {
   @Post()
   create(@Body() dto: CreateInvoiceDto, @CurrentUser() user: AuthUser): Promise<Invoice> {
     return this.invoices.create(dto, user.id);
+  }
+
+  // Envoi par courriel : limité à 3 par minute par IP (anti-abus).
+  @Post(':id/send')
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  send(@Param('id') id: string, @Body() dto: SendInvoiceDto): Promise<SendInvoiceResponse> {
+    return this.invoices.sendInvoice(id, dto, this.pdf, this.issuer, this.mail);
+  }
+
+  @Post(':id/remind')
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  remind(@Param('id') id: string, @Body() dto: SendInvoiceDto): Promise<{ sent: boolean }> {
+    return this.invoices.sendReminder(id, dto, this.pdf, this.issuer, this.mail);
   }
 
   @Patch(':id')
