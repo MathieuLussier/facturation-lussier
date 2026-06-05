@@ -8,12 +8,14 @@ import {
   type Client,
   type Contact,
   type CreateInvoiceRequest,
+  type Product,
   type Project,
 } from '@facturation/core';
 import { ApiError } from '../lib/api';
 import { listClients } from '../lib/clients';
 import { listContacts } from '../lib/contacts';
 import { listProjects } from '../lib/projects';
+import { listActiveProducts } from '../lib/products';
 import { centsToInput, createInvoice, dollarsToCents, getInvoice, updateInvoice } from '../lib/invoices';
 
 interface LineDraft {
@@ -61,6 +63,7 @@ export function InvoiceFormPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [companyContacts, setCompanyContacts] = useState<Contact[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
 
   const [projectId, setProjectId] = useState('');
   const [clientId, setClientId] = useState('');
@@ -81,6 +84,14 @@ export function InvoiceFormPage() {
         setProjects(pRes);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Erreur de chargement.');
+      }
+    })();
+    // Catalogue produits (autocomplete) — échec non bloquant.
+    void (async () => {
+      try {
+        setProducts(await listActiveProducts());
+      } catch {
+        setProducts([]);
       }
     })();
   }, []);
@@ -359,6 +370,31 @@ export function InvoiceFormPage() {
           <div className="space-y-3">
             {lines.map((l, i) => (
               <div key={i} className="grid grid-cols-12 items-end gap-2">
+                {products.length > 0 && (
+                  <div className="col-span-12">
+                    <select
+                      aria-label="Choisir un produit du catalogue"
+                      value=""
+                      onChange={(e) => {
+                        const p = products.find((pr) => pr.id === e.target.value);
+                        if (p) {
+                          setLine(i, 'description', p.description ? `${p.name} — ${p.description}` : p.name);
+                          setLine(i, 'unitPrice', centsToInput(p.unitPriceCents));
+                        }
+                      }}
+                      disabled={submitting}
+                      className={`${SELECT_CLASS} text-xs`}
+                    >
+                      <option value="">+ Depuis le catalogue…</option>
+                      {products.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                          {p.unit ? ` (${p.unit})` : ''} — {formatCents(p.unitPriceCents)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div className="col-span-6">
                   <Input
                     id={`line-desc-${i}`}

@@ -13,6 +13,7 @@ const BASE_NAV: NavItem[] = [
   { to: '/', label: 'Accueil', end: true },
   { to: '/clients', label: 'Clients' },
   { to: '/invoices', label: 'Factures' },
+  { to: '/produits', label: 'Produits' },
 ];
 
 const ADMIN_NAV: NavItem[] = [

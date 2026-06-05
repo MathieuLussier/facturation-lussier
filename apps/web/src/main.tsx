@@ -15,6 +15,7 @@ import { IssuerPage } from './pages/IssuerPage';
 import { InvoicesPage } from './pages/InvoicesPage';
 import { InvoiceFormPage } from './pages/InvoiceFormPage';
 import { InvoiceDetailPage } from './pages/InvoiceDetailPage';
+import { ProductsPage } from './pages/ProductsPage';
 import { applyTheme, resolveInitialTheme } from './lib/theme';
 import './index.css';
 
@@ -47,6 +48,7 @@ createRoot(rootElement).render(
             <Route path="/" element={<HomePage />} />
             <Route path="/clients" element={<ClientsPage />} />
             <Route path="/clients/:id" element={<ClientDetailPage />} />
+            <Route path="/produits" element={<ProductsPage />} />
             <Route path="/invoices" element={<InvoicesPage />} />
             <Route path="/invoices/new" element={<InvoiceFormPage />} />
             <Route path="/invoices/:id" element={<InvoiceDetailPage />} />
