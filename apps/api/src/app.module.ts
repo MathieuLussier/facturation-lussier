@@ -11,6 +11,7 @@ import { IssuerModule } from './issuer/issuer.module';
 import { InvoicesModule } from './invoices/invoices.module';
 import { ContactsModule } from './contacts/contacts.module';
 import { ProjectsModule } from './projects/projects.module';
+import { ProductsModule } from './products/products.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
 import { validateEnv } from './config/env.validation';
@@ -38,6 +39,7 @@ import { validateEnv } from './config/env.validation';
     InvoicesModule,
     ContactsModule,
     ProjectsModule,
+    ProductsModule,
   ],
   providers: [
     // JwtAuthGuard global — toutes les routes protégées par défaut
