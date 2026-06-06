@@ -9,6 +9,7 @@ import {
   unarchiveContact,
   updateContact,
 } from '../../lib/contacts';
+import { formatPhone } from '../../lib/format';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/Confirm';
 
@@ -251,7 +252,7 @@ export function ContactsTab({
               id="contact-phone"
               label="Téléphone"
               value={fields.phone}
-              onChange={(e) => change('phone', e.target.value)}
+              onChange={(e) => change('phone', formatPhone(e.target.value))}
               disabled={submitting}
             />
           </div>

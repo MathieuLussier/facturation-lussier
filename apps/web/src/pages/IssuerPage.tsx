@@ -3,7 +3,11 @@ import { Button, Card, Input } from '@facturation/ui';
 import type { UpsertIssuerRequest } from '@facturation/core';
 import { ApiError } from '../lib/api';
 import { getIssuer, issuerLogoUrl, uploadIssuerLogo, upsertIssuer } from '../lib/issuer';
+import { CANADA_PROVINCES, formatPhone, formatPostalCode } from '../lib/format';
 import { useToast } from '../components/Toast';
+
+const SELECT_CLASS =
+  'block w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50';
 
 interface IssuerFields {
   legalName: string;
@@ -164,17 +168,46 @@ export function IssuerPage() {
               disabled={submitting}
             />
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {TEXT_FIELDS.map((f) => (
-                <Input
-                  key={f.key}
-                  id={`issuer-${f.key}`}
-                  label={f.label}
-                  type={f.type ?? 'text'}
-                  value={fields[f.key]}
-                  onChange={(e) => change(f.key, e.target.value)}
-                  disabled={submitting}
-                />
-              ))}
+              {TEXT_FIELDS.map((f) => {
+                if (f.key === 'province') {
+                  return (
+                    <div key="province" className="flex flex-col gap-1.5">
+                      <label htmlFor="issuer-province" className="text-sm font-medium text-fg">
+                        Province
+                      </label>
+                      <select
+                        id="issuer-province"
+                        value={fields.province}
+                        onChange={(e) => change('province', e.target.value)}
+                        disabled={submitting}
+                        className={SELECT_CLASS}
+                      >
+                        {CANADA_PROVINCES.map((p) => (
+                          <option key={p.value} value={p.value}>
+                            {p.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  );
+                }
+                const onChange = (e: ChangeEvent<HTMLInputElement>): void => {
+                  if (f.key === 'phone') change('phone', formatPhone(e.target.value));
+                  else if (f.key === 'postalCode') change('postalCode', formatPostalCode(e.target.value));
+                  else change(f.key, e.target.value);
+                };
+                return (
+                  <Input
+                    key={f.key}
+                    id={`issuer-${f.key}`}
+                    label={f.label}
+                    type={f.type ?? 'text'}
+                    value={fields[f.key]}
+                    onChange={onChange}
+                    disabled={submitting}
+                  />
+                );
+              })}
             </div>
             <Button type="submit" variant="primary" disabled={submitting}>
               {submitting ? 'Enregistrement…' : 'Enregistrer'}

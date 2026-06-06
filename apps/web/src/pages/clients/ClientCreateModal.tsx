@@ -1,8 +1,12 @@
-import { type FormEvent, useState } from 'react';
+import { type ChangeEvent, type FormEvent, useState } from 'react';
 import { Button, Input, Modal } from '@facturation/ui';
 import type { ClientType, CreateClientRequest } from '@facturation/core';
 import { ApiError } from '../../lib/api';
 import { createClient } from '../../lib/clients';
+import { CANADA_PROVINCES, formatPhone, formatPostalCode } from '../../lib/format';
+
+const SELECT_CLASS =
+  'block w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50';
 
 interface ClientFields {
   companyName: string;
@@ -153,17 +157,46 @@ export function ClientCreateModal({ open, onClose, onCreated, onError }: ClientC
         />
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {TEXT_FIELDS.map((f) => (
-            <Input
-              key={f.key}
-              id={`client-${f.key}`}
-              label={f.key === 'email' && clientType === 'INDIVIDUAL' ? 'Courriel *' : f.label}
-              type={f.type ?? 'text'}
-              value={fields[f.key]}
-              onChange={(e) => change(f.key, e.target.value)}
-              disabled={submitting}
-            />
-          ))}
+          {TEXT_FIELDS.map((f) => {
+            if (f.key === 'province') {
+              return (
+                <div key="province" className="flex flex-col gap-1.5">
+                  <label htmlFor="client-province" className="text-sm font-medium text-fg">
+                    Province
+                  </label>
+                  <select
+                    id="client-province"
+                    value={fields.province}
+                    onChange={(e) => change('province', e.target.value)}
+                    disabled={submitting}
+                    className={SELECT_CLASS}
+                  >
+                    {CANADA_PROVINCES.map((p) => (
+                      <option key={p.value} value={p.value}>
+                        {p.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              );
+            }
+            const onChange = (e: ChangeEvent<HTMLInputElement>): void => {
+              if (f.key === 'phone') change('phone', formatPhone(e.target.value));
+              else if (f.key === 'postalCode') change('postalCode', formatPostalCode(e.target.value));
+              else change(f.key, e.target.value);
+            };
+            return (
+              <Input
+                key={f.key}
+                id={`client-${f.key}`}
+                label={f.key === 'email' && clientType === 'INDIVIDUAL' ? 'Courriel *' : f.label}
+                type={f.type ?? 'text'}
+                value={fields[f.key]}
+                onChange={onChange}
+                disabled={submitting}
+              />
+            );
+          })}
         </div>
 
         <div className="flex flex-col gap-1">

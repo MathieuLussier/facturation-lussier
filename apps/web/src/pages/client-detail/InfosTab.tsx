@@ -1,9 +1,13 @@
-import { type FormEvent, useState } from 'react';
+import { type ChangeEvent, type FormEvent, useState } from 'react';
 import { Button, Card, Input, Modal } from '@facturation/ui';
 import type { Client, ClientType, UpdateClientRequest } from '@facturation/core';
 import { ApiError } from '../../lib/api';
 import { updateClient } from '../../lib/clients';
+import { CANADA_PROVINCES, formatPhone, formatPostalCode } from '../../lib/format';
 import { useToast } from '../../components/Toast';
+
+const SELECT_CLASS =
+  'block w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50';
 
 interface InfosTabProps {
   client: Client;
@@ -151,17 +155,46 @@ export function InfosTab({ client, onUpdated }: InfosTabProps) {
             disabled={submitting}
           />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {INFOS_FIELDS.map((f) => (
-              <Input
-                key={f.key}
-                id={`info-${f.key}`}
-                label={f.key === 'email' && fields.type === 'INDIVIDUAL' ? 'Courriel *' : f.label}
-                type={f.type ?? 'text'}
-                value={String(fields[f.key] ?? '')}
-                onChange={(e) => change(f.key, e.target.value)}
-                disabled={submitting}
-              />
-            ))}
+            {INFOS_FIELDS.map((f) => {
+              if (f.key === 'province') {
+                return (
+                  <div key="province" className="flex flex-col gap-1.5">
+                    <label htmlFor="info-province" className="text-sm font-medium text-fg">
+                      Province
+                    </label>
+                    <select
+                      id="info-province"
+                      value={String(fields.province ?? '')}
+                      onChange={(e) => change('province', e.target.value)}
+                      disabled={submitting}
+                      className={SELECT_CLASS}
+                    >
+                      {CANADA_PROVINCES.map((p) => (
+                        <option key={p.value} value={p.value}>
+                          {p.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              }
+              const onChange = (e: ChangeEvent<HTMLInputElement>): void => {
+                if (f.key === 'phone') change('phone', formatPhone(e.target.value));
+                else if (f.key === 'postalCode') change('postalCode', formatPostalCode(e.target.value));
+                else change(f.key, e.target.value);
+              };
+              return (
+                <Input
+                  key={f.key}
+                  id={`info-${f.key}`}
+                  label={f.key === 'email' && fields.type === 'INDIVIDUAL' ? 'Courriel *' : f.label}
+                  type={f.type ?? 'text'}
+                  value={String(fields[f.key] ?? '')}
+                  onChange={onChange}
+                  disabled={submitting}
+                />
+              );
+            })}
           </div>
           <div className="flex flex-col gap-1">
             <label htmlFor="info-notes" className="text-sm font-medium text-fg">
