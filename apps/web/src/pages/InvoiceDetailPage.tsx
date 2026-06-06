@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { type ChangeEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Button, Card } from '@facturation/ui';
 import {
@@ -16,8 +16,9 @@ import {
   openInvoicePdf,
   unarchiveInvoice,
   updateInvoiceStatus,
+  uploadInvoiceAttachment,
 } from '../lib/invoices';
-import { ArrowLeft, Pencil, Printer, ScanLine, Send } from 'lucide-react';
+import { ArrowLeft, Loader2, Pencil, Printer, ScanLine, Send } from 'lucide-react';
 import { useToast } from '../components/Toast';
 import { useConfirm } from '../components/Confirm';
 import { PaymentModal } from '../components/PaymentModal';
@@ -55,6 +56,8 @@ export function InvoiceDetailPage() {
     open: false,
     mode: 'send',
   });
+  const scanInputRef = useRef<HTMLInputElement>(null);
+  const [scanning, setScanning] = useState(false);
 
   const load = useCallback(async (): Promise<void> => {
     if (!id) return;
@@ -114,7 +117,23 @@ export function InvoiceDetailPage() {
   };
 
   const scanner = (): void => {
-    notify("La numérisation par le scanner de l'imprimante sera bientôt disponible.", 'info');
+    scanInputRef.current?.click();
+  };
+
+  const handleScanFile = async (e: ChangeEvent<HTMLInputElement>): Promise<void> => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !invoice) return;
+    setScanning(true);
+    try {
+      const list = await uploadInvoiceAttachment(invoice.id, file);
+      setInvoice((prev) => (prev ? { ...prev, attachments: list } : prev));
+      notify('Document ajouté en pièce jointe', 'success');
+    } catch (err) {
+      notify(err instanceof Error ? err.message : "Erreur lors de l'ajout du document.", 'error');
+    } finally {
+      setScanning(false);
+    }
   };
 
   const remove = async (): Promise<void> => {
@@ -188,10 +207,21 @@ export function InvoiceDetailPage() {
                 <Printer className="h-4 w-4" aria-hidden="true" />
                 Imprimer
               </Button>
-              <Button variant="secondary" disabled={busy} onClick={scanner}>
-                <ScanLine className="h-4 w-4" aria-hidden="true" />
-                Scanner
+              <Button variant="secondary" disabled={busy || scanning} onClick={scanner}>
+                {scanning ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                ) : (
+                  <ScanLine className="h-4 w-4" aria-hidden="true" />
+                )}
+                {scanning ? 'Ajout…' : 'Scanner'}
               </Button>
+              <input
+                ref={scanInputRef}
+                type="file"
+                accept="application/pdf,image/*"
+                className="hidden"
+                onChange={(e) => void handleScanFile(e)}
+              />
               <InvoiceActionsMenu
                 invoice={invoice}
                 busy={busy}
