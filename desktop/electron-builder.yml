@@ -31,9 +31,10 @@ win:
         - x64
   # Signature : fournir CSC_LINK (chemin/-base64 du .pfx) + CSC_KEY_PASSWORD
   # en variables d'environnement au moment du build. Sans elles, build non signé.
-  signingHashAlgorithms:
-    - sha256
-  timeStampServer: http://timestamp.sectigo.com
+  signtoolOptions:
+    signingHashAlgorithms:
+      - sha256
+    timeStampServer: http://timestamp.sectigo.com
 
 # ── Installeur NSIS (one-click + auto-update) ────────────────────────────────
 nsis:
