@@ -83,6 +83,7 @@ function makePrisma() {
     aggregate: jest.fn(),
   };
   const invoiceLine = { deleteMany: jest.fn() };
+  const invoiceAttachment = { findMany: jest.fn().mockResolvedValue([]) };
   const client = { findUnique: jest.fn() };
   const project = { findUnique: jest.fn() };
   const contact = { findUnique: jest.fn() };
@@ -92,6 +93,7 @@ function makePrisma() {
   const c: Record<string, unknown> = {
     invoice,
     invoiceLine,
+    invoiceAttachment,
     client,
     project,
     contact,

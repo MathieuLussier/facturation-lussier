@@ -164,6 +164,7 @@ model Invoice {
   qstCents      Int           @default(0)
   totalCents    Int           @default(0)
   lines         InvoiceLine[]
+  attachments   InvoiceAttachment[]
   createdById   String?
   createdBy     User?         @relation(fields: [createdById], references: [id], onDelete: SetNull)
   createdAt     DateTime      @default(now())
@@ -195,6 +196,23 @@ model InvoiceLine {
 
   @@index([invoiceId])
   @@map("invoice_lines")
+}
+
+// Pièces jointes d'une facture (jointes au courriel d'envoi). Stockées hors web public.
+model InvoiceAttachment {
+  id         String   @id @default(cuid())
+  invoiceId  String
+  invoice    Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  /** Nom affiché, éditable par l'utilisateur. */
+  fileName   String
+  /** Nom du fichier sur disque (unique, non exposé). */
+  storedName String
+  mimeType   String
+  sizeBytes  Int
+  createdAt  DateTime @default(now())
+
+  @@index([invoiceId])
+  @@map("invoice_attachments")
 }
 
 // ---------------------------------------------------------------------------

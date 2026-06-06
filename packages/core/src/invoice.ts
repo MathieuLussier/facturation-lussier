@@ -27,6 +27,17 @@ export interface InvoiceLine {
   amountCents: number;
 }
 
+/** Pièce jointe d'une facture (jointe au courriel d'envoi). */
+export interface InvoiceAttachment {
+  id: string;
+  invoiceId: string;
+  /** Nom affiché, éditable. */
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  createdAt: string;
+}
+
 export interface Invoice extends InvoiceTotals {
   id: string;
   /** Numéro interne (SERIAL) — sert de clé de tri, non affiché. */
@@ -56,6 +67,8 @@ export interface Invoice extends InvoiceTotals {
   /** Calculé serveur : modifiable seulement en BROUILLON ou ENVOYEE. */
   editable?: boolean;
   lines: InvoiceLine[];
+  /** Pièces jointes (présentes dans le détail). */
+  attachments?: InvoiceAttachment[];
   createdAt: string;
   updatedAt: string;
 }

@@ -8,6 +8,8 @@ export interface SendMailOptions {
   body: string;
   pdfBuffer: Buffer;
   attachmentName: string;
+  /** Pièces jointes supplémentaires (fichiers sur disque). */
+  extraAttachments?: Array<{ filename: string; path: string; contentType: string }>;
 }
 
 /**
@@ -61,6 +63,7 @@ export class MailService {
         text: opts.body,
         attachments: [
           { filename: opts.attachmentName, content: opts.pdfBuffer, contentType: 'application/pdf' },
+          ...(opts.extraAttachments ?? []),
         ],
       });
     } catch (err) {

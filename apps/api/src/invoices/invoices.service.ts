@@ -10,6 +10,7 @@ import type {
   Client as DbClient,
   Contact as DbContact,
   Invoice as DbInvoice,
+  InvoiceAttachment as DbAttachment,
   InvoiceLine as DbLine,
   Project as DbProject,
 } from '@prisma/client';
@@ -24,6 +25,7 @@ import {
   type InvoiceLine,
   type InvoiceStats,
   type InvoiceStatus,
+  type InvoiceAttachment,
   type Paginated,
   type PaymentMethod,
   type Project,
@@ -36,6 +38,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { IssuerService } from '../issuer/issuer.service';
 import { MailService } from '../mail/mail.service';
 import { InvoicePdfService } from './invoice-pdf.service';
+import { attachmentAbsPath } from './attachments/attachment-storage';
 
 interface ListParams {
   page?: number;
@@ -54,6 +57,7 @@ type DbProjectWithContacts = DbProject & { billingContacts?: DbContact[] };
 
 type InvoiceRow = DbInvoice & {
   lines?: DbLine[];
+  attachments?: DbAttachment[];
   client?: DbClient | null;
   project?: DbProjectWithContacts | null;
   billingContact?: DbContact | null;
@@ -62,6 +66,7 @@ type InvoiceRow = DbInvoice & {
 const INCLUDE_FULL = {
   client: true,
   lines: { orderBy: { position: 'asc' as const } },
+  attachments: { orderBy: { createdAt: 'asc' as const } },
   project: { include: { billingContacts: true } },
   billingContact: true,
 };
@@ -94,6 +99,17 @@ function toLine(l: DbLine): InvoiceLine {
     quantity: l.quantity,
     unitPriceCents: l.unitPriceCents,
     amountCents: l.amountCents,
+  };
+}
+
+function toAttachment(a: DbAttachment): InvoiceAttachment {
+  return {
+    id: a.id,
+    invoiceId: a.invoiceId,
+    fileName: a.fileName,
+    mimeType: a.mimeType,
+    sizeBytes: a.sizeBytes,
+    createdAt: a.createdAt.toISOString(),
   };
 }
 
@@ -151,6 +167,7 @@ function toInvoice(row: InvoiceRow): Invoice {
     qstCents: row.qstCents,
     totalCents: row.totalCents,
     lines: (row.lines ?? []).map(toLine),
+    attachments: row.attachments ? row.attachments.map(toAttachment) : undefined,
     archivedAt: row.archivedAt ? row.archivedAt.toISOString() : null,
     deletable: row.status === 'BROUILLON',
     editable: row.status === 'BROUILLON' || row.status === 'ENVOYEE',
@@ -516,8 +533,24 @@ export class InvoicesService {
       body: dto.body && dto.body.trim() ? dto.body : defaultSendBody(invoice),
       pdfBuffer: buffer,
       attachmentName: `facture-${invoice.reference ?? invoice.number}.pdf`,
+      extraAttachments: await this.loadEmailAttachments(invoice.id),
     });
     return { sent: true, newStatus: invoice.status };
+  }
+
+  /** Pièces jointes de la facture, prêtes pour Nodemailer (chemin disque + nom affiché). */
+  private async loadEmailAttachments(
+    invoiceId: string,
+  ): Promise<Array<{ filename: string; path: string; contentType: string }>> {
+    const rows = await this.prisma.client.invoiceAttachment.findMany({
+      where: { invoiceId },
+      orderBy: { createdAt: 'asc' },
+    });
+    return rows.map((a) => ({
+      filename: a.fileName,
+      path: attachmentAbsPath(a.storedName),
+      contentType: a.mimeType,
+    }));
   }
 
   /** Envoie un rappel de paiement (facture ENVOYEE uniquement ; sans changement de statut). */
@@ -545,6 +578,7 @@ export class InvoicesService {
       body: dto.body && dto.body.trim() ? dto.body : defaultReminderBody(invoice),
       pdfBuffer: buffer,
       attachmentName: `facture-${invoice.reference ?? invoice.number}.pdf`,
+      extraAttachments: await this.loadEmailAttachments(invoice.id),
     });
     return { sent: true };
   }

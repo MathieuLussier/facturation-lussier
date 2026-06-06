@@ -43,3 +43,6 @@ Thumbs.db
 
 # Logos téléversés (servis à l'exécution)
 apps/api/uploads/
+
+# Pièces jointes de factures (stockage privé à l'exécution)
+apps/api/storage/

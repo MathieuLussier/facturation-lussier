@@ -46,6 +46,7 @@ export {
 export type {
   Invoice,
   InvoiceLine,
+  InvoiceAttachment,
   InvoiceStatus,
   PaymentMethod,
   InvoiceTotals,
