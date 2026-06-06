@@ -1,6 +1,7 @@
 import type {
   CreateInvoiceRequest,
   Invoice,
+  InvoiceAttachment,
   InvoiceStats,
   InvoiceStatus,
   Paginated,
@@ -129,6 +130,61 @@ export async function downloadInvoicePdf(id: string, refOrNumber: string | numbe
   const a = document.createElement('a');
   a.href = url;
   a.download = `facture-${refOrNumber}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// ---------------------------------------------------------------------------
+// Pièces jointes (les endpoints retournent la liste à jour)
+// ---------------------------------------------------------------------------
+
+export function uploadInvoiceAttachment(invoiceId: string, file: File): Promise<InvoiceAttachment[]> {
+  const formData = new FormData();
+  formData.append('file', file);
+  return apiFetch<InvoiceAttachment[]>(`/invoices/${invoiceId}/attachments`, {
+    method: 'POST',
+    body: formData,
+  });
+}
+
+export function renameInvoiceAttachment(
+  invoiceId: string,
+  attId: string,
+  fileName: string,
+): Promise<InvoiceAttachment[]> {
+  return apiFetch<InvoiceAttachment[]>(`/invoices/${invoiceId}/attachments/${attId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ fileName }),
+  });
+}
+
+export function deleteInvoiceAttachment(invoiceId: string, attId: string): Promise<InvoiceAttachment[]> {
+  return apiFetch<InvoiceAttachment[]>(`/invoices/${invoiceId}/attachments/${attId}`, {
+    method: 'DELETE',
+  });
+}
+
+/** Télécharge une pièce jointe (fetch authentifié → blob → téléchargement). */
+export async function downloadInvoiceAttachment(
+  invoiceId: string,
+  attId: string,
+  fileName: string,
+): Promise<void> {
+  const token = getAccessToken();
+  const res = await fetch(buildApiPath(`/invoices/${invoiceId}/attachments/${attId}/download`), {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    credentials: 'include',
+  });
+  if (!res.ok) {
+    throw new ApiError(res.status, httpErrorMessage(res.status));
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
   document.body.appendChild(a);
   a.click();
   a.remove();

@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Badge, Button, Card } from '@facturation/ui';
-import { formatCents, type Invoice, type InvoiceStatus, type PaymentMethod } from '@facturation/core';
+import { Badge, Card } from '@facturation/ui';
+import {
+  formatCents,
+  type Invoice,
+  type InvoiceAttachment as InvoiceAttachmentType,
+  type InvoiceStatus,
+  type PaymentMethod,
+} from '@facturation/core';
 import {
   archiveInvoice,
   deleteInvoice,
@@ -12,9 +18,11 @@ import {
 } from '../lib/invoices';
 import { useToast } from '../components/Toast';
 import { useConfirm } from '../components/Confirm';
-import { StatusSelect } from '../components/StatusSelect';
 import { PaymentModal } from '../components/PaymentModal';
 import { SendInvoiceModal } from './invoices/SendInvoiceModal';
+import { InvoiceActionsMenu } from './invoices/InvoiceActionsMenu';
+import { InvoiceAttachments } from './invoices/InvoiceAttachments';
+import { INVOICE_STATUS_LABEL, INVOICE_STATUS_TONE } from '../lib/invoice-status';
 import { PAYMENT_METHOD_LABEL } from '../lib/payment-method';
 
 /** Une facture ENVOYEE dont l'échéance est dépassée est « en retard ». */
@@ -120,29 +128,45 @@ export function InvoiceDetailPage() {
     }
   };
 
+  const handleAttachmentsChange = (list: InvoiceAttachmentType[]): void => {
+    setInvoice((prev) => (prev ? { ...prev, attachments: list } : prev));
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-bold tracking-tight text-fg">
             {invoice ? (invoice.reference ? `Facture ${invoice.reference}` : 'Brouillon') : 'Facture'}
           </h1>
           {invoice && (
-            <StatusSelect
-              value={invoice.status}
-              onChange={(s) => void changeStatus(s as InvoiceStatus)}
-              onPayeeRequest={() => setPaymentModalOpen(true)}
-            />
+            <Badge tone={INVOICE_STATUS_TONE[invoice.status]}>{INVOICE_STATUS_LABEL[invoice.status]}</Badge>
           )}
           {invoice && isOverdue(invoice) && <Badge tone="danger">En retard</Badge>}
           {invoice?.archivedAt && <Badge tone="warning">Archivé</Badge>}
         </div>
-        <Link
-          to="/invoices"
-          className="text-sm text-muted hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-        >
-          ← Factures
-        </Link>
+        <div className="flex shrink-0 items-center gap-3">
+          {invoice && (
+            <InvoiceActionsMenu
+              invoice={invoice}
+              busy={busy}
+              onSetStatus={(s) => void changeStatus(s)}
+              onRequestPayee={() => setPaymentModalOpen(true)}
+              onEdit={() => navigate(`/invoices/${invoice.id}/edit`)}
+              onSend={() => setSendModal({ open: true, mode: 'send' })}
+              onRemind={() => setSendModal({ open: true, mode: 'remind' })}
+              onDownloadPdf={() => void downloadPdf()}
+              onToggleArchive={() => void toggleArchive()}
+              onDelete={() => void remove()}
+            />
+          )}
+          <Link
+            to="/invoices"
+            className="text-sm text-muted hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          >
+            ← Factures
+          </Link>
+        </div>
       </div>
 
       {loading && <p className="text-sm text-muted">Chargement…</p>}
@@ -225,46 +249,11 @@ export function InvoiceDetailPage() {
             </Card>
           )}
 
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            {invoice.editable && (
-              <Button
-                variant="secondary"
-                disabled={busy}
-                onClick={() => navigate(`/invoices/${invoice.id}/edit`)}
-              >
-                Modifier
-              </Button>
-            )}
-            {(invoice.status === 'BROUILLON' || invoice.status === 'ENVOYEE') && (
-              <Button
-                variant="secondary"
-                disabled={busy}
-                onClick={() => setSendModal({ open: true, mode: 'send' })}
-              >
-                Envoyer par courriel
-              </Button>
-            )}
-            {invoice.status === 'ENVOYEE' && (
-              <Button
-                variant="secondary"
-                disabled={busy}
-                onClick={() => setSendModal({ open: true, mode: 'remind' })}
-              >
-                Envoyer un rappel
-              </Button>
-            )}
-            <Button variant="primary" disabled={busy} onClick={() => void downloadPdf()}>
-              Télécharger le PDF
-            </Button>
-            <Button variant="secondary" disabled={busy} onClick={() => void toggleArchive()}>
-              {invoice.archivedAt ? 'Désarchiver' : 'Archiver'}
-            </Button>
-            {invoice.deletable && (
-              <Button variant="danger" disabled={busy} onClick={() => void remove()}>
-                Supprimer
-              </Button>
-            )}
-          </div>
+          <InvoiceAttachments
+            invoiceId={invoice.id}
+            attachments={invoice.attachments ?? []}
+            onChange={handleAttachmentsChange}
+          />
 
           <PaymentModal
             open={paymentModalOpen}
