@@ -1,19 +1,31 @@
 import { useEffect, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
+export type ModalSize = 'md' | 'lg' | 'xl' | '2xl' | '3xl';
+
 export interface ModalProps {
   open: boolean;
   onClose: () => void;
   title?: string;
+  /** Largeur maximale de la fenêtre (défaut : md). */
+  size?: ModalSize;
   children: ReactNode;
 }
+
+const SIZE_CLASS: Record<ModalSize, string> = {
+  md: 'max-w-md',
+  lg: 'max-w-lg',
+  xl: 'max-w-xl',
+  '2xl': 'max-w-2xl',
+  '3xl': 'max-w-3xl',
+};
 
 /**
  * Fenêtre modale accessible du design system.
  * - Fermeture par Échap et clic sur l'arrière-plan.
  * - Verrouille le défilement de la page tant qu'elle est ouverte.
  */
-export function Modal({ open, onClose, title, children }: ModalProps) {
+export function Modal({ open, onClose, title, size = 'md', children }: ModalProps) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent): void => {
@@ -42,7 +54,9 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
         onClick={onClose}
         aria-hidden="true"
       />
-      <div className="relative z-10 w-full max-w-md rounded-xl border border-border bg-surface shadow-xl">
+      <div
+        className={`relative z-10 w-full ${SIZE_CLASS[size]} rounded-xl border border-border bg-surface shadow-xl`}
+      >
         {title && (
           <div className="flex items-center justify-between border-b border-border px-5 py-4">
             <h2 className="text-base font-semibold text-fg">{title}</h2>

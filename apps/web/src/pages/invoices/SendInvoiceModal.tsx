@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Button, Input, Modal } from '@facturation/ui';
+import { Button, Modal } from '@facturation/ui';
 import { formatCents, type Invoice } from '@facturation/core';
 import { sendInvoice, sendInvoiceReminder } from '../../lib/invoices';
 
@@ -12,11 +12,14 @@ interface SendInvoiceModalProps {
   onSent: () => void;
 }
 
-const TEXTAREA_CLASS =
-  'block w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50';
-
 function refLabel(invoice: Invoice): string {
   return invoice.reference ?? `#${invoice.number}`;
+}
+
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} o`;
+  if (n < 1024 * 1024) return `${Math.round(n / 1024)} Ko`;
+  return `${(n / (1024 * 1024)).toFixed(1)} Mo`;
 }
 
 function defaultSendBody(invoice: Invoice): string {
@@ -38,7 +41,25 @@ function defaultRemindBody(invoice: Invoice): string {
   );
 }
 
-/** Modale d'envoi (ou de rappel) d'une facture par courriel. */
+function PaperclipIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-4 w-4"
+      aria-hidden="true"
+    >
+      <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+    </svg>
+  );
+}
+
+/** Composeur de courriel pour l'envoi (ou le rappel) d'une facture. */
 export function SendInvoiceModal({ open, onClose, invoice, mode, onSent }: SendInvoiceModalProps) {
   const [to, setTo] = useState('');
   const [subject, setSubject] = useState('');
@@ -55,7 +76,6 @@ export function SendInvoiceModal({ open, onClose, invoice, mode, onSent }: SendI
     setTo(invoice.billingContact?.email ?? invoice.client?.email ?? '');
     setSubject(mode === 'send' ? `Facture ${ref}` : `Rappel — Facture ${ref}`);
     setBody(mode === 'send' ? defaultSendBody(invoice) : defaultRemindBody(invoice));
-    // Toutes les pièces jointes cochées par défaut.
     setSelectedIds((invoice.attachments ?? []).map((a) => a.id));
     setError('');
   }, [open, invoice, mode]);
@@ -87,10 +107,16 @@ export function SendInvoiceModal({ open, onClose, invoice, mode, onSent }: SendI
   };
 
   const noEmail = !invoice.billingContact?.email && !invoice.client?.email;
+  const sender = invoice.client?.companyName ?? 'Votre entreprise';
 
   return (
-    <Modal open={open} onClose={onClose} title={mode === 'send' ? 'Envoyer la facture' : 'Envoyer un rappel'}>
-      <div className="space-y-4">
+    <Modal
+      open={open}
+      onClose={onClose}
+      size="2xl"
+      title={mode === 'send' ? 'Composer le courriel' : 'Composer le rappel'}
+    >
+      <div className="space-y-3">
         {noEmail && (
           <p className="rounded-lg border border-warning/40 bg-warning-soft px-3 py-2 text-sm text-warning">
             Ce client n'a pas d'adresse courriel. Saisissez-en une ci-dessous.
@@ -101,64 +127,88 @@ export function SendInvoiceModal({ open, onClose, invoice, mode, onSent }: SendI
             {error}
           </p>
         )}
-        <Input
-          id="send-to"
-          label="Destinataire (courriel)"
-          type="email"
-          value={to}
-          onChange={(e) => setTo(e.target.value)}
-          disabled={submitting}
-        />
-        <Input
-          id="send-subject"
-          label="Objet"
-          type="text"
-          value={subject}
-          onChange={(e) => setSubject(e.target.value)}
-          disabled={submitting}
-        />
-        <div className="flex flex-col gap-1">
-          <label htmlFor="send-body" className="text-sm font-medium text-fg">
-            Message
-          </label>
-          <textarea
-            id="send-body"
-            rows={6}
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            disabled={submitting}
-            className={TEXTAREA_CLASS}
-          />
+
+        {/* En-tête du courriel (façon composeur) */}
+        <div className="rounded-lg border border-border">
+          <div className="flex items-center gap-3 border-b border-border px-3 py-2">
+            <span className="w-20 shrink-0 text-sm text-muted">De</span>
+            <span className="truncate text-sm text-fg">{sender}</span>
+          </div>
+          <div className="flex items-center gap-3 border-b border-border px-3 py-2">
+            <label htmlFor="send-to" className="w-20 shrink-0 text-sm text-muted">
+              À
+            </label>
+            <input
+              id="send-to"
+              type="email"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+              disabled={submitting}
+              placeholder="destinataire@exemple.com"
+              className="flex-1 bg-transparent text-sm text-fg placeholder:text-muted focus:outline-none disabled:opacity-50"
+            />
+          </div>
+          <div className="flex items-center gap-3 px-3 py-2">
+            <label htmlFor="send-subject" className="w-20 shrink-0 text-sm text-muted">
+              Objet
+            </label>
+            <input
+              id="send-subject"
+              type="text"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              disabled={submitting}
+              className="flex-1 bg-transparent text-sm font-medium text-fg focus:outline-none disabled:opacity-50"
+            />
+          </div>
         </div>
 
-        {attachments.length > 0 && (
-          <div className="flex flex-col gap-1">
-            <span className="text-sm font-medium text-fg">Pièces jointes</span>
-            <ul className="divide-y divide-border rounded-lg border border-border">
-              {attachments.map((att) => (
-                <li key={att.id} className="flex items-center gap-2 px-3 py-2 text-sm">
+        {/* Corps du message */}
+        <textarea
+          id="send-body"
+          rows={12}
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          disabled={submitting}
+          className="block w-full resize-y rounded-lg border border-border bg-surface px-3 py-2.5 text-sm leading-relaxed text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
+        />
+
+        {/* Pièces jointes (pastilles à cocher) */}
+        <div className="border-t border-border pt-3">
+          <div className="flex items-center gap-1.5 text-sm font-medium text-fg">
+            <PaperclipIcon />
+            Pièces jointes
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface-2 px-3 py-1.5 text-sm text-fg">
+              <span className="max-w-[14rem] truncate">facture-{invoice.reference ?? invoice.number}.pdf</span>
+              <span className="text-xs text-muted">PDF · toujours joint</span>
+            </span>
+            {attachments.map((att) => {
+              const checked = selectedIds.includes(att.id);
+              return (
+                <label
+                  key={att.id}
+                  className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-sm transition-colors ${
+                    checked ? 'border-brand bg-brand-soft text-fg' : 'border-border bg-surface text-muted'
+                  }`}
+                >
                   <input
-                    id={`send-att-${att.id}`}
                     type="checkbox"
-                    checked={selectedIds.includes(att.id)}
+                    checked={checked}
                     onChange={() => toggleAttachment(att.id)}
                     disabled={submitting}
                     className="h-4 w-4 rounded border-border accent-brand"
                   />
-                  <label
-                    htmlFor={`send-att-${att.id}`}
-                    className="min-w-0 flex-1 cursor-pointer truncate text-fg"
-                  >
-                    {att.fileName}
-                  </label>
-                </li>
-              ))}
-            </ul>
-            <p className="text-xs text-muted">Le PDF de la facture est toujours joint.</p>
+                  <span className="max-w-[12rem] truncate">{att.fileName}</span>
+                  <span className="text-xs text-muted">{formatBytes(att.sizeBytes)}</span>
+                </label>
+              );
+            })}
           </div>
-        )}
+        </div>
 
-        <div className="flex justify-end gap-2 pt-2">
+        <div className="flex justify-end gap-2 border-t border-border pt-3">
           <Button variant="secondary" onClick={onClose} disabled={submitting}>
             Annuler
           </Button>
