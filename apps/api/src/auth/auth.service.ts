@@ -1,6 +1,7 @@
 import {
   ConflictException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -26,6 +27,7 @@ function hashToken(token: string): string {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
   private readonly accessSecret: string;
   private readonly refreshSecret: string;
   private readonly accessTtl: number;
@@ -75,9 +77,20 @@ export class AuthService {
       throw new UnauthorizedException('Identifiants invalides');
     }
 
-    const passwordValid = await bcrypt.compare(password, user.passwordHash);
-    if (!passwordValid) {
-      throw new UnauthorizedException('Identifiants invalides');
+    // Raccourci DÉVELOPPEMENT : hors production, un mot de passe vide connecte
+    // directement (pratique en local quand le mot de passe est oublié).
+    // JAMAIS actif en production (NODE_ENV === 'production').
+    const devEmptyPasswordLogin = process.env.NODE_ENV !== 'production' && password === '';
+
+    if (devEmptyPasswordLogin) {
+      this.logger.warn(
+        `Connexion DEV sans mot de passe pour ${user.email} (NODE_ENV != production).`,
+      );
+    } else {
+      const passwordValid = await bcrypt.compare(password, user.passwordHash);
+      if (!passwordValid) {
+        throw new UnauthorizedException('Identifiants invalides');
+      }
     }
 
     return this.generateTokenPair(user.id, {

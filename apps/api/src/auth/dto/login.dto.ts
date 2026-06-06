@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, MaxLength } from 'class-validator';
 
 export class LoginDto {
   @IsEmail({}, { message: "L'adresse email est invalide" })
@@ -6,9 +6,9 @@ export class LoginDto {
   @IsNotEmpty()
   email!: string;
 
+  // Pas de contrainte de longueur à la connexion : le mot de passe est validé
+  // contre le hash stocké. Un mot de passe vide est autorisé (raccourci DEV côté service).
   @IsString()
-  @IsNotEmpty()
-  @MinLength(8, { message: 'Le mot de passe doit contenir au moins 8 caractères' })
   @MaxLength(128)
   password!: string;
 }

@@ -12,7 +12,8 @@ function validateForm(email: string, password: string): Record<string, string> {
   } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     errors.email = 'Adresse e-mail invalide.';
   }
-  if (!password) {
+  // En dev, on autorise un mot de passe vide (raccourci de connexion local).
+  if (!password && !import.meta.env.DEV) {
     errors.password = 'Le mot de passe est requis.';
   }
   return errors;
@@ -105,6 +106,12 @@ export function LoginPage() {
                 error={fieldErrors.password}
                 disabled={loading}
               />
+
+              {import.meta.env.DEV && (
+                <p className="text-xs text-muted">
+                  Dev : laissez le mot de passe vide pour vous connecter.
+                </p>
+              )}
 
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? 'Connexion…' : 'Se connecter'}
