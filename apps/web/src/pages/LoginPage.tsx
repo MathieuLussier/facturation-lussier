@@ -1,6 +1,7 @@
 import { type FormEvent, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Card, Input } from '@facturation/ui';
+import { LogIn } from 'lucide-react';
 import { ApiError } from '../lib/api';
 import { useAuth } from '../auth/AuthContext';
 
@@ -114,6 +115,7 @@ export function LoginPage() {
               )}
 
               <Button type="submit" className="w-full" disabled={loading}>
+                <LogIn className="h-4 w-4" aria-hidden="true" />
                 {loading ? 'Connexion…' : 'Se connecter'}
               </Button>
             </form>

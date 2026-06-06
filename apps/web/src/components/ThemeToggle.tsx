@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Moon, Sun } from 'lucide-react';
 import { applyTheme, type ThemeMode } from '../lib/theme';
 
 function currentMode(): ThemeMode {
@@ -22,7 +23,11 @@ export function ThemeToggle() {
       title={mode === 'dark' ? 'Thème clair' : 'Thème sombre'}
       className="grid h-9 w-9 place-items-center rounded-lg border border-border bg-surface text-fg transition-colors hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
     >
-      <span aria-hidden="true">{mode === 'dark' ? '☀' : '☾'}</span>
+      {mode === 'dark' ? (
+        <Sun className="h-[18px] w-[18px]" aria-hidden="true" />
+      ) : (
+        <Moon className="h-[18px] w-[18px]" aria-hidden="true" />
+      )}
     </button>
   );
 }

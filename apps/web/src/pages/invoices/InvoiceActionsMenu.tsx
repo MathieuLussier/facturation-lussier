@@ -1,8 +1,30 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react';
+import {
+  Archive,
+  ArchiveRestore,
+  Ban,
+  BadgeCheck,
+  Bell,
+  Check,
+  Download,
+  FileEdit,
+  Pencil,
+  Send,
+  Settings,
+  Trash2,
+  type LucideIcon,
+} from 'lucide-react';
 import type { Invoice, InvoiceStatus } from '@facturation/core';
 import { INVOICE_STATUS_LABEL } from '../../lib/invoice-status';
 
 const STATUSES: InvoiceStatus[] = ['BROUILLON', 'ENVOYEE', 'PAYEE', 'ANNULEE'];
+
+const STATUS_ICON: Record<InvoiceStatus, LucideIcon> = {
+  BROUILLON: FileEdit,
+  ENVOYEE: Send,
+  PAYEE: BadgeCheck,
+  ANNULEE: Ban,
+};
 
 interface InvoiceActionsMenuProps {
   invoice: Invoice;
@@ -17,43 +39,27 @@ interface InvoiceActionsMenuProps {
   onDelete: () => void;
 }
 
-function GearIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-4 w-4"
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="3" />
-      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-    </svg>
-  );
-}
-
 function MenuItem({
   children,
   onClick,
   danger,
+  icon: Icon,
 }: {
   children: ReactNode;
   onClick: () => void;
   danger?: boolean;
+  icon: LucideIcon;
 }) {
   return (
     <button
       type="button"
       role="menuitem"
       onClick={onClick}
-      className={`flex w-full items-center rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-surface-2 ${
+      className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-surface-2 ${
         danger ? 'text-danger' : 'text-fg'
       }`}
     >
+      <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
       {children}
     </button>
   );
@@ -115,7 +121,7 @@ export function InvoiceActionsMenu({
         onClick={() => setOpen((v) => !v)}
         className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
       >
-        <GearIcon />
+        <Settings className="h-4 w-4" aria-hidden="true" />
         Action
         <span aria-hidden="true" className="text-xs text-muted">
           ▾
@@ -128,34 +134,53 @@ export function InvoiceActionsMenu({
           className="absolute right-0 z-20 mt-1 w-56 rounded-lg border border-border bg-surface p-1 shadow-lg"
         >
           <p className="px-2 py-1 text-xs font-medium uppercase tracking-wide text-muted">Statut</p>
-          {STATUSES.map((s) => (
-            <button
-              key={s}
-              type="button"
-              role="menuitemradio"
-              aria-checked={s === invoice.status}
-              disabled={s === invoice.status}
-              onClick={onStatusClick(s)}
-              className={`flex w-full items-center justify-between rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-surface-2 disabled:cursor-default ${
-                s === invoice.status ? 'font-medium text-brand' : 'text-fg'
-              }`}
-            >
-              {INVOICE_STATUS_LABEL[s]}
-              {s === invoice.status && <span aria-hidden="true">✓</span>}
-            </button>
-          ))}
+          {STATUSES.map((s) => {
+            const StatusIcon = STATUS_ICON[s];
+            const isCurrent = s === invoice.status;
+            return (
+              <button
+                key={s}
+                type="button"
+                role="menuitemradio"
+                aria-checked={isCurrent}
+                disabled={isCurrent}
+                onClick={onStatusClick(s)}
+                className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-surface-2 disabled:cursor-default ${
+                  isCurrent ? 'font-medium text-brand' : 'text-fg'
+                }`}
+              >
+                <StatusIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <span className="flex-1 text-left">{INVOICE_STATUS_LABEL[s]}</span>
+                {isCurrent && <Check className="h-4 w-4" aria-hidden="true" />}
+              </button>
+            );
+          })}
 
           <div className="my-1 h-px bg-border" />
 
-          {invoice.editable && <MenuItem onClick={run(onEdit)}>Modifier</MenuItem>}
-          {canSend && <MenuItem onClick={run(onSend)}>Envoyer par courriel</MenuItem>}
-          {invoice.status === 'ENVOYEE' && <MenuItem onClick={run(onRemind)}>Envoyer un rappel</MenuItem>}
-          <MenuItem onClick={run(onDownloadPdf)}>Télécharger le PDF</MenuItem>
-          <MenuItem onClick={run(onToggleArchive)}>
+          {invoice.editable && (
+            <MenuItem onClick={run(onEdit)} icon={Pencil}>
+              Modifier
+            </MenuItem>
+          )}
+          {canSend && (
+            <MenuItem onClick={run(onSend)} icon={Send}>
+              Envoyer par courriel
+            </MenuItem>
+          )}
+          {invoice.status === 'ENVOYEE' && (
+            <MenuItem onClick={run(onRemind)} icon={Bell}>
+              Envoyer un rappel
+            </MenuItem>
+          )}
+          <MenuItem onClick={run(onDownloadPdf)} icon={Download}>
+            Télécharger le PDF
+          </MenuItem>
+          <MenuItem onClick={run(onToggleArchive)} icon={invoice.archivedAt ? ArchiveRestore : Archive}>
             {invoice.archivedAt ? 'Désarchiver' : 'Archiver'}
           </MenuItem>
           {invoice.deletable && (
-            <MenuItem onClick={run(onDelete)} danger>
+            <MenuItem onClick={run(onDelete)} danger icon={Trash2}>
               Supprimer
             </MenuItem>
           )}

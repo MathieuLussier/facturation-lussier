@@ -1,5 +1,6 @@
 import { type ChangeEvent, useRef, useState } from 'react';
 import { Button, Card, Input } from '@facturation/ui';
+import { Download, FileText, Paperclip, Pencil, Plus, Trash2 } from 'lucide-react';
 import type { InvoiceAttachment } from '@facturation/core';
 import {
   deleteInvoiceAttachment,
@@ -99,9 +100,13 @@ export function InvoiceAttachments({ invoiceId, attachments, onChange }: Invoice
   return (
     <Card padded>
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-sm font-semibold text-fg">Pièces jointes</h2>
+        <h2 className="flex items-center gap-1.5 text-sm font-semibold text-fg">
+          <Paperclip className="h-4 w-4 text-muted" aria-hidden="true" />
+          Pièces jointes
+        </h2>
         <Button variant="secondary" size="sm" disabled={busy} onClick={() => fileInputRef.current?.click()}>
-          + Ajouter un fichier
+          <Plus className="h-4 w-4" aria-hidden="true" />
+          Ajouter un fichier
         </Button>
         <input ref={fileInputRef} type="file" className="hidden" onChange={(e) => void handleUpload(e)} />
       </div>
@@ -136,19 +141,45 @@ export function InvoiceAttachments({ invoiceId, attachments, onChange }: Invoice
                 </div>
               ) : (
                 <>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium text-fg">{att.fileName}</p>
-                    <p className="text-xs text-muted">{formatBytes(att.sizeBytes)}</p>
+                  <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-surface-2 text-muted">
+                      <FileText className="h-[18px] w-[18px]" aria-hidden="true" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-fg">{att.fileName}</p>
+                      <p className="text-xs text-muted">{formatBytes(att.sizeBytes)}</p>
+                    </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-1.5">
-                    <Button variant="secondary" size="sm" disabled={busy} onClick={() => void download(att)}>
-                      Télécharger
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={busy}
+                      aria-label="Télécharger"
+                      title="Télécharger"
+                      onClick={() => void download(att)}
+                    >
+                      <Download className="h-4 w-4" aria-hidden="true" />
                     </Button>
-                    <Button variant="secondary" size="sm" disabled={busy} onClick={() => startEdit(att)}>
-                      Renommer
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={busy}
+                      aria-label="Renommer"
+                      title="Renommer"
+                      onClick={() => startEdit(att)}
+                    >
+                      <Pencil className="h-4 w-4" aria-hidden="true" />
                     </Button>
-                    <Button variant="danger" size="sm" disabled={busy} onClick={() => void remove(att)}>
-                      Supprimer
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      disabled={busy}
+                      aria-label="Supprimer"
+                      title="Supprimer"
+                      onClick={() => void remove(att)}
+                    >
+                      <Trash2 className="h-4 w-4" aria-hidden="true" />
                     </Button>
                   </div>
                 </>

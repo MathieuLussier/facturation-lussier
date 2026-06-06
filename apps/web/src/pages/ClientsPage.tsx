@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Badge, Button, Input } from '@facturation/ui';
+import { Search, UserPlus } from 'lucide-react';
 import type { DirectoryEntry } from '@facturation/core';
 import { getClientsDirectory } from '../lib/clients';
 import { useToast } from '../components/Toast';
@@ -133,7 +134,10 @@ export function ClientsPage() {
           <h1 className="text-2xl font-bold tracking-tight text-fg">Clients</h1>
           <p className="text-sm text-muted">Entreprises, particuliers et contacts</p>
         </div>
-        <Button onClick={() => setModalOpen(true)}>Nouveau client</Button>
+        <Button onClick={() => setModalOpen(true)}>
+          <UserPlus className="h-4 w-4" aria-hidden="true" />
+          Nouveau client
+        </Button>
       </div>
 
       {/* Barre de filtres */}
@@ -154,6 +158,7 @@ export function ClientsPage() {
             onChange={(e) => setSearch(e.target.value)}
           />
           <Button type="submit" variant="secondary" size="sm" disabled={loading}>
+            <Search className="h-4 w-4" aria-hidden="true" />
             Rechercher
           </Button>
         </form>
@@ -185,7 +190,10 @@ export function ClientsPage() {
       {!loading && !listError && items.length === 0 && (
         <div className="py-16 text-center">
           <p className="mb-4 text-sm text-muted">Aucun résultat.</p>
-          <Button onClick={() => setModalOpen(true)}>Ajouter le premier client</Button>
+          <Button onClick={() => setModalOpen(true)}>
+            <UserPlus className="h-4 w-4" aria-hidden="true" />
+            Ajouter le premier client
+          </Button>
         </div>
       )}
 

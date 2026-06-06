@@ -2,6 +2,17 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Badge, Card } from '@facturation/ui';
 import { formatCents, type InvoiceStats } from '@facturation/core';
+import {
+  AlertTriangle,
+  ArrowRight,
+  CalendarRange,
+  FilePlus2,
+  Hourglass,
+  ReceiptText,
+  Users,
+  Wallet,
+  type LucideIcon,
+} from 'lucide-react';
 import { getInvoiceStats } from '../lib/invoices';
 import { INVOICE_STATUS_LABEL, INVOICE_STATUS_TONE } from '../lib/invoice-status';
 import { useAuth } from '../auth/AuthContext';
@@ -13,12 +24,22 @@ interface MetricProps {
   value: string;
   hint?: string;
   danger?: boolean;
+  icon: LucideIcon;
 }
 
-function Metric({ label, value, hint, danger }: MetricProps) {
+function Metric({ label, value, hint, danger, icon: Icon }: MetricProps) {
   return (
     <Card padded>
-      <p className="text-sm text-muted">{label}</p>
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-sm text-muted">{label}</p>
+        <span
+          className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${
+            danger ? 'bg-danger-soft text-danger' : 'bg-brand-soft text-brand'
+          }`}
+        >
+          <Icon className="h-5 w-5" aria-hidden="true" />
+        </span>
+      </div>
       <p className={`mt-1 text-2xl font-bold ${danger ? 'text-danger' : 'text-fg'}`}>{value}</p>
       {hint && <p className="mt-1 text-xs text-muted">{hint}</p>}
     </Card>
@@ -70,15 +91,16 @@ export function HomePage() {
 
       {/* Indicateurs clés */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Metric label="Encaissé" value={money(stats?.paidCents)} hint="Factures payées" />
-        <Metric label="À recevoir" value={money(stats?.outstandingCents)} hint="Factures envoyées" />
+        <Metric label="Encaissé" value={money(stats?.paidCents)} hint="Factures payées" icon={Wallet} />
+        <Metric label="À recevoir" value={money(stats?.outstandingCents)} hint="Factures envoyées" icon={Hourglass} />
         <Metric
           label="En retard"
           value={money(stats?.overdueCents)}
           hint={stats ? `${stats.overdueCount} facture(s)` : ''}
           danger
+          icon={AlertTriangle}
         />
-        <Metric label="CA du mois" value={money(stats?.currentMonthCents)} hint="Émis ce mois-ci" />
+        <Metric label="CA du mois" value={money(stats?.currentMonthCents)} hint="Émis ce mois-ci" icon={CalendarRange} />
       </div>
 
       {/* Répartition + dernières factures */}
@@ -146,18 +168,27 @@ export function HomePage() {
       {/* Accès rapides */}
       <div className="grid gap-4 sm:grid-cols-3">
         {[
-          { to: '/clients', kicker: 'Répertoire', title: 'Clients' },
-          { to: '/invoices/new', kicker: 'Créer', title: 'Nouvelle facture' },
-          { to: '/invoices', kicker: 'Historique', title: 'Toutes les factures' },
+          { to: '/clients', kicker: 'Répertoire', title: 'Clients', icon: Users },
+          { to: '/invoices/new', kicker: 'Créer', title: 'Nouvelle facture', icon: FilePlus2 },
+          { to: '/invoices', kicker: 'Historique', title: 'Toutes les factures', icon: ReceiptText },
         ].map((q) => (
           <Link
             key={q.to}
             to={q.to}
             className="rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
           >
-            <Card padded className="transition-colors hover:bg-surface-2">
-              <p className="text-sm font-medium text-muted">{q.kicker}</p>
-              <p className="mt-1 text-lg font-semibold text-fg">{q.title}</p>
+            <Card padded className="group transition-colors hover:bg-surface-2">
+              <div className="flex items-center justify-between">
+                <span className="grid h-10 w-10 place-items-center rounded-lg bg-brand-soft text-brand">
+                  <q.icon className="h-5 w-5" aria-hidden="true" />
+                </span>
+                <ArrowRight
+                  className="h-4 w-4 text-muted transition-transform group-hover:translate-x-0.5"
+                  aria-hidden="true"
+                />
+              </div>
+              <p className="mt-3 text-sm font-medium text-muted">{q.kicker}</p>
+              <p className="mt-0.5 text-lg font-semibold text-fg">{q.title}</p>
             </Card>
           </Link>
         ))}

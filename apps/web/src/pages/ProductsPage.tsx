@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Badge, Button, Card } from '@facturation/ui';
+import {
+  Archive,
+  ArchiveRestore,
+  ChevronLeft,
+  ChevronRight,
+  Pencil,
+  Plus,
+  Trash2,
+} from 'lucide-react';
 import { formatCents, type Product } from '@facturation/core';
 import {
   archiveProduct,
@@ -85,6 +94,7 @@ export function ProductsPage() {
           <p className="text-sm text-muted">Catalogue réutilisable pour les lignes de facture</p>
         </div>
         <Button variant="primary" onClick={openCreate}>
+          <Plus className="h-4 w-4" aria-hidden="true" />
           Nouveau produit
         </Button>
       </div>
@@ -127,6 +137,7 @@ export function ProductsPage() {
           <div className="py-12 text-center">
             <p className="mb-4 text-sm text-muted">Aucun produit pour le moment.</p>
             <Button variant="primary" onClick={openCreate}>
+              <Plus className="h-4 w-4" aria-hidden="true" />
               Créer le premier produit
             </Button>
           </div>
@@ -165,12 +176,19 @@ export function ProductsPage() {
                     <td className="px-4 py-2.5">
                       <div className="flex flex-wrap gap-1.5">
                         <Button variant="secondary" size="sm" onClick={() => openEdit(p)}>
+                          <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
                           Modifier
                         </Button>
                         <Button variant="secondary" size="sm" onClick={() => void toggleArchive(p)}>
+                          {p.archivedAt ? (
+                            <ArchiveRestore className="h-3.5 w-3.5" aria-hidden="true" />
+                          ) : (
+                            <Archive className="h-3.5 w-3.5" aria-hidden="true" />
+                          )}
                           {p.archivedAt ? 'Désarchiver' : 'Archiver'}
                         </Button>
                         <Button variant="danger" size="sm" onClick={() => void remove(p)}>
+                          <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                           Supprimer
                         </Button>
                       </div>
@@ -186,6 +204,7 @@ export function ProductsPage() {
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-3 text-sm">
           <Button variant="secondary" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+            <ChevronLeft className="h-4 w-4" aria-hidden="true" />
             Précédent
           </Button>
           <span className="text-muted">
@@ -193,6 +212,7 @@ export function ProductsPage() {
           </span>
           <Button variant="secondary" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
             Suivant
+            <ChevronRight className="h-4 w-4" aria-hidden="true" />
           </Button>
         </div>
       )}

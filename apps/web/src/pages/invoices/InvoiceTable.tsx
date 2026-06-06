@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Badge, Button } from '@facturation/ui';
+import { Archive, ArchiveRestore, Bell } from 'lucide-react';
 import { formatCents, type Invoice, type InvoiceStatus } from '@facturation/core';
 import { StatusSelect } from '../../components/StatusSelect';
 import {
@@ -241,10 +242,16 @@ function InvoiceRow({
       <td className="px-4 py-2.5" onClick={(e) => e.stopPropagation()}>
         <div className="flex flex-col items-start gap-1">
           <Button variant="secondary" size="sm" onClick={() => onToggleArchive(inv)}>
+            {inv.archivedAt ? (
+              <ArchiveRestore className="h-3.5 w-3.5" aria-hidden="true" />
+            ) : (
+              <Archive className="h-3.5 w-3.5" aria-hidden="true" />
+            )}
             {inv.archivedAt ? 'Désarchiver' : 'Archiver'}
           </Button>
           {dueLabel.overdue && (
             <Button variant="secondary" size="sm" onClick={() => onSendReminder(inv)}>
+              <Bell className="h-3.5 w-3.5" aria-hidden="true" />
               Rappel
             </Button>
           )}

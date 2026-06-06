@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Button, Modal } from '@facturation/ui';
+import { Check } from 'lucide-react';
 import type { PaymentMethod } from '@facturation/core';
 import { PAYMENT_METHODS, PAYMENT_METHOD_LABEL } from '../lib/payment-method';
 
@@ -69,6 +70,7 @@ export function PaymentModal({ open, onClose, onConfirm, busy }: PaymentModalPro
             Annuler
           </Button>
           <Button variant="primary" onClick={() => onConfirm(paidAt, method)} disabled={busy || !paidAt}>
+            <Check className="h-4 w-4" aria-hidden="true" />
             Confirmer le paiement
           </Button>
         </div>

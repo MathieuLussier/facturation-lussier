@@ -17,6 +17,7 @@ import {
   unarchiveInvoice,
   updateInvoiceStatus,
 } from '../lib/invoices';
+import { ArrowLeft, Pencil, Printer, ScanLine, Send } from 'lucide-react';
 import { useToast } from '../components/Toast';
 import { useConfirm } from '../components/Confirm';
 import { PaymentModal } from '../components/PaymentModal';
@@ -164,11 +165,13 @@ export function InvoiceDetailPage() {
         <div className="flex flex-wrap items-center gap-2">
           {invoice?.editable && (
             <Button variant="secondary" disabled={busy} onClick={() => navigate(`/invoices/${invoice.id}/edit`)}>
+              <Pencil className="h-4 w-4" aria-hidden="true" />
               Modifier
             </Button>
           )}
           {canSend && invoice && (
             <Button variant="primary" disabled={busy} onClick={() => setSendModal({ open: true, mode: 'send' })}>
+              <Send className="h-4 w-4" aria-hidden="true" />
               Envoyer par courriel
             </Button>
           )}
@@ -177,9 +180,11 @@ export function InvoiceDetailPage() {
           {invoice && (
             <>
               <Button variant="secondary" disabled={busy} onClick={() => void imprimer()}>
+                <Printer className="h-4 w-4" aria-hidden="true" />
                 Imprimer
               </Button>
               <Button variant="secondary" disabled={busy} onClick={scanner}>
+                <ScanLine className="h-4 w-4" aria-hidden="true" />
                 Scanner
               </Button>
               <InvoiceActionsMenu
@@ -198,9 +203,10 @@ export function InvoiceDetailPage() {
           )}
           <Link
             to="/invoices"
-            className="ml-1 text-sm text-muted hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            className="ml-1 inline-flex items-center gap-1 text-sm text-muted hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
           >
-            ← Factures
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            Factures
           </Link>
         </div>
       </div>

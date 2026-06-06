@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, buttonClasses } from '@facturation/ui';
+import { Layers, Plus } from 'lucide-react';
 import type { Invoice, InvoiceStatus, PaymentMethod } from '@facturation/core';
 import {
   archiveInvoice,
@@ -116,6 +117,7 @@ export function InvoicesPage() {
           <p className="text-sm text-muted">Facturation B2B (TPS/TVQ)</p>
         </div>
         <Link to="/invoices/new" className={buttonClasses('primary')}>
+          <Plus className="h-4 w-4" aria-hidden="true" />
           Nouvelle facture
         </Link>
       </div>
@@ -160,6 +162,7 @@ export function InvoicesPage() {
 
         {/* Group-by select */}
         <label className="flex items-center gap-2 text-sm text-muted">
+          <Layers className="h-4 w-4" aria-hidden="true" />
           Regrouper par
           <select
             value={groupBy}
@@ -211,6 +214,7 @@ export function InvoicesPage() {
           <div className="py-12 text-center">
             <p className="mb-4 text-sm text-muted">Aucune facture pour le moment.</p>
             <Link to="/invoices/new" className={buttonClasses('primary')}>
+              <Plus className="h-4 w-4" aria-hidden="true" />
               Créer la première facture
             </Link>
           </div>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Button, Modal } from '@facturation/ui';
+import { FileText, Paperclip, Send } from 'lucide-react';
 import { formatCents, type Invoice } from '@facturation/core';
 import { sendInvoice, sendInvoiceReminder } from '../../lib/invoices';
 
@@ -38,24 +39,6 @@ function defaultRemindBody(invoice: Invoice): string {
     `Nous vous rappelons que la facture ${refLabel(invoice)} ` +
     `d'un montant de ${formatCents(invoice.totalCents)} est toujours en attente de règlement${echeance}.\n\n` +
     `Merci de régulariser cette situation.\n\nCordialement`
-  );
-}
-
-function PaperclipIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-4 w-4"
-      aria-hidden="true"
-    >
-      <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-    </svg>
   );
 }
 
@@ -176,11 +159,12 @@ export function SendInvoiceModal({ open, onClose, invoice, mode, onSent }: SendI
         {/* Pièces jointes (pastilles à cocher) */}
         <div className="border-t border-border pt-3">
           <div className="flex items-center gap-1.5 text-sm font-medium text-fg">
-            <PaperclipIcon />
+            <Paperclip className="h-4 w-4 text-muted" aria-hidden="true" />
             Pièces jointes
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface-2 px-3 py-1.5 text-sm text-fg">
+              <FileText className="h-4 w-4 text-muted" aria-hidden="true" />
               <span className="max-w-[14rem] truncate">facture-{invoice.reference ?? invoice.number}.pdf</span>
               <span className="text-xs text-muted">PDF · toujours joint</span>
             </span>
@@ -213,6 +197,7 @@ export function SendInvoiceModal({ open, onClose, invoice, mode, onSent }: SendI
             Annuler
           </Button>
           <Button variant="primary" onClick={() => void submit()} disabled={submitting}>
+            <Send className="h-4 w-4" aria-hidden="true" />
             {submitting ? 'Envoi…' : 'Envoyer'}
           </Button>
         </div>
