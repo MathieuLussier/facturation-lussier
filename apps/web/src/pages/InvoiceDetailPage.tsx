@@ -160,8 +160,15 @@ export function InvoiceDetailPage() {
 
   return (
     <div className="space-y-4">
-      {/* Barre d'outils façon Odoo */}
+      {/* Barre d'outils façon Odoo — retour à gauche, actions à droite */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
+        <Link
+          to="/invoices"
+          className="inline-flex items-center gap-1 text-sm text-muted hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          Factures
+        </Link>
         <div className="flex flex-wrap items-center gap-2">
           {invoice?.editable && (
             <Button variant="secondary" disabled={busy} onClick={() => navigate(`/invoices/${invoice.id}/edit`)}>
@@ -175,8 +182,6 @@ export function InvoiceDetailPage() {
               Envoyer par courriel
             </Button>
           )}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
           {invoice && (
             <>
               <Button variant="secondary" disabled={busy} onClick={() => void imprimer()}>
@@ -201,13 +206,6 @@ export function InvoiceDetailPage() {
               />
             </>
           )}
-          <Link
-            to="/invoices"
-            className="ml-1 inline-flex items-center gap-1 text-sm text-muted hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-          >
-            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-            Factures
-          </Link>
         </div>
       </div>
 

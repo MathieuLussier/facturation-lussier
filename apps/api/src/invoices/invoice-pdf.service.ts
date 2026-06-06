@@ -66,7 +66,8 @@ export class InvoicePdfService {
     const logoPath = resolveLogoPath(issuer);
     if (logoPath) {
       try {
-        doc.image(logoPath, 497, 50, { width: 48 });
+        // Logo en haut à droite, borné à 120×80 pt (proportions conservées).
+        doc.image(logoPath, 425, 45, { fit: [120, 80], align: 'right' });
       } catch {
         /* format non supporté / fichier corrompu : on continue sans */
       }
