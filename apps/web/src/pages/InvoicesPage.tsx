@@ -25,13 +25,6 @@ const FILTER_CHIPS: Array<{ id: FilterChip; label: string }> = [
   { id: 'overdue', label: 'En retard' },
 ];
 
-const GROUP_OPTIONS: Array<{ value: InvoiceGroupBy; label: string }> = [
-  { value: 'none', label: 'Aucun' },
-  { value: 'client', label: 'Client' },
-  { value: 'status', label: 'Statut' },
-  { value: 'month', label: 'Mois' },
-];
-
 export function InvoicesPage() {
   const { notify } = useToast();
   const [items, setItems] = useState<Invoice[]>([]);
@@ -174,11 +167,19 @@ export function InvoicesPage() {
             className="rounded-md border border-border bg-surface px-2 py-1 text-xs text-fg
                        focus:outline-none focus:ring-2 focus:ring-brand"
           >
-            {GROUP_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
+            <option value="none">Aucun</option>
+            <option value="client">Client</option>
+            <option value="status">Statut</option>
+            <optgroup label="Date de facturation">
+              <option value="issueYear">Année</option>
+              <option value="issueQuarter">Trimestre</option>
+              <option value="issueMonth">Mois</option>
+            </optgroup>
+            <optgroup label="Date d'échéance">
+              <option value="dueYear">Année</option>
+              <option value="dueQuarter">Trimestre</option>
+              <option value="dueMonth">Mois</option>
+            </optgroup>
           </select>
         </label>
 

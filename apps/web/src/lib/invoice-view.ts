@@ -67,7 +67,16 @@ export function relativeDueLabel(
   };
 }
 
-export type InvoiceGroupBy = 'none' | 'client' | 'status' | 'month';
+export type InvoiceGroupBy =
+  | 'none'
+  | 'client'
+  | 'status'
+  | 'issueYear'
+  | 'issueQuarter'
+  | 'issueMonth'
+  | 'dueYear'
+  | 'dueQuarter'
+  | 'dueMonth';
 
 export interface InvoiceGroup {
   key: string;
@@ -78,6 +87,56 @@ export interface InvoiceGroup {
 }
 
 const STATUS_ORDER: InvoiceStatus[] = ['BROUILLON', 'ENVOYEE', 'PAYEE', 'ANNULEE'];
+
+type DateField = 'issueDate' | 'dueDate';
+type Granularity = 'year' | 'quarter' | 'month';
+
+/** Configuration des regroupements par date (champ + granularité). */
+const DATE_GROUPS: Partial<Record<InvoiceGroupBy, { field: DateField; gran: Granularity }>> = {
+  issueYear: { field: 'issueDate', gran: 'year' },
+  issueQuarter: { field: 'issueDate', gran: 'quarter' },
+  issueMonth: { field: 'issueDate', gran: 'month' },
+  dueYear: { field: 'dueDate', gran: 'year' },
+  dueQuarter: { field: 'dueDate', gran: 'quarter' },
+  dueMonth: { field: 'dueDate', gran: 'month' },
+};
+
+/**
+ * Clé (triable) + libellé d'un regroupement par date selon la granularité.
+ * Date absente (échéance non définie) → clé vide (triée en dernier) + « Sans échéance ».
+ */
+function dateGroupKeyLabel(dateStr: string | null, gran: Granularity): { key: string; label: string } {
+  if (!dateStr) {
+    return { key: '', label: 'Sans échéance' };
+  }
+  const [y, m] = dateStr.slice(0, 10).split('-').map(Number) as [number, number];
+  if (gran === 'year') {
+    return { key: String(y), label: String(y) };
+  }
+  if (gran === 'quarter') {
+    const q = Math.ceil(m / 3);
+    return { key: `${y}-Q${q}`, label: `T${q} ${y}` };
+  }
+  const raw = new Intl.DateTimeFormat('fr-CA', { month: 'long', year: 'numeric' }).format(
+    new Date(y, m - 1, 1),
+  );
+  return { key: `${y}-${String(m).padStart(2, '0')}`, label: raw.charAt(0).toUpperCase() + raw.slice(1) };
+}
+
+/** Clé + libellé d'un regroupement pour une facture donnée. */
+function groupKeyLabel(inv: Invoice, by: InvoiceGroupBy): { key: string; label: string } {
+  if (by === 'client') {
+    return { key: inv.clientId, label: inv.client?.companyName ?? '—' };
+  }
+  if (by === 'status') {
+    return { key: inv.status, label: INVOICE_STATUS_LABEL[inv.status] };
+  }
+  const cfg = DATE_GROUPS[by];
+  if (cfg) {
+    return dateGroupKeyLabel(cfg.field === 'issueDate' ? inv.issueDate : inv.dueDate, cfg.gran);
+  }
+  return { key: '', label: '' };
+}
 
 function sumGroup(invoices: Invoice[]): { subtotalCents: number; totalCents: number } {
   return invoices.reduce(
@@ -96,60 +155,32 @@ export function groupInvoices(items: Invoice[], by: InvoiceGroupBy): InvoiceGrou
     return [{ key: '', label: '', invoices: items, ...sums }];
   }
 
-  const map = new Map<string, Invoice[]>();
+  const map = new Map<string, { label: string; invoices: Invoice[] }>();
 
   for (const inv of items) {
-    let key: string;
-    if (by === 'client') {
-      key = inv.clientId;
-    } else if (by === 'status') {
-      key = inv.status;
-    } else {
-      // month
-      key = inv.issueDate.slice(0, 7);
-    }
+    const { key, label } = groupKeyLabel(inv, by);
     const existing = map.get(key);
     if (existing) {
-      existing.push(inv);
+      existing.invoices.push(inv);
     } else {
-      map.set(key, [inv]);
+      map.set(key, { label, invoices: [inv] });
     }
   }
 
   const groups: InvoiceGroup[] = [];
-
-  for (const [key, groupItems] of map.entries()) {
-    let label: string;
-    if (by === 'client') {
-      label = groupItems[0]?.client?.companyName ?? '—';
-    } else if (by === 'status') {
-      label = INVOICE_STATUS_LABEL[key as InvoiceStatus];
-    } else {
-      // month — capitalize first letter
-      const monthParts = key.split('-').map(Number) as [number, number];
-      const [y, m] = monthParts;
-      const raw = new Intl.DateTimeFormat('fr-CA', {
-        month: 'long',
-        year: 'numeric',
-      }).format(new Date(y, m - 1, 1));
-      label = raw.charAt(0).toUpperCase() + raw.slice(1);
-    }
-
-    const sums = sumGroup(groupItems);
-    groups.push({ key, label, invoices: groupItems, ...sums });
+  for (const [key, { label, invoices }] of map.entries()) {
+    groups.push({ key, label, invoices, ...sumGroup(invoices) });
   }
 
-  // Sort groups
   if (by === 'client') {
     groups.sort((a, b) => a.label.localeCompare(b.label, 'fr'));
   } else if (by === 'status') {
     groups.sort(
       (a, b) =>
-        STATUS_ORDER.indexOf(a.key as InvoiceStatus) -
-        STATUS_ORDER.indexOf(b.key as InvoiceStatus),
+        STATUS_ORDER.indexOf(a.key as InvoiceStatus) - STATUS_ORDER.indexOf(b.key as InvoiceStatus),
     );
   } else {
-    // month DESC (recent first)
+    // Regroupements par date : du plus récent au plus ancien ; « Sans échéance » (clé vide) en dernier.
     groups.sort((a, b) => b.key.localeCompare(a.key));
   }
 

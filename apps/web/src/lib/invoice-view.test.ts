@@ -250,32 +250,72 @@ describe('groupInvoices', () => {
     });
   });
 
-  describe('by month', () => {
-    it('produces correct group count', () => {
-      const groups = groupInvoices([inv1, inv2, inv3], 'month');
+  describe('par mois de facturation (issueMonth)', () => {
+    it('produit le bon nombre de groupes', () => {
+      const groups = groupInvoices([inv1, inv2, inv3], 'issueMonth');
       expect(groups).toHaveLength(2);
     });
 
-    it('groups by YYYY-MM key', () => {
-      const groups = groupInvoices([inv1, inv2, inv3], 'month');
+    it('regroupe par clé YYYY-MM', () => {
+      const groups = groupInvoices([inv1, inv2, inv3], 'issueMonth');
       const marchGroup = groups.find((g) => g.key === '2024-03');
       expect(marchGroup).toBeDefined();
       expect(marchGroup!.invoices).toHaveLength(2);
     });
 
-    it('sorts DESC (most recent first)', () => {
-      const groups = groupInvoices([inv1, inv2, inv3], 'month');
+    it('trie DESC (plus récent en premier)', () => {
+      const groups = groupInvoices([inv1, inv2, inv3], 'issueMonth');
       const [g0, g1] = groups;
       expect(g0!.key).toBe('2024-03');
       expect(g1!.key).toBe('2024-02');
     });
 
-    it('capitalizes the month label', () => {
-      const groups = groupInvoices([inv1, inv2, inv3], 'month');
+    it('met une majuscule au libellé du mois', () => {
+      const groups = groupInvoices([inv1, inv2, inv3], 'issueMonth');
       const march = groups.find((g) => g.key === '2024-03')!;
-      // First char should be uppercase
       expect(march.label.charAt(0)).toBe(march.label.charAt(0).toUpperCase());
       expect(march.label.charAt(0)).not.toBe(march.label.charAt(0).toLowerCase());
+    });
+  });
+
+  describe('par trimestre de facturation (issueQuarter)', () => {
+    it('regroupe Février et Mars dans T1 2024', () => {
+      const groups = groupInvoices([inv1, inv2, inv3], 'issueQuarter');
+      expect(groups).toHaveLength(1);
+      expect(groups[0]!.key).toBe('2024-Q1');
+      expect(groups[0]!.label).toBe('T1 2024');
+      expect(groups[0]!.invoices).toHaveLength(3);
+    });
+  });
+
+  describe('par année de facturation (issueYear)', () => {
+    it('regroupe tout 2024 ensemble', () => {
+      const groups = groupInvoices([inv1, inv2, inv3], 'issueYear');
+      expect(groups).toHaveLength(1);
+      expect(groups[0]!.key).toBe('2024');
+      expect(groups[0]!.label).toBe('2024');
+    });
+  });
+
+  describe("par date d'échéance (dueMonth)", () => {
+    const withDue = makeInvoice({
+      id: 'i4',
+      clientId: 'c1',
+      client: { ...baseClient, id: 'c1', companyName: 'Acme Corp', type: 'COMPANY' },
+      issueDate: '2024-03-10',
+      dueDate: '2024-05-15',
+    });
+
+    it("regroupe les factures sans échéance sous « Sans échéance » (en dernier)", () => {
+      const groups = groupInvoices([inv1, inv2, withDue], 'dueMonth');
+      const sansEcheance = groups.find((g) => g.key === '');
+      expect(sansEcheance).toBeDefined();
+      expect(sansEcheance!.label).toBe('Sans échéance');
+      expect(sansEcheance!.invoices).toHaveLength(2); // inv1 + inv2 (dueDate null)
+      // groupe daté présent
+      expect(groups.find((g) => g.key === '2024-05')?.invoices).toHaveLength(1);
+      // « Sans échéance » (clé vide) trié en dernier
+      expect(groups[groups.length - 1]!.key).toBe('');
     });
   });
 });
