@@ -20,8 +20,9 @@ export class ListClientsQuery {
   @MaxLength(255)
   search?: string;
 
+  /** true → afficher uniquement les clients archivés (sinon, uniquement les actifs). */
   @IsOptional()
   @Transform(({ value }) => value === true || value === 'true' || value === '1')
   @IsBoolean()
-  includeArchived?: boolean;
+  archivedOnly?: boolean;
 }

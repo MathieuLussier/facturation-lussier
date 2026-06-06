@@ -10,8 +10,8 @@ export interface ListProductsParams {
   page?: number;
   pageSize?: number;
   search?: string;
-  /** Inclure les produits archivés (masqués par défaut). */
-  includeArchived?: boolean;
+  /** true → afficher uniquement les produits archivés (sinon, uniquement les actifs). */
+  archivedOnly?: boolean;
 }
 
 /** Construit la query string pour GET /products. Pure, testable. */
@@ -20,7 +20,7 @@ export function buildProductsQuery(params: ListProductsParams): string {
   if (params.page) sp.set('page', String(params.page));
   if (params.pageSize) sp.set('pageSize', String(params.pageSize));
   if (params.search && params.search.trim()) sp.set('search', params.search.trim());
-  if (params.includeArchived) sp.set('includeArchived', 'true');
+  if (params.archivedOnly) sp.set('archivedOnly', 'true');
   const qs = sp.toString();
   return qs ? `?${qs}` : '';
 }

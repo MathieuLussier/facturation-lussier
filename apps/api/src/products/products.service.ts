@@ -12,7 +12,8 @@ interface ListParams {
   page?: number;
   pageSize?: number;
   search?: string;
-  includeArchived?: boolean;
+  /** true → uniquement les archivés ; sinon → uniquement les actifs. */
+  archivedOnly?: boolean;
 }
 
 const DEFAULT_PAGE = 1;
@@ -46,7 +47,7 @@ export class ProductsService {
     const searchFilter = params.search
       ? { name: { contains: params.search, mode: 'insensitive' as const } }
       : {};
-    const archivedFilter = params.includeArchived ? {} : { archivedAt: null };
+    const archivedFilter = params.archivedOnly ? { archivedAt: { not: null } } : { archivedAt: null };
     const where = { ...searchFilter, ...archivedFilter };
 
     const [rows, total] = await db.$transaction([

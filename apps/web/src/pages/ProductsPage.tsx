@@ -30,7 +30,7 @@ export function ProductsPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await listProducts({ page, pageSize: PAGE_SIZE, search, includeArchived: showArchived });
+      const res = await listProducts({ page, pageSize: PAGE_SIZE, search, archivedOnly: showArchived });
       setItems(res.items);
       setTotal(res.total);
     } catch (err) {
@@ -116,7 +116,7 @@ export function ProductsPage() {
               setShowArchived(e.target.checked);
             }}
           />
-          Afficher les archivés
+          Archivés seulement
         </label>
       </div>
 

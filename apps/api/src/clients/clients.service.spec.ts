@@ -107,14 +107,14 @@ describe('ClientsService', () => {
       );
     });
 
-    it("n'ajoute pas archivedAt au where quand includeArchived est true", async () => {
+    it('liste uniquement les archivés quand archivedOnly est true', async () => {
       model.findMany.mockResolvedValue([]);
       model.count.mockResolvedValue(0);
 
-      await service.list({ includeArchived: true });
+      await service.list({ archivedOnly: true });
 
       const whereArg = model.findMany.mock.calls[0][0].where as Record<string, unknown>;
-      expect(whereArg).not.toHaveProperty('archivedAt');
+      expect(whereArg.archivedAt).toEqual({ not: null });
     });
 
     it('calcule deletable=true quand tous les compteurs sont 0', async () => {
@@ -211,7 +211,7 @@ describe('ClientsService', () => {
       expect(byName['Bob Roy'].subtitle).toBe('Acme Inc');
     });
 
-    it('exclut les archivés par défaut, les inclut avec includeArchived', async () => {
+    it('exclut les archivés par défaut, montre uniquement les archivés avec archivedOnly', async () => {
       model.findMany.mockResolvedValue([]);
       contact.findMany.mockResolvedValue([]);
 
@@ -221,9 +221,9 @@ describe('ClientsService', () => {
       );
 
       model.findMany.mockClear();
-      await service.directory({ includeArchived: true });
+      await service.directory({ archivedOnly: true });
       const whereArg = model.findMany.mock.calls[0][0].where as Record<string, unknown>;
-      expect(whereArg).not.toHaveProperty('archivedAt');
+      expect(whereArg.archivedAt).toEqual({ not: null });
     });
   });
 

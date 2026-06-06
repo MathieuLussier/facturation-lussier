@@ -10,9 +10,9 @@ describe('buildProductsQuery', () => {
     expect(buildProductsQuery({ page: 2, pageSize: 10 })).toBe('?page=2&pageSize=10');
   });
 
-  it('inclut la recherche (trim) et les archivés', () => {
-    expect(buildProductsQuery({ search: '  consult ', includeArchived: true })).toBe(
-      '?search=consult&includeArchived=true',
+  it('inclut la recherche (trim) et archivedOnly', () => {
+    expect(buildProductsQuery({ search: '  consult ', archivedOnly: true })).toBe(
+      '?search=consult&archivedOnly=true',
     );
   });
 

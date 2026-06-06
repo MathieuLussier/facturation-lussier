@@ -83,7 +83,7 @@ export function ClientsPage() {
           page: p,
           pageSize: PAGE_SIZE,
           search: q,
-          includeArchived: archived,
+          archivedOnly: archived,
         });
         setItems(res.items);
         setTotal(res.total);
@@ -164,7 +164,7 @@ export function ClientsPage() {
             onChange={(e) => setShowArchived(e.target.checked)}
             className="h-4 w-4 rounded border-border accent-brand"
           />
-          Afficher les archivés
+          Archivés seulement
         </label>
       </div>
 

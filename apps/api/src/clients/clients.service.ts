@@ -18,7 +18,8 @@ interface ListParams {
   page?: number;
   pageSize?: number;
   search?: string;
-  includeArchived?: boolean;
+  /** true → uniquement les archivés ; sinon → uniquement les actifs. */
+  archivedOnly?: boolean;
 }
 
 const DEFAULT_PAGE = 1;
@@ -71,8 +72,8 @@ export class ClientsService {
       ? { companyName: { contains: params.search, mode: 'insensitive' as const } }
       : {};
 
-    // Filtre d'archivage : par défaut on exclut les archivés
-    const archivedFilter = params.includeArchived ? {} : { archivedAt: null };
+    // Filtre d'archivage : par défaut les actifs ; archivedOnly → uniquement les archivés
+    const archivedFilter = params.archivedOnly ? { archivedAt: { not: null } } : { archivedAt: null };
 
     const where = { ...searchFilter, ...archivedFilter };
 
@@ -98,7 +99,7 @@ export class ClientsService {
     const page = params.page ?? DEFAULT_PAGE;
     const pageSize = params.pageSize ?? DEFAULT_PAGE_SIZE;
     const db = this.prisma.client;
-    const archived = params.includeArchived ? {} : { archivedAt: null };
+    const archived = params.archivedOnly ? { archivedAt: { not: null } } : { archivedAt: null };
     const search = params.search?.trim();
 
     const clientWhere = {

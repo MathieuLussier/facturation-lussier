@@ -11,8 +11,8 @@ export interface ListClientsParams {
   page?: number;
   pageSize?: number;
   search?: string;
-  /** Inclure les entreprises archivées (masquées par défaut). */
-  includeArchived?: boolean;
+  /** true → afficher uniquement les clients archivés (sinon, uniquement les actifs). */
+  archivedOnly?: boolean;
 }
 
 /** Construit la query string pour GET /clients. Pure, testable. */
@@ -21,7 +21,7 @@ export function buildClientsQuery(params: ListClientsParams): string {
   if (params.page) sp.set('page', String(params.page));
   if (params.pageSize) sp.set('pageSize', String(params.pageSize));
   if (params.search && params.search.trim()) sp.set('search', params.search.trim());
-  if (params.includeArchived) sp.set('includeArchived', 'true');
+  if (params.archivedOnly) sp.set('archivedOnly', 'true');
   const qs = sp.toString();
   return qs ? `?${qs}` : '';
 }

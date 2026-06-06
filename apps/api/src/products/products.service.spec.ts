@@ -71,7 +71,7 @@ describe('ProductsService', () => {
       );
     });
 
-    it('filtre archivedAt: null par défaut, le retire avec includeArchived', async () => {
+    it('filtre archivedAt: null par défaut, uniquement les archivés avec archivedOnly', async () => {
       product.findMany.mockResolvedValue([]);
       product.count.mockResolvedValue(0);
 
@@ -81,9 +81,9 @@ describe('ProductsService', () => {
       );
 
       product.findMany.mockClear();
-      await service.list({ includeArchived: true });
+      await service.list({ archivedOnly: true });
       const whereArg = product.findMany.mock.calls[0][0].where as Record<string, unknown>;
-      expect(whereArg).not.toHaveProperty('archivedAt');
+      expect(whereArg.archivedAt).toEqual({ not: null });
     });
   });
 
