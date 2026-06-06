@@ -3,7 +3,13 @@ import { Button, Card, Input, Modal } from '@facturation/ui';
 import type { Client, ClientType, UpdateClientRequest } from '@facturation/core';
 import { ApiError } from '../../lib/api';
 import { updateClient } from '../../lib/clients';
-import { CANADA_PROVINCES, formatPhone, formatPostalCode } from '../../lib/format';
+import {
+  CANADA_PROVINCES,
+  formatPhone,
+  formatPostalCode,
+  isValidPhone,
+  isValidPostalCode,
+} from '../../lib/format';
 import { useToast } from '../../components/Toast';
 
 const SELECT_CLASS =
@@ -44,11 +50,11 @@ export function InfosTab({ client, onUpdated }: InfosTabProps) {
       type: client.type,
       companyName: client.companyName,
       email: client.email ?? '',
-      phone: client.phone ?? '',
+      phone: formatPhone(client.phone ?? ''),
       addressLine: client.addressLine ?? '',
       city: client.city ?? '',
       province: client.province ?? '',
-      postalCode: client.postalCode ?? '',
+      postalCode: formatPostalCode(client.postalCode ?? ''),
       notes: client.notes ?? '',
     });
     setFormError('');
@@ -66,6 +72,14 @@ export function InfosTab({ client, onUpdated }: InfosTabProps) {
     }
     if (fields.type === 'INDIVIDUAL' && !String(fields.email ?? '').trim()) {
       setFormError('Le courriel est requis pour un particulier.');
+      return;
+    }
+    if (!isValidPhone(String(fields.phone ?? ''))) {
+      setFormError('Le numéro de téléphone est incomplet.');
+      return;
+    }
+    if (!isValidPostalCode(String(fields.postalCode ?? ''))) {
+      setFormError('Le code postal est invalide (format A1A 1A1).');
       return;
     }
     setSubmitting(true);

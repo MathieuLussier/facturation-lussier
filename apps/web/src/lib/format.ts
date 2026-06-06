@@ -48,3 +48,23 @@ export function formatPostalCode(value: string): string {
   if (cleaned.length <= 3) return cleaned;
   return `${cleaned.slice(0, 3)} ${cleaned.slice(3)}`;
 }
+
+/**
+ * Téléphone valide : vide (champ optionnel) OU 10 chiffres, OU 11 chiffres
+ * commençant par 1 (indicatif pays). Une saisie partielle est invalide.
+ */
+export function isValidPhone(value: string): boolean {
+  const digits = value.replace(/\D/g, '');
+  if (digits.length === 0) return true;
+  return digits.length === 10 || (digits.length === 11 && digits.startsWith('1'));
+}
+
+/**
+ * Code postal valide : vide OU format canadien A1A 1A1 (lettre-chiffre-lettre
+ * chiffre-lettre-chiffre, espace optionnel).
+ */
+export function isValidPostalCode(value: string): boolean {
+  const v = value.trim();
+  if (v === '') return true;
+  return /^[A-Za-z]\d[A-Za-z]\s?\d[A-Za-z]\d$/.test(v);
+}

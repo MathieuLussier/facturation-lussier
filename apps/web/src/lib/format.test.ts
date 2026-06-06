@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatPhone, formatPostalCode } from './format';
+import { formatPhone, formatPostalCode, isValidPhone, isValidPostalCode } from './format';
 
 describe('formatPhone', () => {
   it('formate 10 chiffres', () => {
@@ -30,5 +30,33 @@ describe('formatPostalCode', () => {
   });
   it('retire les caractères invalides et tronque à 6', () => {
     expect(formatPostalCode('J0L 1H0 99')).toBe('J0L 1H0');
+  });
+});
+
+describe('isValidPhone', () => {
+  it('vide → valide (optionnel)', () => {
+    expect(isValidPhone('')).toBe(true);
+  });
+  it('10 chiffres / +1 → valides', () => {
+    expect(isValidPhone('(438) 889-4324')).toBe(true);
+    expect(isValidPhone('+1 (438) 889-4324')).toBe(true);
+  });
+  it('partiel → invalide', () => {
+    expect(isValidPhone('(438) 889')).toBe(false);
+    expect(isValidPhone('+1')).toBe(false);
+  });
+});
+
+describe('isValidPostalCode', () => {
+  it('vide → valide', () => {
+    expect(isValidPostalCode('')).toBe(true);
+  });
+  it('format A1A 1A1 → valide (avec ou sans espace)', () => {
+    expect(isValidPostalCode('J0L 1H0')).toBe(true);
+    expect(isValidPostalCode('J0L1H0')).toBe(true);
+  });
+  it('incomplet ou mauvais format → invalide', () => {
+    expect(isValidPostalCode('J0L 1')).toBe(false);
+    expect(isValidPostalCode('12345')).toBe(false);
   });
 });

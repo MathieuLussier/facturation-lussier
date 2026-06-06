@@ -3,7 +3,13 @@ import { Button, Input, Modal } from '@facturation/ui';
 import type { ClientType, CreateClientRequest } from '@facturation/core';
 import { ApiError } from '../../lib/api';
 import { createClient } from '../../lib/clients';
-import { CANADA_PROVINCES, formatPhone, formatPostalCode } from '../../lib/format';
+import {
+  CANADA_PROVINCES,
+  formatPhone,
+  formatPostalCode,
+  isValidPhone,
+  isValidPostalCode,
+} from '../../lib/format';
 
 const SELECT_CLASS =
   'block w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50';
@@ -91,6 +97,14 @@ export function ClientCreateModal({ open, onClose, onCreated, onError }: ClientC
     }
     if (clientType === 'INDIVIDUAL' && !fields.email.trim()) {
       setFormError('Le courriel est requis pour un particulier.');
+      return;
+    }
+    if (!isValidPhone(fields.phone)) {
+      setFormError('Le numéro de téléphone est incomplet.');
+      return;
+    }
+    if (!isValidPostalCode(fields.postalCode)) {
+      setFormError('Le code postal est invalide (format A1A 1A1).');
       return;
     }
     setSubmitting(true);

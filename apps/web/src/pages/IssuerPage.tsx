@@ -3,7 +3,13 @@ import { Button, Card, Input } from '@facturation/ui';
 import type { UpsertIssuerRequest } from '@facturation/core';
 import { ApiError } from '../lib/api';
 import { getIssuer, issuerLogoUrl, uploadIssuerLogo, upsertIssuer } from '../lib/issuer';
-import { CANADA_PROVINCES, formatPhone, formatPostalCode } from '../lib/format';
+import {
+  CANADA_PROVINCES,
+  formatPhone,
+  formatPostalCode,
+  isValidPhone,
+  isValidPostalCode,
+} from '../lib/format';
 import { useToast } from '../components/Toast';
 
 const SELECT_CLASS =
@@ -77,11 +83,11 @@ export function IssuerPage() {
           setFields({
             legalName: issuer.legalName,
             email: issuer.email ?? '',
-            phone: issuer.phone ?? '',
+            phone: formatPhone(issuer.phone ?? ''),
             addressLine: issuer.addressLine ?? '',
             city: issuer.city ?? '',
             province: issuer.province ?? 'QC',
-            postalCode: issuer.postalCode ?? '',
+            postalCode: formatPostalCode(issuer.postalCode ?? ''),
             gstNumber: issuer.gstNumber ?? '',
             qstNumber: issuer.qstNumber ?? '',
           });
@@ -122,6 +128,14 @@ export function IssuerPage() {
     setError('');
     if (!fields.legalName.trim()) {
       setError('La raison sociale est requise.');
+      return;
+    }
+    if (!isValidPhone(fields.phone)) {
+      setError('Le numéro de téléphone est incomplet.');
+      return;
+    }
+    if (!isValidPostalCode(fields.postalCode)) {
+      setError('Le code postal est invalide (format A1A 1A1).');
       return;
     }
     setSubmitting(true);

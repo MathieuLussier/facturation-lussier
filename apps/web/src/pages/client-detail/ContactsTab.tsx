@@ -9,7 +9,7 @@ import {
   unarchiveContact,
   updateContact,
 } from '../../lib/contacts';
-import { formatPhone } from '../../lib/format';
+import { formatPhone, isValidPhone } from '../../lib/format';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/Confirm';
 
@@ -79,7 +79,7 @@ export function ContactsTab({
     setFields({
       name: c.name,
       email: c.email ?? '',
-      phone: c.phone ?? '',
+      phone: formatPhone(c.phone ?? ''),
       title: c.title ?? '',
       isBillingContact: c.isBillingContact,
       notes: c.notes ?? '',
@@ -95,6 +95,10 @@ export function ContactsTab({
     e.preventDefault();
     if (!fields.name.trim()) {
       setFormError('Le nom est requis.');
+      return;
+    }
+    if (!isValidPhone(fields.phone)) {
+      setFormError('Le numéro de téléphone est incomplet.');
       return;
     }
     setSubmitting(true);
