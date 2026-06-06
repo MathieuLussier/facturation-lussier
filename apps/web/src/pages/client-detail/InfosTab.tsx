@@ -60,6 +60,10 @@ export function InfosTab({ client, onUpdated }: InfosTabProps) {
       setFormError('Le nom est requis.');
       return;
     }
+    if (fields.type === 'INDIVIDUAL' && !String(fields.email ?? '').trim()) {
+      setFormError('Le courriel est requis pour un particulier.');
+      return;
+    }
     setSubmitting(true);
     setFormError('');
     try {
@@ -151,7 +155,7 @@ export function InfosTab({ client, onUpdated }: InfosTabProps) {
               <Input
                 key={f.key}
                 id={`info-${f.key}`}
-                label={f.label}
+                label={f.key === 'email' && fields.type === 'INDIVIDUAL' ? 'Courriel *' : f.label}
                 type={f.type ?? 'text'}
                 value={String(fields[f.key] ?? '')}
                 onChange={(e) => change(f.key, e.target.value)}

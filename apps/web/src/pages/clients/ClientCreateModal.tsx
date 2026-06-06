@@ -85,6 +85,10 @@ export function ClientCreateModal({ open, onClose, onCreated, onError }: ClientC
       setFormError('Le nom est requis.');
       return;
     }
+    if (clientType === 'INDIVIDUAL' && !fields.email.trim()) {
+      setFormError('Le courriel est requis pour un particulier.');
+      return;
+    }
     setSubmitting(true);
     try {
       await createClient(toPayload(fields, clientType));
@@ -153,7 +157,7 @@ export function ClientCreateModal({ open, onClose, onCreated, onError }: ClientC
             <Input
               key={f.key}
               id={`client-${f.key}`}
-              label={f.label}
+              label={f.key === 'email' && clientType === 'INDIVIDUAL' ? 'Courriel *' : f.label}
               type={f.type ?? 'text'}
               value={fields[f.key]}
               onChange={(e) => change(f.key, e.target.value)}

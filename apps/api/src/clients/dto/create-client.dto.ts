@@ -1,4 +1,13 @@
-import { IsEmail, IsIn, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsIn,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+  ValidateIf,
+} from 'class-validator';
 import type { ClientType } from '@facturation/core';
 
 export class CreateClientDto {
@@ -11,7 +20,12 @@ export class CreateClientDto {
   @MaxLength(255)
   companyName!: string;
 
-  @IsOptional()
+  // Courriel : obligatoire pour un particulier (INDIVIDUAL) ; optionnel pour une
+  // société, mais doit rester valide s'il est fourni.
+  @ValidateIf(
+    (o) => o.type === 'INDIVIDUAL' || (o.email !== undefined && o.email !== null && o.email !== ''),
+  )
+  @IsNotEmpty({ message: 'Le courriel est requis pour un particulier' })
   @IsEmail({}, { message: "L'adresse email est invalide" })
   @MaxLength(255)
   email?: string;
