@@ -27,7 +27,7 @@ function GearIcon() {
       strokeWidth="1.8"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className="h-5 w-5"
+      className="h-4 w-4"
       aria-hidden="true"
     >
       <circle cx="12" cy="12" r="3" />
@@ -112,11 +112,14 @@ export function InvoiceActionsMenu({
         disabled={busy}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label="Actions"
         onClick={() => setOpen((v) => !v)}
-        className="grid h-9 w-9 place-items-center rounded-lg border border-border bg-surface text-muted transition-colors hover:bg-surface-2 hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
+        className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50"
       >
         <GearIcon />
+        Action
+        <span aria-hidden="true" className="text-xs text-muted">
+          ▾
+        </span>
       </button>
 
       {open && (

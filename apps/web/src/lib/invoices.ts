@@ -115,6 +115,35 @@ export function unarchiveInvoice(id: string): Promise<Invoice> {
   return apiFetch<Invoice>(`/invoices/${id}/unarchive`, { method: 'PATCH' });
 }
 
+/** Ouvre le PDF d'une facture dans un nouvel onglet (pour impression). */
+export async function openInvoicePdf(id: string): Promise<void> {
+  // Ouvrir l'onglet de façon synchrone (geste utilisateur) pour éviter le bloqueur de popups.
+  const win = window.open('', '_blank');
+  const token = getAccessToken();
+  const res = await fetch(buildApiPath(`/invoices/${id}/pdf`), {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    credentials: 'include',
+  });
+  if (!res.ok) {
+    win?.close();
+    throw new ApiError(res.status, httpErrorMessage(res.status));
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  if (win) {
+    win.location.href = url;
+  } else {
+    // Popup bloquée : repli sur un téléchargement.
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `facture-${id}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
 /** Télécharge le PDF d'une facture (fetch authentifié → blob → téléchargement navigateur). */
 export async function downloadInvoicePdf(id: string, refOrNumber: string | number): Promise<void> {
   const token = getAccessToken();

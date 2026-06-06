@@ -1,4 +1,4 @@
-import { IsEmail, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsArray, IsEmail, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 
 /** Envoi (ou rappel) d'une facture par courriel. Objet/message éditables côté UI. */
 export class SendInvoiceDto {
@@ -15,4 +15,10 @@ export class SendInvoiceDto {
   @IsString()
   @MaxLength(5000)
   body?: string;
+
+  /** Ids des pièces jointes à joindre. Absent = toutes. */
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  attachmentIds?: string[];
 }

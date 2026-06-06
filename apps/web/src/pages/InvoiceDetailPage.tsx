@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Badge, Card } from '@facturation/ui';
+import { Button, Card } from '@facturation/ui';
 import {
   formatCents,
   type Invoice,
@@ -13,6 +13,7 @@ import {
   deleteInvoice,
   downloadInvoicePdf,
   getInvoice,
+  openInvoicePdf,
   unarchiveInvoice,
   updateInvoiceStatus,
 } from '../lib/invoices';
@@ -22,13 +23,21 @@ import { PaymentModal } from '../components/PaymentModal';
 import { SendInvoiceModal } from './invoices/SendInvoiceModal';
 import { InvoiceActionsMenu } from './invoices/InvoiceActionsMenu';
 import { InvoiceAttachments } from './invoices/InvoiceAttachments';
-import { INVOICE_STATUS_LABEL, INVOICE_STATUS_TONE } from '../lib/invoice-status';
+import { InvoiceStatusBar } from './invoices/InvoiceStatusBar';
 import { PAYMENT_METHOD_LABEL } from '../lib/payment-method';
 
 /** Une facture ENVOYEE dont l'échéance est dépassée est « en retard ». */
 function isOverdue(invoice: Invoice): boolean {
   if (invoice.status !== 'ENVOYEE' || !invoice.dueDate) return false;
   return new Date(invoice.dueDate) < new Date();
+}
+
+/** Ruban d'angle (façon Odoo) selon l'état de la facture. */
+function ribbonFor(invoice: Invoice): { label: string; cls: string } | null {
+  if (invoice.status === 'PAYEE') return { label: 'PAYÉ', cls: 'bg-success' };
+  if (invoice.status === 'ANNULEE') return { label: 'ANNULÉ', cls: 'bg-danger' };
+  if (isOverdue(invoice)) return { label: 'EN RETARD', cls: 'bg-warning' };
+  return null;
 }
 
 export function InvoiceDetailPage() {
@@ -74,8 +83,7 @@ export function InvoiceDetailPage() {
       setInvoice(await updateInvoiceStatus(id, status, paidAt, paymentMethod));
       notify('Statut mis à jour', 'success');
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Erreur lors du changement de statut.';
-      notify(msg, 'error');
+      notify(err instanceof Error ? err.message : 'Erreur lors du changement de statut.', 'error');
     } finally {
       setBusy(false);
     }
@@ -86,14 +94,26 @@ export function InvoiceDetailPage() {
     void changeStatus('PAYEE', paidAt, paymentMethod);
   };
 
+  const imprimer = async (): Promise<void> => {
+    if (!invoice) return;
+    try {
+      await openInvoicePdf(invoice.id);
+    } catch (err) {
+      notify(err instanceof Error ? err.message : "Erreur lors de l'ouverture du PDF.", 'error');
+    }
+  };
+
   const downloadPdf = async (): Promise<void> => {
     if (!invoice) return;
     try {
       await downloadInvoicePdf(invoice.id, invoice.reference ?? invoice.number);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Erreur lors du téléchargement du PDF.';
-      notify(msg, 'error');
+      notify(err instanceof Error ? err.message : 'Erreur lors du téléchargement du PDF.', 'error');
     }
+  };
+
+  const scanner = (): void => {
+    notify("La numérisation par le scanner de l'imprimante sera bientôt disponible.", 'info');
   };
 
   const remove = async (): Promise<void> => {
@@ -105,8 +125,7 @@ export function InvoiceDetailPage() {
       notify('Facture supprimée', 'success');
       navigate('/invoices');
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Erreur lors de la suppression.';
-      notify(msg, 'error');
+      notify(err instanceof Error ? err.message : 'Erreur lors de la suppression.', 'error');
       setBusy(false);
     }
   };
@@ -121,8 +140,7 @@ export function InvoiceDetailPage() {
       setInvoice(updated);
       notify(invoice.archivedAt ? 'Facture désarchivée' : 'Facture archivée', 'success');
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Erreur lors de l'archivage.";
-      notify(msg, 'error');
+      notify(err instanceof Error ? err.message : "Erreur lors de l'archivage.", 'error');
     } finally {
       setBusy(false);
     }
@@ -132,42 +150,71 @@ export function InvoiceDetailPage() {
     setInvoice((prev) => (prev ? { ...prev, attachments: list } : prev));
   };
 
+  const canSend = invoice !== null && (invoice.status === 'BROUILLON' || invoice.status === 'ENVOYEE');
+  const ribbon = invoice ? ribbonFor(invoice) : null;
+  const client = invoice?.client;
+  const cityLine = client
+    ? [client.city, client.province, client.postalCode].filter(Boolean).join(' ')
+    : '';
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-bold tracking-tight text-fg">
-            {invoice ? (invoice.reference ? `Facture ${invoice.reference}` : 'Brouillon') : 'Facture'}
-          </h1>
-          {invoice && (
-            <Badge tone={INVOICE_STATUS_TONE[invoice.status]}>{INVOICE_STATUS_LABEL[invoice.status]}</Badge>
+    <div className="space-y-4">
+      {/* Barre d'outils façon Odoo */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
+        <div className="flex flex-wrap items-center gap-2">
+          {invoice?.editable && (
+            <Button variant="secondary" disabled={busy} onClick={() => navigate(`/invoices/${invoice.id}/edit`)}>
+              Modifier
+            </Button>
           )}
-          {invoice && isOverdue(invoice) && <Badge tone="danger">En retard</Badge>}
-          {invoice?.archivedAt && <Badge tone="warning">Archivé</Badge>}
+          {canSend && invoice && (
+            <Button variant="primary" disabled={busy} onClick={() => setSendModal({ open: true, mode: 'send' })}>
+              Envoyer par courriel
+            </Button>
+          )}
         </div>
-        <div className="flex shrink-0 items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           {invoice && (
-            <InvoiceActionsMenu
-              invoice={invoice}
-              busy={busy}
-              onSetStatus={(s) => void changeStatus(s)}
-              onRequestPayee={() => setPaymentModalOpen(true)}
-              onEdit={() => navigate(`/invoices/${invoice.id}/edit`)}
-              onSend={() => setSendModal({ open: true, mode: 'send' })}
-              onRemind={() => setSendModal({ open: true, mode: 'remind' })}
-              onDownloadPdf={() => void downloadPdf()}
-              onToggleArchive={() => void toggleArchive()}
-              onDelete={() => void remove()}
-            />
+            <>
+              <Button variant="secondary" disabled={busy} onClick={() => void imprimer()}>
+                Imprimer
+              </Button>
+              <Button variant="secondary" disabled={busy} onClick={scanner}>
+                Scanner
+              </Button>
+              <InvoiceActionsMenu
+                invoice={invoice}
+                busy={busy}
+                onSetStatus={(s) => void changeStatus(s)}
+                onRequestPayee={() => setPaymentModalOpen(true)}
+                onEdit={() => navigate(`/invoices/${invoice.id}/edit`)}
+                onSend={() => setSendModal({ open: true, mode: 'send' })}
+                onRemind={() => setSendModal({ open: true, mode: 'remind' })}
+                onDownloadPdf={() => void downloadPdf()}
+                onToggleArchive={() => void toggleArchive()}
+                onDelete={() => void remove()}
+              />
+            </>
           )}
           <Link
             to="/invoices"
-            className="text-sm text-muted hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            className="ml-1 text-sm text-muted hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
           >
             ← Factures
           </Link>
         </div>
       </div>
+
+      {/* Pipeline de statut (droite) */}
+      {invoice && (
+        <div className="flex justify-end">
+          <InvoiceStatusBar
+            status={invoice.status}
+            overdue={isOverdue(invoice)}
+            archived={Boolean(invoice.archivedAt)}
+          />
+        </div>
+      )}
 
       {loading && <p className="text-sm text-muted">Chargement…</p>}
 
@@ -179,27 +226,80 @@ export function InvoiceDetailPage() {
 
       {invoice && (
         <>
-          <Card padded>
-            <div className="text-sm space-y-1">
-              <p className="font-medium text-fg">{invoice.client?.companyName ?? '—'}</p>
-              {invoice.client?.email && (
-                <p className="text-muted">{invoice.client.email}</p>
-              )}
-              <p className="mt-2 text-muted">Émise le {invoice.issueDate.slice(0, 10)}</p>
-              {invoice.dueDate && (
-                <p className={isOverdue(invoice) ? 'font-medium text-danger' : 'text-muted'}>
-                  Échéance : {invoice.dueDate.slice(0, 10)}
-                </p>
-              )}
-              {invoice.status === 'PAYEE' && invoice.paidAt && (
-                <p className="text-success">
-                  Payée le {invoice.paidAt.slice(0, 10)}
-                  {invoice.paymentMethod ? ` — ${PAYMENT_METHOD_LABEL[invoice.paymentMethod]}` : ''}
-                </p>
-              )}
-            </div>
-          </Card>
+          {/* Carte document façon Odoo */}
+          <div className="relative overflow-hidden rounded-xl border border-border bg-surface p-6 shadow-sm sm:p-8">
+            {ribbon && (
+              <span
+                className={`pointer-events-none absolute -right-12 top-6 w-44 rotate-45 py-1 text-center text-xs font-bold uppercase tracking-wider text-white shadow-md ${ribbon.cls}`}
+              >
+                {ribbon.label}
+              </span>
+            )}
 
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted">Facture client</p>
+            <h1 className="mt-1 text-2xl font-bold tracking-tight text-fg">
+              {invoice.reference ?? 'Brouillon'}
+            </h1>
+
+            <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
+              {/* Client + référence */}
+              <dl className="space-y-3 text-sm">
+                <div>
+                  <dt className="text-xs font-medium uppercase tracking-wide text-muted">Client</dt>
+                  <dd className="mt-1 text-fg">
+                    <p className="font-medium">{client?.companyName ?? '—'}</p>
+                    {client?.addressLine && <p className="text-muted">{client.addressLine}</p>}
+                    {cityLine && <p className="text-muted">{cityLine}</p>}
+                    {client?.country && <p className="text-muted">{client.country}</p>}
+                    {client?.email && <p className="text-muted">{client.email}</p>}
+                  </dd>
+                </div>
+                {invoice.billingContact && (
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-muted">À l'attention de</dt>
+                    <dd className="text-right text-fg">{invoice.billingContact.name}</dd>
+                  </div>
+                )}
+                <div className="flex justify-between gap-4">
+                  <dt className="text-muted">Référence</dt>
+                  <dd className="text-right text-fg">{invoice.reference ?? '—'}</dd>
+                </div>
+              </dl>
+
+              {/* Dates */}
+              <dl className="space-y-2 text-sm">
+                <div className="flex justify-between gap-4">
+                  <dt className="text-muted">Date de facturation</dt>
+                  <dd className="text-right text-fg">{invoice.issueDate.slice(0, 10)}</dd>
+                </div>
+                {invoice.dueDate && (
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-muted">Date d'échéance</dt>
+                    <dd className={`text-right ${isOverdue(invoice) ? 'font-medium text-danger' : 'text-fg'}`}>
+                      {invoice.dueDate.slice(0, 10)}
+                    </dd>
+                  </div>
+                )}
+                {invoice.project && (
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-muted">Projet</dt>
+                    <dd className="text-right text-fg">{invoice.project.name}</dd>
+                  </div>
+                )}
+                {invoice.status === 'PAYEE' && invoice.paidAt && (
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-muted">Payée le</dt>
+                    <dd className="text-right text-success">
+                      {invoice.paidAt.slice(0, 10)}
+                      {invoice.paymentMethod ? ` — ${PAYMENT_METHOD_LABEL[invoice.paymentMethod]}` : ''}
+                    </dd>
+                  </div>
+                )}
+              </dl>
+            </div>
+          </div>
+
+          {/* Lignes + totaux */}
           <Card>
             <div className="overflow-hidden rounded-lg">
               <table className="w-full text-sm">

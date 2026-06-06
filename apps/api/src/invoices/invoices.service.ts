@@ -533,17 +533,21 @@ export class InvoicesService {
       body: dto.body && dto.body.trim() ? dto.body : defaultSendBody(invoice),
       pdfBuffer: buffer,
       attachmentName: `facture-${invoice.reference ?? invoice.number}.pdf`,
-      extraAttachments: await this.loadEmailAttachments(invoice.id),
+      extraAttachments: await this.loadEmailAttachments(invoice.id, dto.attachmentIds),
     });
     return { sent: true, newStatus: invoice.status };
   }
 
-  /** Pièces jointes de la facture, prêtes pour Nodemailer (chemin disque + nom affiché). */
+  /**
+   * Pièces jointes de la facture, prêtes pour Nodemailer (chemin disque + nom affiché).
+   * Si `attachmentIds` est fourni, ne joint que celles-là (tableau vide = aucune).
+   */
   private async loadEmailAttachments(
     invoiceId: string,
+    attachmentIds?: string[],
   ): Promise<Array<{ filename: string; path: string; contentType: string }>> {
     const rows = await this.prisma.client.invoiceAttachment.findMany({
-      where: { invoiceId },
+      where: { invoiceId, ...(attachmentIds ? { id: { in: attachmentIds } } : {}) },
       orderBy: { createdAt: 'asc' },
     });
     return rows.map((a) => ({
@@ -578,7 +582,7 @@ export class InvoicesService {
       body: dto.body && dto.body.trim() ? dto.body : defaultReminderBody(invoice),
       pdfBuffer: buffer,
       attachmentName: `facture-${invoice.reference ?? invoice.number}.pdf`,
-      extraAttachments: await this.loadEmailAttachments(invoice.id),
+      extraAttachments: await this.loadEmailAttachments(invoice.id, dto.attachmentIds),
     });
     return { sent: true };
   }

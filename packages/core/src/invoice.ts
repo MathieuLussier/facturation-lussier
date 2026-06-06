@@ -131,6 +131,8 @@ export interface SendInvoiceRequest {
   to: string;
   subject: string;
   body?: string;
+  /** Pièces jointes à joindre (ids). Absent = toutes les pièces jointes de la facture. */
+  attachmentIds?: string[];
 }
 
 export interface SendInvoiceResponse {
