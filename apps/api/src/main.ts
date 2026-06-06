@@ -28,7 +28,7 @@ async function bootstrap(): Promise<void> {
 
   // CORS — autorise les credentials (cookie refresh_token)
   app.enableCors({
-    origin: process.env.WEB_ORIGIN ?? 'http://localhost:5173',
+    origin: process.env.WEB_ORIGIN ?? 'http://localhost:4000',
     credentials: true,
   });
 
@@ -51,7 +51,7 @@ async function bootstrap(): Promise<void> {
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api/docs', app, document);
 
-  const port = Number(process.env.API_PORT ?? 4000);
+  const port = Number(process.env.API_PORT ?? 4001);
   await app.listen(port);
   Logger.log(`API prête sur http://localhost:${port} (docs: /api/docs)`, 'Bootstrap');
 }
