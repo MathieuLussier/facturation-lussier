@@ -40,7 +40,8 @@ import { InvoicePdfService } from './invoice-pdf.service';
 interface ListParams {
   page?: number;
   pageSize?: number;
-  includeArchived?: boolean;
+  /** true → uniquement les archivées ; sinon → uniquement les actives. */
+  archivedOnly?: boolean;
   status?: InvoiceStatus;
   /** Envoyées dont l'échéance est dépassée. */
   overdue?: boolean;
@@ -193,7 +194,7 @@ export class InvoicesService {
     const pageSize = params.pageSize ?? DEFAULT_PAGE_SIZE;
     const db = this.prisma.client;
     const where = {
-      ...(params.includeArchived ? {} : { archivedAt: null }),
+      ...(params.archivedOnly ? { archivedAt: { not: null } } : { archivedAt: null }),
       ...(params.status ? { status: params.status } : {}),
       ...(params.overdue ? { status: 'ENVOYEE' as const, dueDate: { lt: new Date() } } : {}),
     };

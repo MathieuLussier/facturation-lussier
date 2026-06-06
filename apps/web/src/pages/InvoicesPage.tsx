@@ -45,7 +45,7 @@ export function InvoicesPage() {
   const [reminderInvoice, setReminderInvoice] = useState<Invoice | null>(null);
 
   const fetchInvoices = useCallback(
-    async (filter: FilterChip, includeArchived: boolean): Promise<void> => {
+    async (filter: FilterChip, archivedOnly: boolean): Promise<void> => {
       setLoading(true);
       setError('');
       try {
@@ -56,7 +56,7 @@ export function InvoicesPage() {
         const res = await listInvoices({
           status,
           overdue,
-          includeArchived,
+          archivedOnly,
           pageSize: 500,
         });
         setItems(res.items);
@@ -191,7 +191,7 @@ export function InvoicesPage() {
             checked={showArchived}
             onChange={(e) => setShowArchived(e.target.checked)}
           />
-          Afficher les archivés
+          Archivées seulement
         </label>
       </div>
 

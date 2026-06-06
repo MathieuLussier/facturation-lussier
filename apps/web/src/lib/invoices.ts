@@ -14,8 +14,8 @@ import { ApiError, apiFetch, buildApiPath, getAccessToken, httpErrorMessage } fr
 export interface ListInvoicesParams {
   page?: number;
   pageSize?: number;
-  /** Inclure les factures archivées (masquées par défaut). */
-  includeArchived?: boolean;
+  /** true → afficher uniquement les factures archivées (sinon, uniquement les actives). */
+  archivedOnly?: boolean;
   /** Filtrer par statut. */
   status?: InvoiceStatus;
   /** Seulement les factures ENVOYÉE en retard. */
@@ -27,7 +27,7 @@ export function buildInvoicesQuery(params: ListInvoicesParams): string {
   const sp = new URLSearchParams();
   if (params.page) sp.set('page', String(params.page));
   if (params.pageSize) sp.set('pageSize', String(params.pageSize));
-  if (params.includeArchived) sp.set('includeArchived', 'true');
+  if (params.archivedOnly) sp.set('archivedOnly', 'true');
   if (params.status) sp.set('status', params.status);
   if (params.overdue) sp.set('overdue', 'true');
   const qs = sp.toString();

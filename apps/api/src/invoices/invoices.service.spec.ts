@@ -259,13 +259,13 @@ describe('InvoicesService', () => {
     expect(countCall?.where).toEqual({ archivedAt: null });
   });
 
-  it('list omet le filtre archivedAt quand includeArchived est vrai', async () => {
+  it('list ne montre que les archivées quand archivedOnly est vrai', async () => {
     const { prisma, invoice } = makePrisma();
     invoice.findMany.mockResolvedValue([makeInvoiceRow()]);
     invoice.count.mockResolvedValue(1);
-    await new InvoicesService(prisma).list({ includeArchived: true });
+    await new InvoicesService(prisma).list({ archivedOnly: true });
     const findManyArg = invoice.findMany.mock.calls[0][0];
-    expect(findManyArg?.where?.archivedAt).toBeUndefined();
+    expect(findManyArg?.where?.archivedAt).toEqual({ not: null });
   });
 
   it('list filtre par statut', async () => {

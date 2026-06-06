@@ -8,6 +8,9 @@ describe('buildInvoicesQuery', () => {
   it('sérialise page et pageSize', () => {
     expect(buildInvoicesQuery({ page: 3, pageSize: 25 })).toBe('?page=3&pageSize=25');
   });
+  it('sérialise archivedOnly', () => {
+    expect(buildInvoicesQuery({ archivedOnly: true })).toBe('?archivedOnly=true');
+  });
 });
 
 describe('dollarsToCents', () => {

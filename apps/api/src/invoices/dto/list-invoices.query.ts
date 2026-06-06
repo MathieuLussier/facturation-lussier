@@ -16,10 +16,11 @@ export class ListInvoicesQuery {
   @Max(500)
   pageSize?: number;
 
+  /** true → afficher uniquement les factures archivées (sinon, uniquement les actives). */
   @IsOptional()
   @Transform(({ value }) => value === true || value === 'true' || value === '1')
   @IsBoolean()
-  includeArchived?: boolean;
+  archivedOnly?: boolean;
 
   @IsOptional()
   @IsIn(['BROUILLON', 'ENVOYEE', 'PAYEE', 'ANNULEE'])
