@@ -27,6 +27,7 @@ import { InvoiceActionsMenu } from './invoices/InvoiceActionsMenu';
 import { InvoiceAttachments } from './invoices/InvoiceAttachments';
 import { InvoiceStatusBar } from './invoices/InvoiceStatusBar';
 import { PAYMENT_METHOD_LABEL } from '../lib/payment-method';
+import { isDesktopScanAvailable, scanViaDesktop } from '../lib/desktop-scan';
 
 /** Une facture ENVOYEE dont l'échéance est dépassée est « en retard ». */
 function isOverdue(invoice: Invoice): boolean {
@@ -116,14 +117,8 @@ export function InvoiceDetailPage() {
     }
   };
 
-  const scanner = (): void => {
-    scanInputRef.current?.click();
-  };
-
-  const handleScanFile = async (e: ChangeEvent<HTMLInputElement>): Promise<void> => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file || !invoice) return;
+  const attachScannedFile = async (file: File): Promise<void> => {
+    if (!invoice) return;
     setScanning(true);
     try {
       const list = await uploadInvoiceAttachment(invoice.id, file);
@@ -134,6 +129,29 @@ export function InvoiceDetailPage() {
     } finally {
       setScanning(false);
     }
+  };
+
+  // App de bureau Electron : scan natif de l'imprimante. Sinon : sélecteur de fichier / caméra.
+  const scanner = async (): Promise<void> => {
+    if (!isDesktopScanAvailable()) {
+      scanInputRef.current?.click();
+      return;
+    }
+    if (!invoice) return;
+    setScanning(true);
+    try {
+      const file = await scanViaDesktop();
+      await attachScannedFile(file);
+    } catch (err) {
+      setScanning(false);
+      notify(err instanceof Error ? err.message : 'Erreur lors de la numérisation.', 'error');
+    }
+  };
+
+  const handleScanFile = async (e: ChangeEvent<HTMLInputElement>): Promise<void> => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (file) await attachScannedFile(file);
   };
 
   const remove = async (): Promise<void> => {
@@ -207,13 +225,13 @@ export function InvoiceDetailPage() {
                 <Printer className="h-4 w-4" aria-hidden="true" />
                 Imprimer
               </Button>
-              <Button variant="secondary" disabled={busy || scanning} onClick={scanner}>
+              <Button variant="secondary" disabled={busy || scanning} onClick={() => void scanner()}>
                 {scanning ? (
                   <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                 ) : (
                   <ScanLine className="h-4 w-4" aria-hidden="true" />
                 )}
-                {scanning ? 'Ajout…' : 'Scanner'}
+                {scanning ? 'Numérisation…' : 'Scanner'}
               </Button>
               <input
                 ref={scanInputRef}
