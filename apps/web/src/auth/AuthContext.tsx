@@ -52,6 +52,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Ref vers performRefresh pour éviter la dépendance circulaire
   const performRefreshRef = useRef<(() => Promise<string | null>) | null>(null);
+  // Refresh en cours : garantit un seul appel réseau concurrent (single-flight).
+  const inFlightRefreshRef = useRef<Promise<string | null> | null>(null);
 
   /** Programme un re-refresh automatique avant expiration. */
   const scheduleRefresh = useCallback((expiresInSec: number) => {
@@ -64,18 +66,37 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }, delay);
   }, []);
 
-  /** Tente un refresh du token. Retourne le nouveau token ou null. */
+  /**
+   * Tente un refresh du token. Retourne le nouveau token ou null.
+   *
+   * Single-flight : si un refresh est déjà en cours, on réutilise sa promesse au
+   * lieu d'en lancer un second. Les refresh tokens sont à usage unique (rotation
+   * + détection de réutilisation côté API) ; deux appels concurrents avec le même
+   * cookie (ex. double montage React StrictMode, ou plusieurs 401 simultanés)
+   * feraient révoquer toutes les sessions → déconnexion au rechargement.
+   */
   const performRefresh = useCallback(async (): Promise<string | null> => {
-    const tokens = await refreshTokens();
-    if (!tokens) {
-      setAccessToken(null);
-      setUser(null);
-      setStatus('unauthenticated');
-      return null;
+    if (inFlightRefreshRef.current) {
+      return inFlightRefreshRef.current;
     }
-    setAccessToken(tokens.accessToken);
-    scheduleRefresh(tokens.expiresInSec);
-    return tokens.accessToken;
+    const run = (async (): Promise<string | null> => {
+      const tokens = await refreshTokens();
+      if (!tokens) {
+        setAccessToken(null);
+        setUser(null);
+        setStatus('unauthenticated');
+        return null;
+      }
+      setAccessToken(tokens.accessToken);
+      scheduleRefresh(tokens.expiresInSec);
+      return tokens.accessToken;
+    })();
+    inFlightRefreshRef.current = run;
+    try {
+      return await run;
+    } finally {
+      inFlightRefreshRef.current = null;
+    }
   }, [scheduleRefresh]);
 
   // Synchronise la ref avec la fonction courante
