@@ -19,6 +19,8 @@ interface HttpResponse {
   body: Buffer;
 }
 
+const REQUEST_TIMEOUT_MS = 15_000;
+
 function request(options: http.RequestOptions, body: Buffer | null = null): Promise<HttpResponse> {
   return new Promise((resolve, reject) => {
     const req = http.request(options, (res) => {
@@ -31,6 +33,10 @@ function request(options: http.RequestOptions, body: Buffer | null = null): Prom
           body: Buffer.concat(chunks),
         }),
       );
+    });
+    // Évite tout blocage si l'imprimante réseau ne répond pas.
+    req.setTimeout(REQUEST_TIMEOUT_MS, () => {
+      req.destroy(new Error(`eSCL : délai de réponse dépassé (${REQUEST_TIMEOUT_MS / 1000} s).`));
     });
     req.on('error', reject);
     if (body) req.write(body);

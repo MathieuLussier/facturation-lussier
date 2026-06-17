@@ -87,13 +87,39 @@ export function desktopScanResultToFile(result: DesktopScanResult): File {
 /** Liste les scanners disponibles (app de bureau). */
 export function listScanDevices(): Promise<ScanDevice[]> {
   if (!window.facturationScan) throw new Error('Scanner de bureau indisponible.');
-  return window.facturationScan.listDevices();
+  return withTimeout(
+    window.facturationScan.listDevices(),
+    30_000,
+    'Délai dépassé lors de la détection des scanners.',
+  );
+}
+
+/** Rejette si la promesse ne se résout pas dans le délai imparti. */
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), ms);
+    promise.then(
+      (v) => {
+        clearTimeout(timer);
+        resolve(v);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err instanceof Error ? err : new Error(String(err)));
+      },
+    );
+  });
 }
 
 /** Déclenche une numérisation avec les options choisies (app de bureau). */
 export function scanViaDesktop(opts?: ScanOptions): Promise<DesktopScanResult> {
   if (!window.facturationScan) throw new Error('Scanner de bureau indisponible.');
-  return window.facturationScan.scan(opts);
+  // Filet de sécurité : le dialogue ne doit jamais rester bloqué indéfiniment.
+  return withTimeout(
+    window.facturationScan.scan(opts),
+    150_000,
+    'Délai de numérisation dépassé. Vérifie que le scanner est prêt, puis réessaie.',
+  );
 }
 
 /** Imprime un PDF via le dialogue natif (app de bureau). */

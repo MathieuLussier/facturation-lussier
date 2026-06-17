@@ -16,6 +16,14 @@ export interface WIADevice {
   name: string;
 }
 
+/** Erreur de délai dépassé (on ne tente alors pas le repli 32 bits). */
+class TimeoutError extends Error {
+  readonly isTimeout = true;
+}
+
+const LIST_TIMEOUT_MS = 20_000; // énumération des scanners
+const SCAN_TIMEOUT_MS = 120_000; // numérisation d'une page
+
 /**
  * Localise le script wia.ps1 :
  * - prod packagée : extraResources (process.resourcesPath/scan/wia.ps1)
@@ -28,8 +36,8 @@ function getScriptPath(): string {
   return path.join(__dirname, 'wia.ps1');
 }
 
-/** Lance wia.ps1 avec les arguments donnés et renvoie son stdout. */
-function runPowerShell(args: string[], use32bit: boolean): Promise<string> {
+/** Lance wia.ps1 avec un délai maximal ; tue le process et rejette si dépassé. */
+function runPowerShell(args: string[], use32bit: boolean, timeoutMs: number): Promise<string> {
   return new Promise((resolve, reject) => {
     const psExe = use32bit
       ? 'C:\\Windows\\SysWOW64\\WindowsPowerShell\\v1.0\\powershell.exe'
@@ -39,8 +47,27 @@ function runPowerShell(args: string[], use32bit: boolean): Promise<string> {
       ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', getScriptPath(), ...args],
       { windowsHide: true },
     );
+
     let stdout = '';
     let stderr = '';
+    let settled = false;
+
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      try {
+        ps.kill();
+      } catch {
+        /* déjà terminé */
+      }
+      reject(
+        new TimeoutError(
+          `Délai de numérisation dépassé (${Math.round(timeoutMs / 1000)} s). ` +
+            'Vérifie que le scanner est allumé, connecté et prêt.',
+        ),
+      );
+    }, timeoutMs);
+
     ps.stdout.on('data', (d: Buffer) => {
       stdout += d.toString();
     });
@@ -48,6 +75,9 @@ function runPowerShell(args: string[], use32bit: boolean): Promise<string> {
       stderr += d.toString();
     });
     ps.on('close', (code: number | null) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
       if (code !== 0) {
         reject(new Error(`Numérisation WIA échouée (code ${code ?? 'null'}).\n${stderr.trim()}`));
         return;
@@ -55,6 +85,9 @@ function runPowerShell(args: string[], use32bit: boolean): Promise<string> {
       resolve(stdout);
     });
     ps.on('error', (err: Error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
       reject(new Error(`Impossible de lancer PowerShell (${psExe}) : ${err.message}`));
     });
   });
@@ -69,12 +102,12 @@ function lastNonEmptyLine(stdout: string): string | undefined {
     .pop();
 }
 
-/** Exécute avec repli PowerShell 32 bits (wiaaut.dll parfois enregistrée en 32 bits). */
+/** Exécute avec repli PowerShell 32 bits — sauf en cas de délai dépassé. */
 async function withFallback<T>(fn: (use32bit: boolean) => Promise<T>): Promise<T> {
   try {
     return await fn(false);
   } catch (err) {
-    if (process.platform === 'win32') {
+    if (process.platform === 'win32' && !(err instanceof TimeoutError)) {
       return fn(true);
     }
     throw err;
@@ -84,7 +117,7 @@ async function withFallback<T>(fn: (use32bit: boolean) => Promise<T>): Promise<T
 /** Énumère les scanners WIA disponibles. */
 export function listWiaDevices(): Promise<WIADevice[]> {
   return withFallback(async (use32bit) => {
-    const out = await runPowerShell(['-Mode', 'list'], use32bit);
+    const out = await runPowerShell(['-Mode', 'list'], use32bit, LIST_TIMEOUT_MS);
     const line = lastNonEmptyLine(out);
     if (!line) return [];
     try {
@@ -115,7 +148,7 @@ export function scanViaWIA(opts: WIAOptions = {}): Promise<string> {
   if (opts.deviceName) args.push('-DeviceName', opts.deviceName);
 
   return withFallback(async (use32bit) => {
-    const out = await runPowerShell(args, use32bit);
+    const out = await runPowerShell(args, use32bit, SCAN_TIMEOUT_MS);
     const filePath = lastNonEmptyLine(out);
     if (!filePath) {
       throw new Error('Numérisation WIA : aucun chemin de fichier retourné.');
