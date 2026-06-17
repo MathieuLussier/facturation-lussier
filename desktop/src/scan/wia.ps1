@@ -19,7 +19,10 @@
     lit la dernière ligne non vide.
 #>
 param(
+    [ValidateSet("acquire","list")]
+    [string]$Mode       = "acquire",
     [string]$OutputPath = "",
+    [string]$DeviceId   = "",
     [string]$DeviceName = "",
     [int]   $DPI        = 300,
     [ValidateSet("color","gray","bw")]
@@ -91,6 +94,19 @@ try {
     exit 2
 }
 
+# ── Mode "list" : énumérer les scanners et sortir en JSON ────────────────────
+if ($Mode -eq "list") {
+    $parts = @()
+    for ($i = 1; $i -le $wia.DeviceInfos.Count; $i++) {
+        $di = $wia.DeviceInfos.Item($i)
+        if ($di.Type -ne $WIA_SCANNER_TYPE) { continue }
+        $name = Get-WIAProperty -Properties $di.Properties -PropID 7  # WIA_DIP_DEV_NAME
+        $parts += ('{"id":' + (ConvertTo-Json "$($di.DeviceID)") + ',"name":' + (ConvertTo-Json "$name") + '}')
+    }
+    Write-Output ('[' + ($parts -join ',') + ']')
+    exit 0
+}
+
 # ── Sélection du scanner ─────────────────────────────────────────────────────
 $scannerInfo = $null
 for ($i = 1; $i -le $wia.DeviceInfos.Count; $i++) {
@@ -100,7 +116,13 @@ for ($i = 1; $i -le $wia.DeviceInfos.Count; $i++) {
     $diName = Get-WIAProperty -Properties $di.Properties -PropID 7  # WIA_DIP_DEV_NAME
     Write-Host "Scanner trouvé : '$diName'"
 
-    if ($DeviceName -eq "" -or ($diName -and $diName -like "*$DeviceName*")) {
+    if ($DeviceId -ne "") {
+        if ($di.DeviceID -eq $DeviceId) {
+            $scannerInfo = $di
+            Write-Host "Scanner sélectionné (id) : $diName"
+            break
+        }
+    } elseif ($DeviceName -eq "" -or ($diName -and $diName -like "*$DeviceName*")) {
         $scannerInfo = $di
         Write-Host "Scanner sélectionné : $diName"
         break

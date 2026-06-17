@@ -115,20 +115,30 @@ export function unarchiveInvoice(id: string): Promise<Invoice> {
   return apiFetch<Invoice>(`/invoices/${id}/unarchive`, { method: 'PATCH' });
 }
 
-/** Ouvre le PDF d'une facture dans un nouvel onglet (pour impression). */
-export async function openInvoicePdf(id: string): Promise<void> {
-  // Ouvrir l'onglet de façon synchrone (geste utilisateur) pour éviter le bloqueur de popups.
-  const win = window.open('', '_blank');
+/** Récupère le PDF d'une facture (fetch authentifié → blob). */
+export async function fetchInvoicePdfBlob(id: string): Promise<Blob> {
   const token = getAccessToken();
   const res = await fetch(buildApiPath(`/invoices/${id}/pdf`), {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     credentials: 'include',
   });
   if (!res.ok) {
-    win?.close();
     throw new ApiError(res.status, httpErrorMessage(res.status));
   }
-  const blob = await res.blob();
+  return res.blob();
+}
+
+/** Ouvre le PDF d'une facture dans un nouvel onglet (pour impression). */
+export async function openInvoicePdf(id: string): Promise<void> {
+  // Ouvrir l'onglet de façon synchrone (geste utilisateur) pour éviter le bloqueur de popups.
+  const win = window.open('', '_blank');
+  let blob: Blob;
+  try {
+    blob = await fetchInvoicePdfBlob(id);
+  } catch (err) {
+    win?.close();
+    throw err;
+  }
   const url = URL.createObjectURL(blob);
   if (win) {
     win.location.href = url;
@@ -146,15 +156,7 @@ export async function openInvoicePdf(id: string): Promise<void> {
 
 /** Télécharge le PDF d'une facture (fetch authentifié → blob → téléchargement navigateur). */
 export async function downloadInvoicePdf(id: string, refOrNumber: string | number): Promise<void> {
-  const token = getAccessToken();
-  const res = await fetch(buildApiPath(`/invoices/${id}/pdf`), {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-    credentials: 'include',
-  });
-  if (!res.ok) {
-    throw new ApiError(res.status, httpErrorMessage(res.status));
-  }
-  const blob = await res.blob();
+  const blob = await fetchInvoicePdfBlob(id);
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;

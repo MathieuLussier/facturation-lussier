@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import log from 'electron-log';
 import { config } from '../config';
-import { scanViaWIA } from './wia';
+import { listWiaDevices, scanViaWIA } from './wia';
 import { scanViaESCL } from './escl';
 
 export interface ScanResult {
@@ -11,7 +11,25 @@ export interface ScanResult {
   fileName: string;
 }
 
-const ESCL_COLOR: Record<string, 'RGB24' | 'Grayscale8' | 'BlackAndWhite1'> = {
+export interface ScanDevice {
+  id: string;
+  name: string;
+}
+
+export type ColorMode = 'color' | 'gray' | 'bw';
+export type ScanSource = 'flatbed' | 'adf';
+
+export interface ScanOptions {
+  /** Identifiant d'appareil (WIA DeviceID, ou « escl:<host> » pour le réseau). */
+  deviceId?: string;
+  dpi?: number;
+  colorMode?: ColorMode;
+  source?: ScanSource;
+}
+
+const ESCL_PREFIX = 'escl:';
+
+const ESCL_COLOR: Record<ColorMode, 'RGB24' | 'Grayscale8' | 'BlackAndWhite1'> = {
   color: 'RGB24',
   gray: 'Grayscale8',
   bw: 'BlackAndWhite1',
@@ -38,14 +56,32 @@ function timestamp(): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`;
 }
 
-/**
- * Numérise (WIA puis eSCL en repli) et renvoie le document tel quel :
- * - WIA → image (JPEG, ou BMP en repli)
- * - eSCL → PDF
- * Le document est joint à la facture par l'app web (qui accepte image et PDF).
- */
-export async function performScan(): Promise<ScanResult> {
-  const scanned = await scanDocument();
+/** Liste les scanners disponibles (WIA sous Windows + entrée eSCL si configurée). */
+export async function listScanDevices(): Promise<ScanDevice[]> {
+  const devices: ScanDevice[] = [];
+  if (process.platform === 'win32') {
+    try {
+      devices.push(...(await listWiaDevices()));
+    } catch (err) {
+      log.warn('Énumération WIA échouée :', err instanceof Error ? err.message : err);
+    }
+  }
+  if (config.scan.esclHost) {
+    devices.push({
+      id: `${ESCL_PREFIX}${config.scan.esclHost}`,
+      name: `Réseau eSCL (${config.scan.esclHost})`,
+    });
+  }
+  return devices;
+}
+
+/** Numérise selon les options choisies et renvoie le document (image ou PDF) en base64. */
+export async function performScan(opts: ScanOptions = {}): Promise<ScanResult> {
+  const dpi = opts.dpi ?? config.scan.resolution;
+  const colorMode = opts.colorMode ?? config.scan.colorMode;
+  const source = opts.source ?? 'flatbed';
+
+  const scanned = await scanDocument(opts.deviceId, dpi, colorMode, source);
   const ext = extOf(scanned) || '.jpg';
   const mimeType = MIME_BY_EXT[ext] ?? 'application/octet-stream';
   const buffer = await fs.readFile(scanned);
@@ -58,35 +94,52 @@ export async function performScan(): Promise<ScanResult> {
   };
 }
 
-/** WIA (Windows) en priorité, eSCL réseau en repli. Renvoie un chemin (image ou PDF). */
-async function scanDocument(): Promise<string> {
-  const { resolution, colorMode, wiaDeviceName, esclHost, esclPort } = config.scan;
+function scanEscl(host: string, dpi: number, colorMode: ColorMode, source: ScanSource): Promise<string> {
+  return scanViaESCL({
+    host,
+    port: config.scan.esclPort,
+    dpi,
+    colorMode: ESCL_COLOR[colorMode],
+    source: source === 'adf' ? 'Feeder' : 'Platen',
+  });
+}
 
+/** Route vers WIA ou eSCL selon le périphérique choisi. Renvoie un chemin (image ou PDF). */
+async function scanDocument(
+  deviceId: string | undefined,
+  dpi: number,
+  colorMode: ColorMode,
+  source: ScanSource,
+): Promise<string> {
+  // Périphérique réseau explicitement choisi.
+  if (deviceId && deviceId.startsWith(ESCL_PREFIX)) {
+    const host = deviceId.slice(ESCL_PREFIX.length) || config.scan.esclHost;
+    if (!host) throw new Error('Hôte eSCL manquant.');
+    return scanEscl(host, dpi, colorMode, source);
+  }
+
+  // WIA (Windows) — par DeviceID si fourni, sinon filtre par nom configuré.
   if (process.platform === 'win32') {
     try {
       return await scanViaWIA({
-        dpi: resolution,
+        deviceId,
+        dpi,
         colorMode,
-        source: 'flatbed',
-        deviceName: wiaDeviceName,
+        source,
+        deviceName: deviceId ? undefined : config.scan.wiaDeviceName,
       });
     } catch (wiaErr) {
-      if (!esclHost) throw wiaErr;
+      if (!config.scan.esclHost) throw wiaErr;
       log.warn('WIA indisponible, bascule eSCL :', wiaErr instanceof Error ? wiaErr.message : wiaErr);
     }
   }
 
-  if (!esclHost) {
-    throw new Error(
-      "Numérisation indisponible : aucun scanner WIA et aucun hôte eSCL configuré (FACT_SCAN_ESCL_HOST).",
-    );
+  // Repli eSCL configuré (hors Windows, ou échec WIA).
+  if (config.scan.esclHost) {
+    return scanEscl(config.scan.esclHost, dpi, colorMode, source);
   }
 
-  return scanViaESCL({
-    host: esclHost,
-    port: esclPort,
-    dpi: resolution,
-    colorMode: ESCL_COLOR[colorMode],
-    source: 'Platen',
-  });
+  throw new Error(
+    "Numérisation indisponible : aucun scanner WIA et aucun hôte eSCL configuré (FACT_SCAN_ESCL_HOST).",
+  );
 }

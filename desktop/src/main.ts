@@ -1,10 +1,12 @@
 import { app, BrowserWindow, ipcMain, session, shell } from 'electron';
 import path from 'node:path';
+import os from 'node:os';
+import fs from 'node:fs/promises';
 import { URL } from 'node:url';
 import log from 'electron-log';
 import { autoUpdater } from 'electron-updater';
 import { config } from './config';
-import { performScan } from './scan/index';
+import { listScanDevices, performScan, type ScanOptions } from './scan/index';
 
 const APP_URL = config.appUrl;
 const APP_ORIGIN = new URL(APP_URL).origin;
@@ -38,6 +40,23 @@ function createWindow(): void {
     },
   });
 
+  // ── Garde-fous de sécurité : uniquement sur la fenêtre du contenu distant ──
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (!isAllowedOrigin(url)) {
+      log.warn(`Navigation bloquée : ${url}`);
+      event.preventDefault();
+    }
+  });
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    // Liens externes → navigateur système ; aucune nouvelle fenêtre Electron.
+    if (url.startsWith('https://') || url.startsWith('http://')) {
+      setImmediate(() => {
+        void shell.openExternal(url);
+      });
+    }
+    return { action: 'deny' };
+  });
+
   void mainWindow.loadURL(APP_URL);
   if (config.isDev) {
     mainWindow.webContents.openDevTools({ mode: 'detach' });
@@ -46,26 +65,6 @@ function createWindow(): void {
     mainWindow = null;
   });
 }
-
-// ── Garde-fous de sécurité (contenu distant) ───────────────────────────────
-app.on('web-contents-created', (_event, contents) => {
-  // Bloque toute navigation hors de l'origine de l'app.
-  contents.on('will-navigate', (event, url) => {
-    if (!isAllowedOrigin(url)) {
-      log.warn(`Navigation bloquée : ${url}`);
-      event.preventDefault();
-    }
-  });
-  // Aucune nouvelle fenêtre Electron ; les liens externes s'ouvrent dans le navigateur système.
-  contents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith('https://') || url.startsWith('http://')) {
-      setImmediate(() => {
-        void shell.openExternal(url);
-      });
-    }
-    return { action: 'deny' };
-  });
-});
 
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
@@ -103,7 +102,42 @@ app.on('window-all-closed', () => {
 });
 
 // ── IPC : numérisation ─────────────────────────────────────────────────────
-ipcMain.handle('scan', () => performScan());
+ipcMain.handle('scan:list', () => listScanDevices());
+ipcMain.handle('scan:acquire', (_event, opts: ScanOptions) => performScan(opts));
+
+// ── IPC : impression (dialogue natif + aperçu du PDF) ──────────────────────
+ipcMain.handle('print:pdf', (_event, base64: string) => printPdf(base64));
+
+/**
+ * Affiche le PDF dans une fenêtre (aperçu) et ouvre le dialogue d'impression
+ * natif (sélection de l'imprimante). L'utilisateur ferme la fenêtre ensuite.
+ */
+async function printPdf(base64: string): Promise<void> {
+  const tmp = path.join(os.tmpdir(), `facture-print-${Date.now()}.pdf`);
+  await fs.writeFile(tmp, Buffer.from(base64, 'base64'));
+
+  const win = new BrowserWindow({
+    width: 900,
+    height: 1000,
+    title: 'Imprimer la facture',
+    parent: mainWindow ?? undefined,
+    autoHideMenuBar: true,
+    backgroundColor: '#525659',
+    webPreferences: { plugins: true },
+  });
+  win.on('closed', () => {
+    void fs.unlink(tmp).catch(() => undefined);
+  });
+
+  await win.loadFile(tmp);
+  // Laisser le visualiseur PDF rendre la page, puis ouvrir le dialogue natif.
+  setTimeout(() => {
+    if (win.isDestroyed()) return;
+    win.webContents.print({ silent: false }, () => {
+      /* impression lancée ou annulée : on garde la fenêtre comme aperçu */
+    });
+  }, 700);
+}
 
 // ── Mises à jour automatiques (prod packagée uniquement) ───────────────────
 function setupAutoUpdater(): void {
@@ -115,7 +149,6 @@ function setupAutoUpdater(): void {
   });
   autoUpdater.on('update-downloaded', () => {
     log.info('Mise à jour téléchargée — installation au redémarrage.');
-    // isSilent = true, isForceRunAfter = true
     autoUpdater.quitAndInstall(true, true);
   });
   autoUpdater.on('error', (err) => {

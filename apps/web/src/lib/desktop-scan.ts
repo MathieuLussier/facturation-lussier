@@ -1,34 +1,58 @@
 /**
- * Pont vers le scanner natif exposé par la coquille Electron (« desktop/ »).
+ * Pont vers les fonctions natives exposées par la coquille Electron (« desktop/ »).
  *
- * En contexte navigateur classique, `window.facturationScan` est absent : l'app
- * retombe alors sur le sélecteur de fichier / la caméra. Dans l'app de bureau
- * Electron, le preload expose `window.facturationScan.scan()` qui pilote le
- * scanner de l'imprimante (WIA puis eSCL) et renvoie un PDF.
+ * En navigateur classique, `window.facturationScan` / `window.facturationPrint`
+ * sont absents : l'app retombe sur le sélecteur de fichier (scan) et l'ouverture
+ * du PDF (impression). Dans l'app de bureau, le preload expose la numérisation
+ * (choix du scanner + réglages) et l'impression native (sélection d'imprimante).
  */
 
 export interface DesktopScanResult {
-  /** Contenu du document numérisé encodé en base64 (sans préfixe data:). */
+  /** Document numérisé encodé en base64 (sans préfixe data:). */
   base64: string;
-  /** Type MIME du document (ex. application/pdf, image/jpeg). */
   mimeType: string;
-  /** Nom de fichier suggéré (ex. Numerisation-2026-06-05-2230.pdf). */
   fileName: string;
 }
 
+export interface ScanDevice {
+  id: string;
+  name: string;
+}
+
+export type ScanColorMode = 'color' | 'gray' | 'bw';
+export type ScanSource = 'flatbed' | 'adf';
+
+export interface ScanOptions {
+  deviceId?: string;
+  dpi?: number;
+  colorMode?: ScanColorMode;
+  source?: ScanSource;
+}
+
 export interface FacturationScanApi {
-  scan: () => Promise<DesktopScanResult>;
+  listDevices: () => Promise<ScanDevice[]>;
+  scan: (opts?: ScanOptions) => Promise<DesktopScanResult>;
+}
+
+export interface FacturationPrintApi {
+  printPdf: (base64: string) => Promise<void>;
 }
 
 declare global {
   interface Window {
     facturationScan?: FacturationScanApi;
+    facturationPrint?: FacturationPrintApi;
   }
 }
 
-/** Vrai uniquement dans l'app de bureau Electron (scanner natif disponible). */
+/** Vrai uniquement dans l'app de bureau (scanner natif disponible). */
 export function isDesktopScanAvailable(): boolean {
   return typeof window !== 'undefined' && typeof window.facturationScan?.scan === 'function';
+}
+
+/** Vrai uniquement dans l'app de bureau (impression native disponible). */
+export function isDesktopPrintAvailable(): boolean {
+  return typeof window !== 'undefined' && typeof window.facturationPrint?.printPdf === 'function';
 }
 
 function base64ToBlob(base64: string, mimeType: string): Blob {
@@ -40,12 +64,41 @@ function base64ToBlob(base64: string, mimeType: string): Blob {
   return new Blob([bytes], { type: mimeType });
 }
 
-/** Déclenche la numérisation native et renvoie le document prêt à téléverser. */
-export async function scanViaDesktop(): Promise<File> {
-  if (!window.facturationScan) {
-    throw new Error('Scanner de bureau indisponible.');
-  }
-  const result = await window.facturationScan.scan();
+/** Convertit un blob (ex. PDF) en base64 sans préfixe data:. */
+export function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (): void => {
+      const result = typeof reader.result === 'string' ? reader.result : '';
+      const comma = result.indexOf(',');
+      resolve(comma >= 0 ? result.slice(comma + 1) : result);
+    };
+    reader.onerror = (): void => reject(reader.error ?? new Error('Lecture du fichier échouée.'));
+    reader.readAsDataURL(blob);
+  });
+}
+
+/** Reconstitue un File à partir d'un résultat de numérisation. */
+export function desktopScanResultToFile(result: DesktopScanResult): File {
   const blob = base64ToBlob(result.base64, result.mimeType);
   return new File([blob], result.fileName, { type: result.mimeType });
+}
+
+/** Liste les scanners disponibles (app de bureau). */
+export function listScanDevices(): Promise<ScanDevice[]> {
+  if (!window.facturationScan) throw new Error('Scanner de bureau indisponible.');
+  return window.facturationScan.listDevices();
+}
+
+/** Déclenche une numérisation avec les options choisies (app de bureau). */
+export function scanViaDesktop(opts?: ScanOptions): Promise<DesktopScanResult> {
+  if (!window.facturationScan) throw new Error('Scanner de bureau indisponible.');
+  return window.facturationScan.scan(opts);
+}
+
+/** Imprime un PDF via le dialogue natif (app de bureau). */
+export async function printPdfViaDesktop(blob: Blob): Promise<void> {
+  if (!window.facturationPrint) throw new Error('Impression de bureau indisponible.');
+  const base64 = await blobToBase64(blob);
+  return window.facturationPrint.printPdf(base64);
 }

@@ -12,6 +12,7 @@ import {
   archiveInvoice,
   deleteInvoice,
   downloadInvoicePdf,
+  fetchInvoicePdfBlob,
   getInvoice,
   openInvoicePdf,
   unarchiveInvoice,
@@ -27,7 +28,12 @@ import { InvoiceActionsMenu } from './invoices/InvoiceActionsMenu';
 import { InvoiceAttachments } from './invoices/InvoiceAttachments';
 import { InvoiceStatusBar } from './invoices/InvoiceStatusBar';
 import { PAYMENT_METHOD_LABEL } from '../lib/payment-method';
-import { isDesktopScanAvailable, scanViaDesktop } from '../lib/desktop-scan';
+import {
+  isDesktopPrintAvailable,
+  isDesktopScanAvailable,
+  printPdfViaDesktop,
+} from '../lib/desktop-scan';
+import { ScanDialog } from './invoices/ScanDialog';
 
 /** Une facture ENVOYEE dont l'échéance est dépassée est « en retard ». */
 function isOverdue(invoice: Invoice): boolean {
@@ -59,6 +65,7 @@ export function InvoiceDetailPage() {
   });
   const scanInputRef = useRef<HTMLInputElement>(null);
   const [scanning, setScanning] = useState(false);
+  const [scanDialogOpen, setScanDialogOpen] = useState(false);
 
   const load = useCallback(async (): Promise<void> => {
     if (!id) return;
@@ -99,12 +106,18 @@ export function InvoiceDetailPage() {
     void changeStatus('PAYEE', paidAt, paymentMethod);
   };
 
+  // App de bureau : dialogue d'impression natif (aperçu + choix imprimante). Sinon : ouverture du PDF.
   const imprimer = async (): Promise<void> => {
     if (!invoice) return;
     try {
-      await openInvoicePdf(invoice.id);
+      if (isDesktopPrintAvailable()) {
+        const blob = await fetchInvoicePdfBlob(invoice.id);
+        await printPdfViaDesktop(blob);
+      } else {
+        await openInvoicePdf(invoice.id);
+      }
     } catch (err) {
-      notify(err instanceof Error ? err.message : "Erreur lors de l'ouverture du PDF.", 'error');
+      notify(err instanceof Error ? err.message : "Erreur lors de l'impression.", 'error');
     }
   };
 
@@ -131,20 +144,12 @@ export function InvoiceDetailPage() {
     }
   };
 
-  // App de bureau Electron : scan natif de l'imprimante. Sinon : sélecteur de fichier / caméra.
-  const scanner = async (): Promise<void> => {
-    if (!isDesktopScanAvailable()) {
+  // App de bureau : dialogue de numérisation (choix scanner + aperçu). Sinon : sélecteur de fichier / caméra.
+  const scanner = (): void => {
+    if (isDesktopScanAvailable()) {
+      setScanDialogOpen(true);
+    } else {
       scanInputRef.current?.click();
-      return;
-    }
-    if (!invoice) return;
-    setScanning(true);
-    try {
-      const file = await scanViaDesktop();
-      await attachScannedFile(file);
-    } catch (err) {
-      setScanning(false);
-      notify(err instanceof Error ? err.message : 'Erreur lors de la numérisation.', 'error');
     }
   };
 
@@ -422,6 +427,12 @@ export function InvoiceDetailPage() {
               notify(sendModal.mode === 'send' ? 'Facture envoyée par courriel' : 'Rappel envoyé', 'success');
               void load();
             }}
+          />
+          <ScanDialog
+            invoiceId={invoice.id}
+            open={scanDialogOpen}
+            onClose={() => setScanDialogOpen(false)}
+            onAttached={(list) => setInvoice((prev) => (prev ? { ...prev, attachments: list } : prev))}
           />
         </>
       )}
