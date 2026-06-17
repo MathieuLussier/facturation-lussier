@@ -14,7 +14,7 @@ le VPS via l'API existante.
 │  Electron                                                                     │
 │   • BrowserWindow → charge l'app web du VPS (HTTPS)                            │
 │   • Numérisation native :  WIA (imprimante installée)  ➜ eSCL (repli réseau)   │
-│   • preload expose  window.facturationScan.scan()  → renvoie un PDF (base64)   │
+│   • preload expose  window.facturationScan.scan()  → JPEG (WIA) ou PDF (eSCL)  │
 └───────────────────────────────────────────────────────────────────────────────┘
         │ scan (PDF base64)                         ▲ upload pièce jointe (HTTPS)
         ▼                                           │
@@ -195,7 +195,7 @@ desktop/
     ├── main.ts             # process principal : fenêtre, sécurité, IPC, auto-update
     ├── preload.ts          # expose window.facturationScan.scan()
     └── scan/
-        ├── index.ts        # orchestration WIA→eSCL + image→PDF
+        ├── index.ts        # orchestration WIA→eSCL (joint l'image/PDF tel quel)
         ├── wia.ts          # wrapper Node du script PowerShell
         ├── wia.ps1         # numérisation WIA headless (Windows)
         └── escl.ts         # client eSCL/AirScan réseau (repli)
