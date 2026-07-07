@@ -422,12 +422,27 @@ export class InvoicesService {
   /**
    * Assigne la référence officielle « FAC-AAAA-NNNN » et passe la facture en
    * « Envoyée », dans une transaction sérialisable (numérotation sans trou).
+   * IDEMPOTENT : la référence est re-vérifiée À L'INTÉRIEUR de la transaction ;
+   * si la facture est déjà numérotée (finalisation concurrente ou rejouée), on
+   * retourne son état courant SANS consommer un second numéro.
    * Réutilisé par {@link updateStatus} et par l'envoi par courriel.
    */
   async finalizeToEnvoyee(id: string): Promise<Invoice> {
     const year = new Date().getFullYear();
     const row = await this.prisma.client.$transaction(
       async (tx) => {
+        const existing = await tx.invoice.findUnique({
+          where: { id },
+          select: { reference: true },
+        });
+        if (!existing) {
+          throw new NotFoundException('Facture introuvable');
+        }
+        // Déjà finalisée → idempotent : ne pas ré-attribuer de numéro.
+        if (existing.reference !== null) {
+          return tx.invoice.findUnique({ where: { id }, include: INCLUDE_FULL });
+        }
+
         await tx.$executeRaw`
           INSERT INTO invoice_sequences ("year", "lastNumber")
           VALUES (${year}, 0)
@@ -456,7 +471,36 @@ export class InvoicesService {
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
+    if (!row) {
+      throw new NotFoundException('Facture introuvable');
+    }
     return toInvoice(row);
+  }
+
+  /**
+   * Compensation : ré-ouvre une facture fraîchement finalisée dont l'envoi a
+   * échoué (pour ne pas laisser une facture « envoyée » jamais reçue). Rend le
+   * numéro au compteur en CAS (uniquement s'il est encore le dernier attribué,
+   * pour préserver l'absence de trou dans le cas courant sans concurrence).
+   */
+  private async revertFinalization(
+    id: string,
+    sequenceYear: number | null,
+    sequenceNo: number | null,
+  ): Promise<void> {
+    await this.prisma.client.$transaction(async (tx) => {
+      await tx.invoice.update({
+        where: { id },
+        data: { status: 'BROUILLON', reference: null, sequenceYear: null, sequenceNo: null },
+      });
+      if (sequenceYear !== null && sequenceNo !== null) {
+        await tx.$executeRaw`
+          UPDATE invoice_sequences
+          SET "lastNumber" = "lastNumber" - 1
+          WHERE "year" = ${sequenceYear} AND "lastNumber" = ${sequenceNo}
+        `;
+      }
+    });
   }
 
   /**
@@ -549,19 +593,32 @@ export class InvoicesService {
       );
     }
     let invoice = await this.findById(id);
-    if (invoice.status === 'BROUILLON') {
+    const freshlyFinalized = invoice.status === 'BROUILLON';
+    if (freshlyFinalized) {
       invoice = await this.finalizeToEnvoyee(id);
     }
-    const issuer = await issuerService.get();
-    const buffer = await pdf.generate(invoice, issuer);
-    await mail.sendInvoiceEmail({
-      to: dto.to,
-      subject: dto.subject,
-      body: dto.body && dto.body.trim() ? dto.body : defaultSendBody(invoice),
-      pdfBuffer: buffer,
-      attachmentName: `facture-${invoice.reference ?? invoice.number}.pdf`,
-      extraAttachments: await this.loadEmailAttachments(invoice.id, dto.attachmentIds),
-    });
+
+    // Génération PDF + envoi APRÈS finalisation (le PDF doit porter le numéro).
+    // Si l'un des deux échoue alors qu'on vient de finaliser, on compense en
+    // ré-ouvrant la facture : pas de facture « envoyée » que le client n'a
+    // jamais reçue, et le numéro est rendu au compteur.
+    try {
+      const issuer = await issuerService.get();
+      const buffer = await pdf.generate(invoice, issuer);
+      await mail.sendInvoiceEmail({
+        to: dto.to,
+        subject: dto.subject,
+        body: dto.body && dto.body.trim() ? dto.body : defaultSendBody(invoice),
+        pdfBuffer: buffer,
+        attachmentName: `facture-${invoice.reference ?? invoice.number}.pdf`,
+        extraAttachments: await this.loadEmailAttachments(invoice.id, dto.attachmentIds),
+      });
+    } catch (err) {
+      if (freshlyFinalized) {
+        await this.revertFinalization(id, invoice.sequenceYear, invoice.sequenceNo);
+      }
+      throw err;
+    }
     return { sent: true, newStatus: invoice.status };
   }
 

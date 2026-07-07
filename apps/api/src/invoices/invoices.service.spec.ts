@@ -517,6 +517,42 @@ describe('InvoicesService', () => {
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
 
+  it('finalizeToEnvoyee est idempotent si déjà numérotée (aucun 2e numéro)', async () => {
+    const { prisma, invoice, queryRaw } = makePrisma();
+    invoice.findUnique.mockResolvedValue(
+      makeInvoiceRow({ status: 'ENVOYEE', reference: 'FAC-2026-0001', sequenceYear: 2026, sequenceNo: 1 }),
+    );
+    const res = await new InvoicesService(prisma).finalizeToEnvoyee('inv1');
+    expect(queryRaw).not.toHaveBeenCalled(); // pas d'incrément du compteur
+    expect(res.reference).toBe('FAC-2026-0001');
+  });
+
+  it('sendInvoice ré-ouvre le brouillon (compensation) si l’envoi échoue', async () => {
+    const { prisma, invoice } = makePrisma();
+    invoice.findUnique.mockResolvedValue(makeInvoiceRow({ status: 'BROUILLON', reference: null }));
+    invoice.update.mockResolvedValue(
+      makeInvoiceRow({ status: 'ENVOYEE', reference: 'FAC-2026-0001', sequenceYear: 2026, sequenceNo: 1 }),
+    );
+    const mail = {
+      isConfigured: true,
+      sendInvoiceEmail: jest.fn().mockRejectedValue(new ServiceUnavailableException('smtp down')),
+    } as unknown as MailService;
+
+    await expect(
+      new InvoicesService(prisma).sendInvoice(
+        'inv1',
+        { to: 'a@b.com', subject: 'S' },
+        fakePdf(),
+        fakeIssuer(),
+        mail,
+      ),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
+
+    // Le dernier update ré-ouvre la facture en BROUILLON (numéro effacé).
+    const calls = invoice.update.mock.calls;
+    expect(calls[calls.length - 1][0].data).toMatchObject({ status: 'BROUILLON', reference: null });
+  });
+
   it('sendReminder rejette une facture non ENVOYEE', async () => {
     const { prisma, invoice } = makePrisma();
     invoice.findUnique.mockResolvedValue(makeInvoiceRow({ status: 'BROUILLON' }));
