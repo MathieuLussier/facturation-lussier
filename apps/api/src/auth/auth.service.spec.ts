@@ -237,15 +237,21 @@ describe('AuthService', () => {
       );
     });
 
-    it('DEV : un mot de passe vide connecte (NODE_ENV != production)', async () => {
-      // En test, NODE_ENV vaut "test" → le raccourci dev est actif.
+    it('DEV : un mot de passe vide connecte (NODE_ENV === development)', async () => {
+      // Le raccourci n'est actif que si NODE_ENV vaut EXACTEMENT 'development'.
       const dbUser = makeDbUser({ passwordHash: '$2b$12$peuimporte' });
       (prisma.client.user.findUnique as jest.Mock).mockResolvedValue(dbUser);
       (prisma.client.refreshToken.deleteMany as jest.Mock).mockResolvedValue({});
       (prisma.client.refreshToken.create as jest.Mock).mockResolvedValue({});
 
-      const result = await service.login(dbUser.email, '');
-      expect(result.tokens).toHaveProperty('accessToken');
+      const prev = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'development';
+      try {
+        const result = await service.login(dbUser.email, '');
+        expect(result.tokens).toHaveProperty('accessToken');
+      } finally {
+        process.env.NODE_ENV = prev;
+      }
     });
 
     it('PROD : un mot de passe vide est refusé (NODE_ENV = production)', async () => {
@@ -255,6 +261,20 @@ describe('AuthService', () => {
 
       const prev = process.env.NODE_ENV;
       process.env.NODE_ENV = 'production';
+      try {
+        await expect(service.login(dbUser.email, '')).rejects.toThrow(UnauthorizedException);
+      } finally {
+        process.env.NODE_ENV = prev;
+      }
+    });
+
+    it('DÉFAUT SÛR : un mot de passe vide est refusé quand NODE_ENV est absent', async () => {
+      const hash = await bcrypt.hash('real-password', 12);
+      const dbUser = makeDbUser({ passwordHash: hash });
+      (prisma.client.user.findUnique as jest.Mock).mockResolvedValue(dbUser);
+
+      const prev = process.env.NODE_ENV;
+      delete process.env.NODE_ENV;
       try {
         await expect(service.login(dbUser.email, '')).rejects.toThrow(UnauthorizedException);
       } finally {

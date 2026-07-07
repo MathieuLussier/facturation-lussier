@@ -10,9 +10,10 @@ import {
   Post,
   Query,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { Throttle } from '@nestjs/throttler';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import type { Response } from 'express';
 import type { AuthUser, Invoice, InvoiceStats, Paginated, SendInvoiceResponse } from '@facturation/core';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -70,14 +71,18 @@ export class InvoicesController {
     return this.invoices.create(dto, user.id);
   }
 
-  // Envoi par courriel : limité à 3 par minute par IP (anti-abus).
+  // Envoi par courriel : limité à 3 par minute par IP (anti-abus). Le
+  // @UseGuards(ThrottlerGuard) est requis pour que @Throttle soit effectif
+  // (le ThrottlerGuard n'est pas enregistré globalement).
   @Post(':id/send')
+  @UseGuards(ThrottlerGuard)
   @Throttle({ default: { limit: 3, ttl: 60_000 } })
   send(@Param('id') id: string, @Body() dto: SendInvoiceDto): Promise<SendInvoiceResponse> {
     return this.invoices.sendInvoice(id, dto, this.pdf, this.issuer, this.mail);
   }
 
   @Post(':id/remind')
+  @UseGuards(ThrottlerGuard)
   @Throttle({ default: { limit: 3, ttl: 60_000 } })
   remind(@Param('id') id: string, @Body() dto: SendInvoiceDto): Promise<{ sent: boolean }> {
     return this.invoices.sendReminder(id, dto, this.pdf, this.issuer, this.mail);

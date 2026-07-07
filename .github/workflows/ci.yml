@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+# Annule les exécutions précédentes encore en cours sur la même réf.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    # Postgres réel : les tests e2e (auth.e2e.spec.ts) tournent contre une vraie DB.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: facturation
+          POSTGRES_PASSWORD: facturation
+          POSTGRES_DB: facturation
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U facturation -d facturation"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    # Valeurs de TEST (pas des secrets de production) — sûres à versionner.
+    env:
+      DATABASE_URL: postgresql://facturation:facturation@localhost:5432/facturation
+      JWT_ACCESS_SECRET: ci-access-secret-not-for-prod
+      JWT_REFRESH_SECRET: ci-refresh-secret-not-for-prod
+      ADMIN_EMAIL: admin@facturation.local
+      ADMIN_PASSWORD: ci-admin-password
+      NODE_ENV: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Fichier .env attendu par les scripts db (dotenv-cli) et par ConfigModule.
+      - name: Write .env
+        run: |
+          cat > .env <<EOF
+          DATABASE_URL=$DATABASE_URL
+          JWT_ACCESS_SECRET=$JWT_ACCESS_SECRET
+          JWT_REFRESH_SECRET=$JWT_REFRESH_SECRET
+          ADMIN_EMAIL=$ADMIN_EMAIL
+          ADMIN_PASSWORD=$ADMIN_PASSWORD
+          NODE_ENV=$NODE_ENV
+          EOF
+
+      - name: Build (turbo — génère le client Prisma + compile les packages)
+        run: npm run build
+
+      - name: Apply migrations
+        run: npm run -w @facturation/db db:deploy
+
+      - name: Seed (utilisateur admin)
+        run: npm run -w @facturation/db db:seed
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type-check
+        run: npm run type-check
+
+      - name: Test (unit + e2e)
+        run: npm test

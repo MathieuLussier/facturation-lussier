@@ -53,6 +53,24 @@ interface ListParams {
 const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 20;
 
+/**
+ * Transitions de statut autorisées (machine à états). Une facture ne peut jamais
+ * revenir à BROUILLON une fois numérotée : cela rouvrirait l'édition des montants
+ * sous une référence officielle déjà émise. ANNULEE est terminal. PAYEE→ENVOYEE
+ * reste permis pour corriger un encaissement marqué par erreur.
+ */
+const ALLOWED_STATUS_TRANSITIONS: Record<InvoiceStatus, InvoiceStatus[]> = {
+  BROUILLON: ['ENVOYEE', 'ANNULEE'],
+  ENVOYEE: ['PAYEE', 'ANNULEE'],
+  PAYEE: ['ENVOYEE', 'ANNULEE'],
+  ANNULEE: [],
+};
+
+/** Vrai si passer de `from` à `to` est permis (l'idempotence from===to est tolérée). */
+function isAllowedStatusTransition(from: InvoiceStatus, to: InvoiceStatus): boolean {
+  return from === to || ALLOWED_STATUS_TRANSITIONS[from].includes(to);
+}
+
 type DbProjectWithContacts = DbProject & { billingContacts?: DbContact[] };
 
 type InvoiceRow = DbInvoice & {
@@ -365,6 +383,15 @@ export class InvoicesService {
     paymentMethod?: PaymentMethod,
   ): Promise<Invoice> {
     const current = await this.findById(id);
+
+    // Machine à états : rejeter toute transition illégale AVANT d'agir
+    // (empêche p. ex. de rouvrir en BROUILLON une facture numérotée, ou de
+    // marquer PAYEE un brouillon sans référence officielle).
+    if (!isAllowedStatusTransition(current.status, status)) {
+      throw new ConflictException(
+        `Transition de statut interdite : ${current.status} → ${status}.`,
+      );
+    }
 
     // Champs de paiement selon la cible.
     let paymentData: { paidAt: Date | null; paymentMethod: PaymentMethod | null };

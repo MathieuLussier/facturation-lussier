@@ -53,6 +53,9 @@ model RefreshToken {
   createdAt DateTime  @default(now())
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  // Filtré par userId à chaque login (purge des tokens expirés) et à chaque
+  // révocation de sessions (updateMany where userId). Sans index → scan séquentiel.
+  @@index([userId])
   @@map("refresh_tokens")
 }
 

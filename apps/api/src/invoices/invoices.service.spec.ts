@@ -439,6 +439,39 @@ describe('InvoicesService', () => {
     expect(queryRaw).not.toHaveBeenCalled();
   });
 
+  // --- Machine à états : transitions interdites --------------------------
+
+  it('updateStatus refuse BROUILLON→PAYEE (facture non numérotée)', async () => {
+    const { prisma, invoice } = makePrisma();
+    invoice.findUnique.mockResolvedValue(makeInvoiceRow({ status: 'BROUILLON', reference: null }));
+    await expect(
+      new InvoicesService(prisma).updateStatus('inv1', 'PAYEE', undefined, 'VIREMENT'),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(invoice.update).not.toHaveBeenCalled();
+  });
+
+  it('updateStatus refuse PAYEE→BROUILLON (réouverture d’une facture émise)', async () => {
+    const { prisma, invoice } = makePrisma();
+    invoice.findUnique.mockResolvedValue(
+      makeInvoiceRow({ status: 'PAYEE', reference: 'FAC-2026-0001', paymentMethod: 'CHEQUE' }),
+    );
+    await expect(
+      new InvoicesService(prisma).updateStatus('inv1', 'BROUILLON'),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(invoice.update).not.toHaveBeenCalled();
+  });
+
+  it('updateStatus refuse toute transition depuis ANNULEE (terminal)', async () => {
+    const { prisma, invoice } = makePrisma();
+    invoice.findUnique.mockResolvedValue(
+      makeInvoiceRow({ status: 'ANNULEE', reference: 'FAC-2026-0002' }),
+    );
+    await expect(
+      new InvoicesService(prisma).updateStatus('inv1', 'ENVOYEE'),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(invoice.update).not.toHaveBeenCalled();
+  });
+
   // --- Envoi par courriel ------------------------------------------------
 
   function fakePdf() {

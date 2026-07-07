@@ -25,6 +25,20 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
     );
   }
 
+  // NODE_ENV : si défini, doit valoir une valeur connue. Le raccourci de
+  // connexion sans mot de passe n'est actif QUE si NODE_ENV === 'development'
+  // (cf. AuthService.login), donc en production il faut impérativement
+  // NODE_ENV=production. On valide le format pour rejeter une faute de frappe
+  // (ex. 'prod', 'Production') qui laisserait le raccourci dev désactivé mais
+  // masquerait une mauvaise configuration.
+  const nodeEnv = config['NODE_ENV'];
+  const allowedNodeEnv = ['development', 'production', 'test'];
+  if (nodeEnv !== undefined && !allowedNodeEnv.includes(nodeEnv as string)) {
+    throw new Error(
+      `NODE_ENV doit valoir l'une de : ${allowedNodeEnv.join(', ')} (reçu : '${String(nodeEnv)}').`,
+    );
+  }
+
   // Validation de format des variables optionnelles (valeurs par défaut sinon).
   const cookieSecure = config['COOKIE_SECURE'];
   if (cookieSecure !== undefined && cookieSecure !== 'true' && cookieSecure !== 'false') {

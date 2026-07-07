@@ -23,9 +23,11 @@ import { validateEnv } from './config/env.validation';
       envFilePath: ['../../.env'],
       validate: validateEnv,
     }),
+    // Plafond par défaut appliqué aux routes protégées par un ThrottlerGuard
+    // (login, envoi/rappel de factures). Les routes sensibles resserrent la
+    // limite via @Throttle().
     ThrottlerModule.forRoot([
       {
-        // 10 requêtes par minute par IP (login rate-limit)
         ttl: 60_000,
         limit: 10,
       },
