@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Badge, Button, Input } from '@facturation/ui';
 import { Search, UserPlus } from 'lucide-react';
 import type { DirectoryEntry } from '@facturation/core';
 import { getClientsDirectory } from '../lib/clients';
+import { useApiResource } from '../lib/useApiResource';
 import { useToast } from '../components/Toast';
 import { EntityIcon } from '../components/EntityIcon';
 import { ClientCreateModal } from './clients/ClientCreateModal';
@@ -66,41 +67,33 @@ export function ClientsPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const [items, setItems] = useState<DirectoryEntry[]>([]);
-  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
+  // Terme de recherche « validé » (soumis) : sert la requête, distinct de la saisie.
+  const [committedSearch, setCommittedSearch] = useState('');
   const [showArchived, setShowArchived] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [listError, setListError] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
+  // Erreur remontée par le modal de création (distincte de l'erreur de liste).
+  const [createError, setCreateError] = useState('');
 
-  const fetchPage = useCallback(
-    async (p: number, q: string, archived: boolean): Promise<void> => {
-      setLoading(true);
-      setListError('');
-      try {
-        const res = await getClientsDirectory({
-          page: p,
-          pageSize: PAGE_SIZE,
-          search: q,
-          archivedOnly: archived,
-        });
-        setItems(res.items);
-        setTotal(res.total);
-        setPage(res.page);
-      } catch (err) {
-        setListError(err instanceof Error ? err.message : 'Erreur de chargement.');
-      } finally {
-        setLoading(false);
-      }
-    },
-    [],
+  const { data, loading, error, reload } = useApiResource(
+    () =>
+      getClientsDirectory({
+        page,
+        pageSize: PAGE_SIZE,
+        search: committedSearch,
+        archivedOnly: showArchived,
+      }),
+    [page, committedSearch, showArchived],
   );
+  const items = data?.items ?? [];
+  const total = data?.total ?? 0;
+  const listError = error ?? createError;
 
-  useEffect(() => {
-    void fetchPage(1, '', showArchived);
-  }, [fetchPage, showArchived]);
+  const submitSearch = (): void => {
+    setPage(1);
+    setCommittedSearch(search);
+  };
 
   // Ouvre le modal de création si le param ?new est présent
   useEffect(() => {
@@ -122,7 +115,10 @@ export function ClientsPage() {
 
   const handleCreated = () => {
     setModalOpen(false);
-    void fetchPage(1, search, showArchived);
+    setCreateError('');
+    setPage(1);
+    setCommittedSearch(search);
+    reload();
     notify('Client créé', 'success');
   };
 
@@ -145,7 +141,7 @@ export function ClientsPage() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            void fetchPage(1, search, showArchived);
+            submitSearch();
           }}
           className="flex items-end gap-2"
         >
@@ -166,7 +162,12 @@ export function ClientsPage() {
           <input
             type="checkbox"
             checked={showArchived}
-            onChange={(e) => setShowArchived(e.target.checked)}
+            onChange={(e) => {
+              setShowArchived(e.target.checked);
+              setSearch('');
+              setCommittedSearch('');
+              setPage(1);
+            }}
             className="h-4 w-4 rounded border-border accent-brand"
           />
           Archivés seulement
@@ -221,7 +222,7 @@ export function ClientsPage() {
               variant="secondary"
               size="sm"
               disabled={loading || page <= 1}
-              onClick={() => void fetchPage(page - 1, search, showArchived)}
+              onClick={() => setPage(page - 1)}
             >
               Précédent
             </Button>
@@ -229,7 +230,7 @@ export function ClientsPage() {
               variant="secondary"
               size="sm"
               disabled={loading || page >= pageCount}
-              onClick={() => void fetchPage(page + 1, search, showArchived)}
+              onClick={() => setPage(page + 1)}
             >
               Suivant
             </Button>
@@ -242,7 +243,7 @@ export function ClientsPage() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onCreated={handleCreated}
-        onError={(msg) => setListError(msg)}
+        onError={(msg) => setCreateError(msg)}
       />
     </div>
   );
