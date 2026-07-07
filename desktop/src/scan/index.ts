@@ -113,8 +113,14 @@ async function scanDocument(
 ): Promise<string> {
   // Périphérique réseau explicitement choisi.
   if (deviceId && deviceId.startsWith(ESCL_PREFIX)) {
-    const host = deviceId.slice(ESCL_PREFIX.length) || config.scan.esclHost;
-    if (!host) throw new Error('Hôte eSCL manquant.');
+    const requestedHost = deviceId.slice(ESCL_PREFIX.length);
+    // Sécurité anti-SSRF : le deviceId provient du renderer (contenu web
+    // distant). On n'autorise QUE l'hôte eSCL pré-configuré ; un hôte
+    // arbitraire permettrait d'atteindre n'importe quelle machine du réseau.
+    const host = config.scan.esclHost;
+    if (!host || (requestedHost && requestedHost !== host)) {
+      throw new Error('Hôte eSCL non autorisé (seul le scanner réseau configuré est permis).');
+    }
     return scanEscl(host, dpi, colorMode, source);
   }
 
