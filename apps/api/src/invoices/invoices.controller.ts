@@ -20,6 +20,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { IssuerService } from '../issuer/issuer.service';
 import { MailService } from '../mail/mail.service';
 import { InvoicesService } from './invoices.service';
+import { InvoiceMailingService } from './invoice-mailing.service';
 import { InvoicePdfService } from './invoice-pdf.service';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
 import { ListInvoicesQuery } from './dto/list-invoices.query';
@@ -32,6 +33,7 @@ import { UpdateInvoiceStatusDto } from './dto/update-invoice-status.dto';
 export class InvoicesController {
   constructor(
     private readonly invoices: InvoicesService,
+    private readonly mailing: InvoiceMailingService,
     private readonly issuer: IssuerService,
     private readonly pdf: InvoicePdfService,
     private readonly mail: MailService,
@@ -78,14 +80,14 @@ export class InvoicesController {
   @UseGuards(ThrottlerGuard)
   @Throttle({ default: { limit: 3, ttl: 60_000 } })
   send(@Param('id') id: string, @Body() dto: SendInvoiceDto): Promise<SendInvoiceResponse> {
-    return this.invoices.sendInvoice(id, dto, this.pdf, this.issuer, this.mail);
+    return this.mailing.sendInvoice(id, dto, this.pdf, this.issuer, this.mail);
   }
 
   @Post(':id/remind')
   @UseGuards(ThrottlerGuard)
   @Throttle({ default: { limit: 3, ttl: 60_000 } })
   remind(@Param('id') id: string, @Body() dto: SendInvoiceDto): Promise<{ sent: boolean }> {
-    return this.invoices.sendReminder(id, dto, this.pdf, this.issuer, this.mail);
+    return this.mailing.sendReminder(id, dto, this.pdf, this.issuer, this.mail);
   }
 
   @Patch(':id')

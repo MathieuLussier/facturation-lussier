@@ -3,42 +3,21 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
-  ServiceUnavailableException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
-import type {
-  Client as DbClient,
-  Contact as DbContact,
-  Invoice as DbInvoice,
-  InvoiceAttachment as DbAttachment,
-  InvoiceLine as DbLine,
-  Project as DbProject,
-} from '@prisma/client';
 import {
   computeInvoiceTotals,
   computeLineAmountCents,
-  formatCents,
-  type Client,
-  type Contact,
   type CreateInvoiceRequest,
   type Invoice,
-  type InvoiceLine,
   type InvoiceStats,
   type InvoiceStatus,
-  type InvoiceAttachment,
   type Paginated,
   type PaymentMethod,
-  type Project,
-  type ProjectStatus,
-  type SendInvoiceRequest,
-  type SendInvoiceResponse,
   type UpdateInvoiceRequest,
 } from '@facturation/core';
 import { PrismaService } from '../prisma/prisma.service';
-import { IssuerService } from '../issuer/issuer.service';
-import { MailService } from '../mail/mail.service';
-import { InvoicePdfService } from './invoice-pdf.service';
-import { attachmentAbsPath } from './attachments/attachment-storage';
+import { InvoiceNumberingService } from './invoice-numbering.service';
+import { INCLUDE_FULL, toInvoice } from './invoice-mappers';
 
 interface ListParams {
   page?: number;
@@ -71,158 +50,12 @@ function isAllowedStatusTransition(from: InvoiceStatus, to: InvoiceStatus): bool
   return from === to || ALLOWED_STATUS_TRANSITIONS[from].includes(to);
 }
 
-type DbProjectWithContacts = DbProject & { billingContacts?: DbContact[] };
-
-type InvoiceRow = DbInvoice & {
-  lines?: DbLine[];
-  attachments?: DbAttachment[];
-  client?: DbClient | null;
-  project?: DbProjectWithContacts | null;
-  billingContact?: DbContact | null;
-};
-
-const INCLUDE_FULL = {
-  client: true,
-  lines: { orderBy: { position: 'asc' as const } },
-  attachments: { orderBy: { createdAt: 'asc' as const } },
-  project: { include: { billingContacts: true } },
-  billingContact: true,
-};
-
-function toClient(c: DbClient): Client {
-  return {
-    id: c.id,
-    type: c.type,
-    companyName: c.companyName,
-    email: c.email,
-    phone: c.phone,
-    addressLine: c.addressLine,
-    city: c.city,
-    province: c.province,
-    postalCode: c.postalCode,
-    country: c.country,
-    neq: c.neq,
-    contactName: c.contactName,
-    notes: c.notes,
-    archivedAt: c.archivedAt ? c.archivedAt.toISOString() : null,
-    createdAt: c.createdAt.toISOString(),
-    updatedAt: c.updatedAt.toISOString(),
-  };
-}
-
-function toLine(l: DbLine): InvoiceLine {
-  return {
-    id: l.id,
-    description: l.description,
-    quantity: l.quantity,
-    unitPriceCents: l.unitPriceCents,
-    amountCents: l.amountCents,
-  };
-}
-
-function toAttachment(a: DbAttachment): InvoiceAttachment {
-  return {
-    id: a.id,
-    invoiceId: a.invoiceId,
-    fileName: a.fileName,
-    mimeType: a.mimeType,
-    sizeBytes: a.sizeBytes,
-    createdAt: a.createdAt.toISOString(),
-  };
-}
-
-function toContact(c: DbContact): Contact {
-  return {
-    id: c.id,
-    companyId: c.companyId,
-    name: c.name,
-    email: c.email,
-    phone: c.phone,
-    title: c.title,
-    isBillingContact: c.isBillingContact,
-    notes: c.notes,
-    archivedAt: c.archivedAt ? c.archivedAt.toISOString() : null,
-    createdAt: c.createdAt.toISOString(),
-    updatedAt: c.updatedAt.toISOString(),
-  };
-}
-
-function toProject(p: DbProjectWithContacts): Project {
-  return {
-    id: p.id,
-    companyId: p.companyId,
-    name: p.name,
-    status: p.status as ProjectStatus,
-    notes: p.notes,
-    billingContacts: (p.billingContacts ?? []).map(toContact),
-    archivedAt: p.archivedAt ? p.archivedAt.toISOString() : null,
-    createdAt: p.createdAt.toISOString(),
-    updatedAt: p.updatedAt.toISOString(),
-  };
-}
-
-function toInvoice(row: InvoiceRow): Invoice {
-  return {
-    id: row.id,
-    number: row.number,
-    reference: row.reference ?? null,
-    sequenceYear: row.sequenceYear ?? null,
-    sequenceNo: row.sequenceNo ?? null,
-    status: row.status as InvoiceStatus,
-    clientId: row.clientId,
-    client: row.client ? toClient(row.client) : undefined,
-    projectId: row.projectId,
-    project: row.project ? toProject(row.project) : undefined,
-    billingContactId: row.billingContactId,
-    billingContact: row.billingContact ? toContact(row.billingContact) : undefined,
-    issueDate: row.issueDate.toISOString(),
-    dueDate: row.dueDate ? row.dueDate.toISOString() : null,
-    notes: row.notes,
-    paidAt: row.paidAt ? row.paidAt.toISOString() : null,
-    paymentMethod: (row.paymentMethod as PaymentMethod | null) ?? null,
-    subtotalCents: row.subtotalCents,
-    gstCents: row.gstCents,
-    qstCents: row.qstCents,
-    totalCents: row.totalCents,
-    lines: (row.lines ?? []).map(toLine),
-    attachments: row.attachments ? row.attachments.map(toAttachment) : undefined,
-    archivedAt: row.archivedAt ? row.archivedAt.toISOString() : null,
-    deletable: row.status === 'BROUILLON',
-    editable: row.status === 'BROUILLON' || row.status === 'ENVOYEE',
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-  };
-}
-
-/** Référence lisible d'une facture pour les courriels (réf. officielle ou n° interne). */
-function invoiceRefLabel(invoice: Invoice): string {
-  return invoice.reference ?? `#${invoice.number}`;
-}
-
-/** Corps par défaut d'un courriel d'envoi de facture (si l'utilisateur n'en saisit pas). */
-function defaultSendBody(invoice: Invoice): string {
-  return (
-    `Bonjour,\n\n` +
-    `Veuillez trouver ci-joint la facture ${invoiceRefLabel(invoice)} ` +
-    `d'un montant de ${formatCents(invoice.totalCents)}.\n\n` +
-    `N'hésitez pas à nous contacter pour toute question.\n\nCordialement`
-  );
-}
-
-/** Corps par défaut d'un courriel de rappel (facture en attente de paiement). */
-function defaultReminderBody(invoice: Invoice): string {
-  const echeance = invoice.dueDate ? ` (échéance : ${invoice.dueDate.slice(0, 10)})` : '';
-  return (
-    `Bonjour,\n\n` +
-    `Nous vous rappelons que la facture ${invoiceRefLabel(invoice)} ` +
-    `d'un montant de ${formatCents(invoice.totalCents)} est toujours en attente de règlement${echeance}.\n\n` +
-    `Merci de régulariser cette situation.\n\nCordialement`
-  );
-}
-
 @Injectable()
 export class InvoicesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly numbering: InvoiceNumberingService,
+  ) {}
 
   async list(params: ListParams): Promise<Paginated<Invoice>> {
     const page = params.page ?? DEFAULT_PAGE;
@@ -370,9 +203,9 @@ export class InvoicesService {
   }
 
   /**
-   * Met à jour le statut d'une facture. Deux responsabilités fusionnées :
+   * Met à jour le statut d'une facture. Deux responsabilités :
    *  - Numérotation : la 1re transition BROUILLON→ENVOYEE assigne la référence
-   *    officielle « FAC-AAAA-NNNN » sans trou (compteur transactionnel).
+   *    officielle (déléguée à {@link InvoiceNumberingService}).
    *  - Paiement : passer à PAYEE enregistre paidAt + mode (requis) ; quitter
    *    PAYEE efface ces champs.
    */
@@ -408,7 +241,7 @@ export class InvoicesService {
     const needsNumber =
       status === 'ENVOYEE' && current.status === 'BROUILLON' && current.reference === null;
     if (needsNumber) {
-      return this.finalizeToEnvoyee(id);
+      return this.numbering.finalizeToEnvoyee(id);
     }
 
     const row = await this.prisma.client.invoice.update({
@@ -417,90 +250,6 @@ export class InvoicesService {
       include: INCLUDE_FULL,
     });
     return toInvoice(row);
-  }
-
-  /**
-   * Assigne la référence officielle « FAC-AAAA-NNNN » et passe la facture en
-   * « Envoyée », dans une transaction sérialisable (numérotation sans trou).
-   * IDEMPOTENT : la référence est re-vérifiée À L'INTÉRIEUR de la transaction ;
-   * si la facture est déjà numérotée (finalisation concurrente ou rejouée), on
-   * retourne son état courant SANS consommer un second numéro.
-   * Réutilisé par {@link updateStatus} et par l'envoi par courriel.
-   */
-  async finalizeToEnvoyee(id: string): Promise<Invoice> {
-    const year = new Date().getFullYear();
-    const row = await this.prisma.client.$transaction(
-      async (tx) => {
-        const existing = await tx.invoice.findUnique({
-          where: { id },
-          select: { reference: true },
-        });
-        if (!existing) {
-          throw new NotFoundException('Facture introuvable');
-        }
-        // Déjà finalisée → idempotent : ne pas ré-attribuer de numéro.
-        if (existing.reference !== null) {
-          return tx.invoice.findUnique({ where: { id }, include: INCLUDE_FULL });
-        }
-
-        await tx.$executeRaw`
-          INSERT INTO invoice_sequences ("year", "lastNumber")
-          VALUES (${year}, 0)
-          ON CONFLICT ("year") DO NOTHING
-        `;
-        const result = await tx.$queryRaw<Array<{ lastNumber: number }>>`
-          UPDATE invoice_sequences
-          SET "lastNumber" = "lastNumber" + 1
-          WHERE "year" = ${year}
-          RETURNING "lastNumber"
-        `;
-        const sequenceNo = Number(result[0].lastNumber);
-        const reference = `FAC-${year}-${String(sequenceNo).padStart(4, '0')}`;
-        return tx.invoice.update({
-          where: { id },
-          data: {
-            status: 'ENVOYEE',
-            sequenceYear: year,
-            sequenceNo,
-            reference,
-            paidAt: null,
-            paymentMethod: null,
-          },
-          include: INCLUDE_FULL,
-        });
-      },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-    );
-    if (!row) {
-      throw new NotFoundException('Facture introuvable');
-    }
-    return toInvoice(row);
-  }
-
-  /**
-   * Compensation : ré-ouvre une facture fraîchement finalisée dont l'envoi a
-   * échoué (pour ne pas laisser une facture « envoyée » jamais reçue). Rend le
-   * numéro au compteur en CAS (uniquement s'il est encore le dernier attribué,
-   * pour préserver l'absence de trou dans le cas courant sans concurrence).
-   */
-  private async revertFinalization(
-    id: string,
-    sequenceYear: number | null,
-    sequenceNo: number | null,
-  ): Promise<void> {
-    await this.prisma.client.$transaction(async (tx) => {
-      await tx.invoice.update({
-        where: { id },
-        data: { status: 'BROUILLON', reference: null, sequenceYear: null, sequenceNo: null },
-      });
-      if (sequenceYear !== null && sequenceNo !== null) {
-        await tx.$executeRaw`
-          UPDATE invoice_sequences
-          SET "lastNumber" = "lastNumber" - 1
-          WHERE "year" = ${sequenceYear} AND "lastNumber" = ${sequenceNo}
-        `;
-      }
-    });
   }
 
   /**
@@ -572,103 +321,6 @@ export class InvoicesService {
     });
 
     return toInvoice(row);
-  }
-
-  /**
-   * Envoie la facture par courriel (PDF en pièce jointe). Si elle est en
-   * brouillon, elle est d'abord finalisée (référence officielle + ENVOYEE) pour
-   * que le PDF porte le bon numéro. Les services PDF/émetteur/mail sont fournis
-   * par le contrôleur (le service factures ne dépend que de Prisma).
-   */
-  async sendInvoice(
-    id: string,
-    dto: SendInvoiceRequest,
-    pdf: InvoicePdfService,
-    issuerService: IssuerService,
-    mail: MailService,
-  ): Promise<SendInvoiceResponse> {
-    if (!mail.isConfigured) {
-      throw new ServiceUnavailableException(
-        "L'envoi de courriels n'est pas configuré (SMTP). Renseignez les variables SMTP_* dans .env.",
-      );
-    }
-    let invoice = await this.findById(id);
-    const freshlyFinalized = invoice.status === 'BROUILLON';
-    if (freshlyFinalized) {
-      invoice = await this.finalizeToEnvoyee(id);
-    }
-
-    // Génération PDF + envoi APRÈS finalisation (le PDF doit porter le numéro).
-    // Si l'un des deux échoue alors qu'on vient de finaliser, on compense en
-    // ré-ouvrant la facture : pas de facture « envoyée » que le client n'a
-    // jamais reçue, et le numéro est rendu au compteur.
-    try {
-      const issuer = await issuerService.get();
-      const buffer = await pdf.generate(invoice, issuer);
-      await mail.sendInvoiceEmail({
-        to: dto.to,
-        subject: dto.subject,
-        body: dto.body && dto.body.trim() ? dto.body : defaultSendBody(invoice),
-        pdfBuffer: buffer,
-        attachmentName: `facture-${invoice.reference ?? invoice.number}.pdf`,
-        extraAttachments: await this.loadEmailAttachments(invoice.id, dto.attachmentIds),
-      });
-    } catch (err) {
-      if (freshlyFinalized) {
-        await this.revertFinalization(id, invoice.sequenceYear, invoice.sequenceNo);
-      }
-      throw err;
-    }
-    return { sent: true, newStatus: invoice.status };
-  }
-
-  /**
-   * Pièces jointes de la facture, prêtes pour Nodemailer (chemin disque + nom affiché).
-   * Si `attachmentIds` est fourni, ne joint que celles-là (tableau vide = aucune).
-   */
-  private async loadEmailAttachments(
-    invoiceId: string,
-    attachmentIds?: string[],
-  ): Promise<Array<{ filename: string; path: string; contentType: string }>> {
-    const rows = await this.prisma.client.invoiceAttachment.findMany({
-      where: { invoiceId, ...(attachmentIds ? { id: { in: attachmentIds } } : {}) },
-      orderBy: { createdAt: 'asc' },
-    });
-    return rows.map((a) => ({
-      filename: a.fileName,
-      path: attachmentAbsPath(a.storedName),
-      contentType: a.mimeType,
-    }));
-  }
-
-  /** Envoie un rappel de paiement (facture ENVOYEE uniquement ; sans changement de statut). */
-  async sendReminder(
-    id: string,
-    dto: SendInvoiceRequest,
-    pdf: InvoicePdfService,
-    issuerService: IssuerService,
-    mail: MailService,
-  ): Promise<{ sent: boolean }> {
-    if (!mail.isConfigured) {
-      throw new ServiceUnavailableException(
-        "L'envoi de courriels n'est pas configuré (SMTP). Renseignez les variables SMTP_* dans .env.",
-      );
-    }
-    const invoice = await this.findById(id);
-    if (invoice.status !== 'ENVOYEE') {
-      throw new BadRequestException('Seules les factures envoyées peuvent faire l’objet d’un rappel.');
-    }
-    const issuer = await issuerService.get();
-    const buffer = await pdf.generate(invoice, issuer);
-    await mail.sendInvoiceEmail({
-      to: dto.to,
-      subject: dto.subject,
-      body: dto.body && dto.body.trim() ? dto.body : defaultReminderBody(invoice),
-      pdfBuffer: buffer,
-      attachmentName: `facture-${invoice.reference ?? invoice.number}.pdf`,
-      extraAttachments: await this.loadEmailAttachments(invoice.id, dto.attachmentIds),
-    });
-    return { sent: true };
   }
 
   async archive(id: string): Promise<Invoice> {
