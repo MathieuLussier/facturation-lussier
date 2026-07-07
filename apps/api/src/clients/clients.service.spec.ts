@@ -39,14 +39,16 @@ function makePrisma() {
   const invoice = { count: jest.fn().mockResolvedValue(0) };
   const contact = { count: jest.fn().mockResolvedValue(0), findMany: jest.fn().mockResolvedValue([]) };
   const project = { count: jest.fn().mockResolvedValue(0) };
+  const queryRaw = jest.fn();
   const client = {
     client: model,
     invoice,
     contact,
     project,
+    $queryRaw: queryRaw,
     $transaction: jest.fn((ops: Promise<unknown>[]) => Promise.all(ops)),
   };
-  return { prisma: { client } as unknown as PrismaService, model, invoice, contact, project };
+  return { prisma: { client } as unknown as PrismaService, model, invoice, contact, project, queryRaw };
 }
 
 describe('ClientsService', () => {
@@ -55,6 +57,7 @@ describe('ClientsService', () => {
   let invoice: ReturnType<typeof makePrisma>['invoice'];
   let contact: ReturnType<typeof makePrisma>['contact'];
   let project: ReturnType<typeof makePrisma>['project'];
+  let queryRaw: ReturnType<typeof makePrisma>['queryRaw'];
 
   beforeEach(() => {
     const p = makePrisma();
@@ -62,6 +65,7 @@ describe('ClientsService', () => {
     invoice = p.invoice;
     contact = p.contact;
     project = p.project;
+    queryRaw = p.queryRaw;
     service = new ClientsService(p.prisma);
   });
 
@@ -183,21 +187,21 @@ describe('ClientsService', () => {
   });
 
   describe('directory', () => {
-    const makeContactRow = (over: Record<string, unknown> = {}) => ({
-      id: 'ct1',
-      name: 'Jean Tremblay',
-      companyId: 'c1',
-      archivedAt: null,
-      company: { companyName: 'Acme Inc' },
-      ...over,
-    });
+    // La fusion/tri/pagination se font en SQL (UNION) ; le service mappe les
+    // lignes renvoyées et le total. La correction du SQL lui-même est couverte
+    // par une validation live contre Postgres (hors test unitaire).
+    function sqlOf(call: unknown[]): string {
+      return String((call[0] as { sql: string }).sql);
+    }
 
-    it('fusionne entreprises/particuliers + contacts, triés par nom', async () => {
-      model.findMany.mockResolvedValue([
-        makeRow({ id: 'c1', type: 'COMPANY', companyName: 'Acme Inc', city: 'Québec' }),
-        makeRow({ id: 'c2', type: 'INDIVIDUAL', companyName: 'Zoé Bernard' }),
-      ]);
-      contact.findMany.mockResolvedValue([makeContactRow({ name: 'Bob Roy' })]);
+    it('mappe les lignes de l’UNION SQL et le total', async () => {
+      queryRaw
+        .mockResolvedValueOnce([
+          { id: 'c1', name: 'Acme Inc', kind: 'company', subtitle: 'Québec', companyId: null, archivedAt: null },
+          { id: 'ct1', name: 'Bob Roy', kind: 'contact', subtitle: 'Acme Inc', companyId: 'c1', archivedAt: null },
+          { id: 'c2', name: 'Zoé Bernard', kind: 'individual', subtitle: null, companyId: null, archivedAt: null },
+        ])
+        .mockResolvedValueOnce([{ count: 3n }]);
 
       const res = await service.directory({});
 
@@ -209,21 +213,28 @@ describe('ClientsService', () => {
       expect(byName['Bob Roy'].kind).toBe('contact');
       expect(byName['Bob Roy'].companyId).toBe('c1');
       expect(byName['Bob Roy'].subtitle).toBe('Acme Inc');
+      expect(queryRaw).toHaveBeenCalledTimes(2); // lignes + count
     });
 
-    it('exclut les archivés par défaut, montre uniquement les archivés avec archivedOnly', async () => {
-      model.findMany.mockResolvedValue([]);
-      contact.findMany.mockResolvedValue([]);
+    it('applique la pagination DB (LIMIT/OFFSET) et retourne page/pageSize', async () => {
+      queryRaw.mockResolvedValueOnce([]).mockResolvedValueOnce([{ count: 0n }]);
+      const res = await service.directory({ page: 3, pageSize: 10 });
+      expect(res).toMatchObject({ page: 3, pageSize: 10, total: 0, items: [] });
+      // Les paramètres LIMIT/OFFSET sont bien passés à la requête de lignes.
+      const values = (queryRaw.mock.calls[0][0] as { values: unknown[] }).values;
+      expect(values).toEqual(expect.arrayContaining([10, 20])); // LIMIT 10, OFFSET (3-1)*10
+    });
+
+    it('filtre par archivage dans le SQL (actifs par défaut, archivés sinon)', async () => {
+      queryRaw.mockResolvedValue([]);
 
       await service.directory({});
-      expect(model.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ where: expect.objectContaining({ archivedAt: null }) }),
-      );
+      expect(sqlOf(queryRaw.mock.calls[0])).toContain('IS NULL');
+      expect(sqlOf(queryRaw.mock.calls[0])).not.toContain('IS NOT NULL');
 
-      model.findMany.mockClear();
+      queryRaw.mockClear();
       await service.directory({ archivedOnly: true });
-      const whereArg = model.findMany.mock.calls[0][0].where as Record<string, unknown>;
-      expect(whereArg.archivedAt).toEqual({ not: null });
+      expect(sqlOf(queryRaw.mock.calls[0])).toContain('IS NOT NULL');
     });
   });
 
