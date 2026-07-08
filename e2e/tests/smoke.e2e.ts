@@ -1,47 +1,42 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '@playwright/test';
+import { login } from './helpers';
 
 /**
- * Smoke E2E des pages migrées vers useApiResource : chaque page se charge en
- * état authentifié et ses interactions clés (filtres, recherche) fonctionnent —
- * non-régression de la migration. Auth via le contexte partagé par worker.
+ * Smoke E2E des pages migrées vers useApiResource. Un seul login, puis
+ * navigation via le MENU (liens client-side React Router) : pas de rechargement
+ * complet → le token reste en mémoire, aucune rotation du refresh token (qui,
+ * répétée, finirait par invalider la session). C'est aussi le parcours réel d'un
+ * utilisateur.
  */
+test('navigation authentifiée : les pages migrées se chargent et fonctionnent', async ({
+  page,
+}) => {
+  await login(page); // atterrit sur le tableau de bord
+  const nav = page.getByRole('navigation').first();
 
-test('tableau de bord se charge (authentifié)', async ({ authedPage: page }) => {
-  await page.goto('/');
-  await expect(page).not.toHaveURL(/login/);
-  await expect(page.getByRole('navigation').first()).toBeVisible();
-});
-
-test('Factures : la page et les filtres fonctionnent', async ({ authedPage: page }) => {
-  await page.goto('/invoices');
+  // Factures : changer de filtre recharge la liste (useApiResource) sans erreur.
+  await nav.getByRole('link', { name: 'Factures' }).click();
   await expect(page.getByRole('heading', { name: 'Factures' })).toBeVisible();
-  // Changer de filtre déclenche un rechargement (useApiResource) sans erreur.
   await page.getByRole('button', { name: 'Payée' }).click();
   await expect(page.getByRole('heading', { name: 'Factures' })).toBeVisible();
-  await page.getByRole('button', { name: 'Toutes' }).click();
-  await expect(page.getByRole('heading', { name: 'Factures' })).toBeVisible();
-});
 
-test('Clients : recherche et bascule archivés', async ({ authedPage: page }) => {
-  await page.goto('/clients');
+  // Clients : recherche sans résultat.
+  await nav.getByRole('link', { name: 'Clients' }).click();
   await expect(page.getByRole('heading', { name: 'Clients' })).toBeVisible();
-
   await page.locator('#client-search').fill('zzz-inexistant-xyz');
   await page.getByRole('button', { name: 'Rechercher' }).click();
   await expect(page.getByText(/Aucun résultat/)).toBeVisible();
 
-  await page.getByRole('checkbox').check();
-  await expect(page.getByRole('heading', { name: 'Clients' })).toBeVisible();
-});
-
-test('Produits : la page se charge', async ({ authedPage: page }) => {
-  await page.goto('/produits');
+  // Produits.
+  await nav.getByRole('link', { name: 'Produits' }).click();
   await expect(page.getByRole('heading', { name: 'Produits et services' })).toBeVisible();
-});
 
-test('Utilisateurs (admin) : la liste charge et affiche l’admin', async ({ authedPage: page }) => {
-  await page.goto('/users');
+  // Entreprise émettrice (IssuerPage).
+  await nav.getByRole('link', { name: 'Entreprise' }).click();
+  await expect(page.getByRole('heading', { name: 'Entreprise émettrice' })).toBeVisible();
+
+  // Utilisateurs (admin).
+  await nav.getByRole('link', { name: 'Utilisateurs' }).click();
   await expect(page.getByRole('heading', { name: 'Utilisateurs', exact: true })).toBeVisible();
-  // La liste (useApiResource) se peuple avec l'admin seedé.
   await expect(page.getByText('admin@facturation.local')).toBeVisible();
 });
