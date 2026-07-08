@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Badge, Button, Card } from '@facturation/ui';
 import type { AuthUser } from '@facturation/core';
 import { deleteUser, listUsers, updateUser } from '../lib/api';
+import { useApiResource } from '../lib/useApiResource';
 import { useToast } from '../components/Toast';
 import { useConfirm } from '../components/Confirm';
 import { useAuth } from '../auth/AuthContext';
@@ -35,28 +36,20 @@ export function UsersPage() {
   const { user: currentUser } = useAuth();
 
   const [users, setUsers] = useState<AuthUser[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState(true);
-  const [listError, setListError] = useState('');
-
   const [createOpen, setCreateOpen] = useState(false);
   const [rowAction, setRowAction] = useState<RowAction>(null);
 
-  const fetchUsers = useCallback(async (): Promise<void> => {
-    setLoadingUsers(true);
-    setListError('');
-    try {
-      const data = await listUsers();
-      setUsers(data);
-    } catch (err) {
-      setListError(err instanceof Error ? err.message : 'Erreur lors du chargement.');
-    } finally {
-      setLoadingUsers(false);
-    }
-  }, []);
+  const {
+    data,
+    loading: loadingUsers,
+    error: listError,
+    reload: fetchUsers,
+  } = useApiResource(() => listUsers(), []);
 
+  // Copie locale éditable : les mutations (activer/supprimer/créer) sont optimistes.
   useEffect(() => {
-    void fetchUsers();
-  }, [fetchUsers]);
+    if (data) setUsers(data);
+  }, [data]);
 
   // Derived counts
   const activeAdminCount = users.filter((u) => u.role === 'ADMIN' && u.isActive).length;

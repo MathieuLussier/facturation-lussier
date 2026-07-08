@@ -1,4 +1,4 @@
-import { type ChangeEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { type ChangeEvent, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Button, Card } from '@facturation/ui';
 import {
@@ -20,6 +20,7 @@ import {
   uploadInvoiceAttachment,
 } from '../lib/invoices';
 import { ArrowLeft, Loader2, Pencil, Printer, ScanLine, Send } from 'lucide-react';
+import { useApiResource } from '../lib/useApiResource';
 import { useToast } from '../components/Toast';
 import { useConfirm } from '../components/Confirm';
 import { PaymentModal } from '../components/PaymentModal';
@@ -55,8 +56,6 @@ export function InvoiceDetailPage() {
   const { notify } = useToast();
   const confirm = useConfirm();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [sendModal, setSendModal] = useState<{ open: boolean; mode: 'send' | 'remind' }>({
@@ -67,22 +66,20 @@ export function InvoiceDetailPage() {
   const [scanning, setScanning] = useState(false);
   const [scanDialogOpen, setScanDialogOpen] = useState(false);
 
-  const load = useCallback(async (): Promise<void> => {
-    if (!id) return;
-    setLoading(true);
-    setError('');
-    try {
-      setInvoice(await getInvoice(id));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur de chargement.');
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
+  const {
+    data: invoiceData,
+    loading,
+    error,
+    reload: load,
+  } = useApiResource(
+    () => (id ? getInvoice(id) : Promise.reject(new Error('Facture introuvable'))),
+    [id],
+  );
 
+  // Copie locale éditable : statut/pièces jointes/archivage sont mis à jour en place.
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (invoiceData) setInvoice(invoiceData);
+  }, [invoiceData]);
 
   const changeStatus = async (
     status: InvoiceStatus,

@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Badge, Card } from '@facturation/ui';
-import { formatCents, type InvoiceStats } from '@facturation/core';
+import { formatCents } from '@facturation/core';
 import {
   AlertTriangle,
   ArrowRight,
@@ -14,6 +13,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { getInvoiceStats } from '../lib/invoices';
+import { useApiResource } from '../lib/useApiResource';
 import { INVOICE_STATUS_LABEL, INVOICE_STATUS_TONE } from '../lib/invoice-status';
 import { useAuth } from '../auth/AuthContext';
 
@@ -48,26 +48,7 @@ function Metric({ label, value, hint, danger, icon: Icon }: MetricProps) {
 
 export function HomePage() {
   const { user } = useAuth();
-  const [stats, setStats] = useState<InvoiceStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    let active = true;
-    void (async () => {
-      try {
-        const data = await getInvoiceStats();
-        if (active) setStats(data);
-      } catch (err) {
-        if (active) setError(err instanceof Error ? err.message : 'Erreur de chargement.');
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, []);
+  const { data: stats, loading, error } = useApiResource(() => getInvoiceStats(), []);
 
   const money = (cents: number | undefined): string => (loading ? '…' : formatCents(cents ?? 0));
 
