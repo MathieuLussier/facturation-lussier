@@ -156,6 +156,34 @@ export async function apiFetch<T>(
   return response.json() as Promise<T>;
 }
 
+/**
+ * Variante de {@link apiFetch} pour les téléchargements binaires (PDF, pièces
+ * jointes) : ajoute le Bearer, tente un refresh UNIQUE sur 401 puis rejoue, et
+ * renvoie un Blob. Évite l'échec des téléchargements après expiration du token.
+ */
+export async function apiFetchBlob(path: string, retried = false): Promise<Blob> {
+  const token = getAccessToken();
+  const response = await fetch(buildApiPath(path), {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    credentials: 'include',
+  });
+
+  if (response.status === 401 && !retried && _refreshFn) {
+    const newToken = await _refreshFn();
+    if (newToken) {
+      setAccessToken(newToken);
+      return apiFetchBlob(path, true);
+    }
+    setAccessToken(null);
+    throw new ApiError(401, httpErrorMessage(401));
+  }
+
+  if (!response.ok) {
+    throw new ApiError(response.status, httpErrorMessage(response.status));
+  }
+  return response.blob();
+}
+
 // ---------------------------------------------------------------------------
 // Endpoints Auth
 // ---------------------------------------------------------------------------
