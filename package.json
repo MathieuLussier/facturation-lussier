@@ -16,6 +16,7 @@
     "build": "turbo run build",
     "lint": "turbo run lint",
     "test": "turbo run test",
+    "test:local:reset": "node scripts/test-local-reset.mjs",
     "test:e2e": "playwright test -c e2e/playwright.config.ts",
     "type-check": "turbo run type-check",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
