@@ -15,9 +15,11 @@ import {
   type PaymentMethod,
   type UpdateInvoiceRequest,
 } from '@facturation/core';
+import * as fs from 'fs';
 import { PrismaService } from '../prisma/prisma.service';
 import { InvoiceNumberingService } from './invoice-numbering.service';
 import { INCLUDE_FULL, toInvoice } from './invoice-mappers';
+import { attachmentAbsPath } from './attachments/attachment-storage';
 
 interface ListParams {
   page?: number;
@@ -350,6 +352,23 @@ export class InvoicesService {
         'Seules les factures en brouillon peuvent être supprimées. Archivez plutôt cette facture.',
       );
     }
+
+    // Récupérer les fichiers des pièces jointes AVANT la cascade DB : la
+    // suppression de la facture cascade les lignes invoice_attachments, mais pas
+    // les fichiers sur disque → il faut les effacer nous-mêmes (sinon fuite).
+    const attachments = await this.prisma.client.invoiceAttachment.findMany({
+      where: { invoiceId: id },
+      select: { storedName: true },
+    });
+
     await this.prisma.client.invoice.delete({ where: { id } });
+
+    for (const a of attachments) {
+      try {
+        fs.unlinkSync(attachmentAbsPath(a.storedName));
+      } catch {
+        /* fichier déjà absent : on ignore */
+      }
+    }
   }
 }

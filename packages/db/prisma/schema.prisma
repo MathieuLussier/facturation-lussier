@@ -102,6 +102,8 @@ model Client {
 
 model IssuerProfile {
   id          String   @id @default(cuid())
+  /** Verrou de singleton : toujours 1, unique → au plus une ligne (upsert atomique). */
+  slot        Int      @unique @default(1)
   legalName   String
   email       String?
   phone       String?
