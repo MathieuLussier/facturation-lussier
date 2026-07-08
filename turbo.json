@@ -1,7 +1,18 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "ui": "stream",
-  "globalEnv": ["DATABASE_URL", "API_PORT", "WEB_ORIGIN", "VITE_API_URL"],
+  "globalEnv": [
+    "DATABASE_URL",
+    "ADMIN_EMAIL",
+    "ADMIN_PASSWORD",
+    "JWT_ACCESS_SECRET",
+    "JWT_REFRESH_SECRET",
+    "COOKIE_SECURE",
+    "NODE_ENV",
+    "API_PORT",
+    "WEB_ORIGIN",
+    "VITE_API_URL"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
