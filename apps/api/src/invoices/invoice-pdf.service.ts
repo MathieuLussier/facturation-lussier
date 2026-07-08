@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import PDFDocument from 'pdfkit';
 import * as path from 'path';
 import * as fs from 'fs';
+import { startOfTodayUtc } from './invoice-dates';
 import {
   formatCents,
   type Invoice,
@@ -42,12 +43,12 @@ function resolveLogoPath(issuer: IssuerProfile | null): string | null {
   return fs.existsSync(fallback) ? fallback : null;
 }
 
-/** Une facture ENVOYEE dont l'échéance est dépassée est « en retard ». */
+/** Une facture ENVOYEE dont l'échéance est passée (jour révolu) est « en retard ». */
 function isOverdue(invoice: Invoice): boolean {
   if (invoice.status !== 'ENVOYEE' || !invoice.dueDate) {
     return false;
   }
-  return new Date(invoice.dueDate) < new Date();
+  return new Date(invoice.dueDate) < startOfTodayUtc();
 }
 
 @Injectable()

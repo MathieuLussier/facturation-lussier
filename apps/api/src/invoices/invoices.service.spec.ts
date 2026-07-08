@@ -291,6 +291,13 @@ describe('InvoicesService', () => {
     };
     expect(where.status).toBe('ENVOYEE');
     expect(where.dueDate?.lt).toBeInstanceOf(Date);
+    // Comparaison à MINUIT UTC (jour calendaire), pas à l'instant présent :
+    // une facture due aujourd'hui n'est pas « en retard ».
+    const lt = where.dueDate?.lt as Date;
+    expect(lt.getUTCHours()).toBe(0);
+    expect(lt.getUTCMinutes()).toBe(0);
+    expect(lt.getUTCSeconds()).toBe(0);
+    expect(lt.getUTCMilliseconds()).toBe(0);
   });
 
   it('toInvoice: deletable est vrai pour BROUILLON, faux sinon', async () => {

@@ -19,6 +19,7 @@ import * as fs from 'fs';
 import { PrismaService } from '../prisma/prisma.service';
 import { InvoiceNumberingService } from './invoice-numbering.service';
 import { INCLUDE_FULL, toInvoice } from './invoice-mappers';
+import { startOfTodayUtc } from './invoice-dates';
 import { attachmentAbsPath } from './attachments/attachment-storage';
 
 interface ListParams {
@@ -66,7 +67,7 @@ export class InvoicesService {
     const where = {
       ...(params.archivedOnly ? { archivedAt: { not: null } } : { archivedAt: null }),
       ...(params.status ? { status: params.status } : {}),
-      ...(params.overdue ? { status: 'ENVOYEE' as const, dueDate: { lt: new Date() } } : {}),
+      ...(params.overdue ? { status: 'ENVOYEE' as const, dueDate: { lt: startOfTodayUtc() } } : {}),
     };
 
     const [rows, total] = await db.$transaction([
@@ -109,7 +110,7 @@ export class InvoicesService {
       db.invoice.aggregate({
         _sum: { totalCents: true },
         _count: { _all: true },
-        where: { status: 'ENVOYEE', dueDate: { lt: now } },
+        where: { status: 'ENVOYEE', dueDate: { lt: startOfTodayUtc() } },
       }),
       db.invoice.aggregate({
         _sum: { totalCents: true },
