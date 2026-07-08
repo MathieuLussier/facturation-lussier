@@ -93,15 +93,13 @@ function makePrisma() {
   // queryRaw sert 2 requêtes dans finalizeToEnvoyee : le verrou (SELECT ... FOR
   // UPDATE) renvoie {status,reference}, l'incrément renvoie {lastNumber}. Défaut :
   // facture BROUILLON non numérotée (chemin nominal). Les tests surchargent au besoin.
-  const queryRaw = jest.fn(
-    (strings: unknown): Promise<Array<Record<string, unknown>>> => {
-      const text = Array.isArray(strings) ? strings.join(' ') : String(strings);
-      if (text.includes('FOR UPDATE')) {
-        return Promise.resolve([{ status: 'BROUILLON', reference: null }]);
-      }
-      return Promise.resolve([{ lastNumber: 1 }]);
-    },
-  );
+  const queryRaw = jest.fn((strings: unknown): Promise<Array<Record<string, unknown>>> => {
+    const text = Array.isArray(strings) ? strings.join(' ') : String(strings);
+    if (text.includes('FOR UPDATE')) {
+      return Promise.resolve([{ status: 'BROUILLON', reference: null }]);
+    }
+    return Promise.resolve([{ lastNumber: 1 }]);
+  });
   // $transaction supporte les deux formes : tableau (Promise.all) et callback interactif.
   const c: Record<string, unknown> = {
     invoice,
@@ -194,13 +192,17 @@ describe('InvoicesService', () => {
   it('findById lève NotFound si absente', async () => {
     const { prisma, invoice } = makePrisma();
     invoice.findUnique.mockResolvedValue(null);
-    await expect(new InvoicesService(prisma, new InvoiceNumberingService(prisma)).findById('x')).rejects.toBeInstanceOf(NotFoundException);
+    await expect(
+      new InvoicesService(prisma, new InvoiceNumberingService(prisma)).findById('x'),
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it('findById mappe la facture (dates ISO, lignes, client)', async () => {
     const { prisma, invoice } = makePrisma();
     invoice.findUnique.mockResolvedValue(makeInvoiceRow());
-    const res = await new InvoicesService(prisma, new InvoiceNumberingService(prisma)).findById('inv1');
+    const res = await new InvoicesService(prisma, new InvoiceNumberingService(prisma)).findById(
+      'inv1',
+    );
     expect(res.issueDate).toBe('2026-02-01T00:00:00.000Z');
     expect(res.lines[0].description).toBe('Service');
     expect(res.client?.companyName).toBe('Acme');
@@ -219,7 +221,10 @@ describe('InvoicesService', () => {
     const { prisma, invoice } = makePrisma();
     invoice.findUnique.mockResolvedValue(makeInvoiceRow());
     invoice.update.mockResolvedValue(makeInvoiceRow({ status: 'ENVOYEE' }));
-    const res = await new InvoicesService(prisma, new InvoiceNumberingService(prisma)).updateStatus('inv1', 'ENVOYEE');
+    const res = await new InvoicesService(prisma, new InvoiceNumberingService(prisma)).updateStatus(
+      'inv1',
+      'ENVOYEE',
+    );
     expect(invoice.update).toHaveBeenCalled();
     expect(res.status).toBe('ENVOYEE');
   });
@@ -235,9 +240,9 @@ describe('InvoicesService', () => {
   it("remove lève ConflictException si la facture n'est pas BROUILLON", async () => {
     const { prisma, invoice } = makePrisma();
     invoice.findUnique.mockResolvedValue(makeInvoiceRow({ status: 'ENVOYEE' }));
-    await expect(new InvoicesService(prisma, new InvoiceNumberingService(prisma)).remove('inv1')).rejects.toBeInstanceOf(
-      ConflictException,
-    );
+    await expect(
+      new InvoicesService(prisma, new InvoiceNumberingService(prisma)).remove('inv1'),
+    ).rejects.toBeInstanceOf(ConflictException);
     expect(invoice.delete).not.toHaveBeenCalled();
   });
 
@@ -246,7 +251,9 @@ describe('InvoicesService', () => {
     const archived = makeInvoiceRow({ archivedAt: new Date('2026-03-01T00:00:00.000Z') });
     invoice.findUnique.mockResolvedValue(makeInvoiceRow());
     invoice.update.mockResolvedValue(archived);
-    const res = await new InvoicesService(prisma, new InvoiceNumberingService(prisma)).archive('inv1');
+    const res = await new InvoicesService(prisma, new InvoiceNumberingService(prisma)).archive(
+      'inv1',
+    );
     const call = invoice.update.mock.calls[0][0];
     expect(call.data.archivedAt).toBeInstanceOf(Date);
     expect(res.archivedAt).toBe('2026-03-01T00:00:00.000Z');
@@ -256,7 +263,9 @@ describe('InvoicesService', () => {
     const { prisma, invoice } = makePrisma();
     invoice.findUnique.mockResolvedValue(makeInvoiceRow({ archivedAt: new Date() }));
     invoice.update.mockResolvedValue(makeInvoiceRow({ archivedAt: null }));
-    const res = await new InvoicesService(prisma, new InvoiceNumberingService(prisma)).unarchive('inv1');
+    const res = await new InvoicesService(prisma, new InvoiceNumberingService(prisma)).unarchive(
+      'inv1',
+    );
     const call = invoice.update.mock.calls[0][0];
     expect(call.data.archivedAt).toBeNull();
     expect(res.archivedAt).toBeNull();
@@ -278,7 +287,9 @@ describe('InvoicesService', () => {
     const { prisma, invoice } = makePrisma();
     invoice.findMany.mockResolvedValue([makeInvoiceRow()]);
     invoice.count.mockResolvedValue(1);
-    await new InvoicesService(prisma, new InvoiceNumberingService(prisma)).list({ archivedOnly: true });
+    await new InvoicesService(prisma, new InvoiceNumberingService(prisma)).list({
+      archivedOnly: true,
+    });
     const findManyArg = invoice.findMany.mock.calls[0][0];
     expect(findManyArg?.where?.archivedAt).toEqual({ not: null });
   });
@@ -287,7 +298,9 @@ describe('InvoicesService', () => {
     const { prisma, invoice } = makePrisma();
     invoice.findMany.mockResolvedValue([]);
     invoice.count.mockResolvedValue(0);
-    await new InvoicesService(prisma, new InvoiceNumberingService(prisma)).list({ status: 'ENVOYEE' });
+    await new InvoicesService(prisma, new InvoiceNumberingService(prisma)).list({
+      status: 'ENVOYEE',
+    });
     expect(invoice.findMany.mock.calls[0][0]?.where).toMatchObject({ status: 'ENVOYEE' });
   });
 
@@ -314,11 +327,16 @@ describe('InvoicesService', () => {
   it('toInvoice: deletable est vrai pour BROUILLON, faux sinon', async () => {
     const { prisma, invoice } = makePrisma();
     invoice.findUnique.mockResolvedValue(makeInvoiceRow({ status: 'BROUILLON' }));
-    const brouillon = await new InvoicesService(prisma, new InvoiceNumberingService(prisma)).findById('inv1');
+    const brouillon = await new InvoicesService(
+      prisma,
+      new InvoiceNumberingService(prisma),
+    ).findById('inv1');
     expect(brouillon.deletable).toBe(true);
 
     invoice.findUnique.mockResolvedValue(makeInvoiceRow({ status: 'ENVOYEE' }));
-    const envoyee = await new InvoicesService(prisma, new InvoiceNumberingService(prisma)).findById('inv1');
+    const envoyee = await new InvoicesService(prisma, new InvoiceNumberingService(prisma)).findById(
+      'inv1',
+    );
     expect(envoyee.deletable).toBe(false);
   });
 
@@ -350,7 +368,9 @@ describe('InvoicesService', () => {
 
   it('update lève ConflictException si la facture est PAYEE', async () => {
     const { prisma, invoice, invoiceLine } = makePrisma();
-    invoice.findUnique.mockResolvedValue(makeInvoiceRow({ status: 'PAYEE', reference: 'FAC-2026-0001' }));
+    invoice.findUnique.mockResolvedValue(
+      makeInvoiceRow({ status: 'PAYEE', reference: 'FAC-2026-0001' }),
+    );
     await expect(
       new InvoicesService(prisma, new InvoiceNumberingService(prisma)).update('inv1', {
         lines: [{ description: 'a', quantity: 1, unitPriceCents: 1 }],
@@ -361,7 +381,9 @@ describe('InvoicesService', () => {
 
   it('update lève ConflictException si la facture est ANNULEE', async () => {
     const { prisma, invoice } = makePrisma();
-    invoice.findUnique.mockResolvedValue(makeInvoiceRow({ status: 'ANNULEE', reference: 'FAC-2026-0002' }));
+    invoice.findUnique.mockResolvedValue(
+      makeInvoiceRow({ status: 'ANNULEE', reference: 'FAC-2026-0002' }),
+    );
     await expect(
       new InvoicesService(prisma, new InvoiceNumberingService(prisma)).update('inv1', {
         lines: [{ description: 'a', quantity: 1, unitPriceCents: 1 }],
@@ -390,12 +412,19 @@ describe('InvoicesService', () => {
 
   it('update est autorisé pour une facture ENVOYEE', async () => {
     const { prisma, invoice, client } = makePrisma();
-    invoice.findUnique.mockResolvedValue(makeInvoiceRow({ status: 'ENVOYEE', reference: 'FAC-2026-0003' }));
+    invoice.findUnique.mockResolvedValue(
+      makeInvoiceRow({ status: 'ENVOYEE', reference: 'FAC-2026-0003' }),
+    );
     client.findUnique.mockResolvedValue(makeClientRow());
-    invoice.update.mockResolvedValue(makeInvoiceRow({ status: 'ENVOYEE', reference: 'FAC-2026-0003' }));
-    const res = await new InvoicesService(prisma, new InvoiceNumberingService(prisma)).update('inv1', {
-      lines: [{ description: 'a', quantity: 1, unitPriceCents: 5000 }],
-    });
+    invoice.update.mockResolvedValue(
+      makeInvoiceRow({ status: 'ENVOYEE', reference: 'FAC-2026-0003' }),
+    );
+    const res = await new InvoicesService(prisma, new InvoiceNumberingService(prisma)).update(
+      'inv1',
+      {
+        lines: [{ description: 'a', quantity: 1, unitPriceCents: 5000 }],
+      },
+    );
     expect(res.status).toBe('ENVOYEE');
   });
 
@@ -403,20 +432,38 @@ describe('InvoicesService', () => {
 
   it('updateStatus PAYEE exige un mode de paiement', async () => {
     const { prisma, invoice } = makePrisma();
-    invoice.findUnique.mockResolvedValue(makeInvoiceRow({ status: 'ENVOYEE', reference: 'FAC-2026-0001' }));
+    invoice.findUnique.mockResolvedValue(
+      makeInvoiceRow({ status: 'ENVOYEE', reference: 'FAC-2026-0001' }),
+    );
     await expect(
-      new InvoicesService(prisma, new InvoiceNumberingService(prisma)).updateStatus('inv1', 'PAYEE'),
+      new InvoicesService(prisma, new InvoiceNumberingService(prisma)).updateStatus(
+        'inv1',
+        'PAYEE',
+      ),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(invoice.update).not.toHaveBeenCalled();
   });
 
   it('updateStatus PAYEE enregistre paidAt + mode', async () => {
-    const { prisma, invoice } = makePrisma();
-    invoice.findUnique.mockResolvedValue(makeInvoiceRow({ status: 'ENVOYEE', reference: 'FAC-2026-0001' }));
-    invoice.update.mockResolvedValue(
-      makeInvoiceRow({ status: 'PAYEE', reference: 'FAC-2026-0001', paidAt: new Date('2026-03-01T00:00:00.000Z'), paymentMethod: 'CHEQUE' }),
+    const { prisma, invoice, queryRaw } = makePrisma();
+    invoice.findUnique.mockResolvedValue(
+      makeInvoiceRow({ status: 'ENVOYEE', reference: 'FAC-2026-0001' }),
     );
-    const res = await new InvoicesService(prisma, new InvoiceNumberingService(prisma)).updateStatus('inv1', 'PAYEE', '2026-03-01', 'CHEQUE');
+    queryRaw.mockResolvedValueOnce([{ status: 'ENVOYEE', reference: 'FAC-2026-0001' }]);
+    invoice.update.mockResolvedValue(
+      makeInvoiceRow({
+        status: 'PAYEE',
+        reference: 'FAC-2026-0001',
+        paidAt: new Date('2026-03-01T00:00:00.000Z'),
+        paymentMethod: 'CHEQUE',
+      }),
+    );
+    const res = await new InvoicesService(prisma, new InvoiceNumberingService(prisma)).updateStatus(
+      'inv1',
+      'PAYEE',
+      '2026-03-01',
+      'CHEQUE',
+    );
     const arg = invoice.update.mock.calls[0][0];
     expect(arg.data.paymentMethod).toBe('CHEQUE');
     expect(arg.data.paidAt).toBeInstanceOf(Date);
@@ -424,12 +471,23 @@ describe('InvoicesService', () => {
   });
 
   it('updateStatus efface paidAt + mode quand on quitte PAYEE', async () => {
-    const { prisma, invoice } = makePrisma();
+    const { prisma, invoice, queryRaw } = makePrisma();
     invoice.findUnique.mockResolvedValue(
-      makeInvoiceRow({ status: 'PAYEE', reference: 'FAC-2026-0001', paidAt: new Date(), paymentMethod: 'CHEQUE' }),
+      makeInvoiceRow({
+        status: 'PAYEE',
+        reference: 'FAC-2026-0001',
+        paidAt: new Date(),
+        paymentMethod: 'CHEQUE',
+      }),
     );
-    invoice.update.mockResolvedValue(makeInvoiceRow({ status: 'ENVOYEE', reference: 'FAC-2026-0001' }));
-    await new InvoicesService(prisma, new InvoiceNumberingService(prisma)).updateStatus('inv1', 'ENVOYEE');
+    queryRaw.mockResolvedValueOnce([{ status: 'PAYEE', reference: 'FAC-2026-0001' }]);
+    invoice.update.mockResolvedValue(
+      makeInvoiceRow({ status: 'ENVOYEE', reference: 'FAC-2026-0001' }),
+    );
+    await new InvoicesService(prisma, new InvoiceNumberingService(prisma)).updateStatus(
+      'inv1',
+      'ENVOYEE',
+    );
     const arg = invoice.update.mock.calls[0][0];
     expect(arg.data.paidAt).toBeNull();
     expect(arg.data.paymentMethod).toBeNull();
@@ -441,9 +499,17 @@ describe('InvoicesService', () => {
     const { prisma, invoice, queryRaw } = makePrisma();
     invoice.findUnique.mockResolvedValue(makeInvoiceRow({ status: 'BROUILLON', reference: null }));
     invoice.update.mockResolvedValue(
-      makeInvoiceRow({ status: 'ENVOYEE', reference: 'FAC-2026-0001', sequenceYear: 2026, sequenceNo: 1 }),
+      makeInvoiceRow({
+        status: 'ENVOYEE',
+        reference: 'FAC-2026-0001',
+        sequenceYear: 2026,
+        sequenceNo: 1,
+      }),
     );
-    const res = await new InvoicesService(prisma, new InvoiceNumberingService(prisma)).updateStatus('inv1', 'ENVOYEE');
+    const res = await new InvoicesService(prisma, new InvoiceNumberingService(prisma)).updateStatus(
+      'inv1',
+      'ENVOYEE',
+    );
     expect(queryRaw).toHaveBeenCalled();
     const arg = invoice.update.mock.calls[0][0];
     expect(arg.data.reference).toMatch(/^FAC-\d{4}-0001$/);
@@ -452,11 +518,40 @@ describe('InvoicesService', () => {
   });
 
   it('updateStatus ENVOYEE→PAYEE ne réassigne pas de référence', async () => {
+    const { prisma, invoice, queryRaw, executeRaw } = makePrisma();
+    invoice.findUnique.mockResolvedValue(
+      makeInvoiceRow({ status: 'ENVOYEE', reference: 'FAC-2026-0001' }),
+    );
+    queryRaw.mockResolvedValueOnce([{ status: 'ENVOYEE', reference: 'FAC-2026-0001' }]);
+    invoice.update.mockResolvedValue(
+      makeInvoiceRow({ status: 'PAYEE', reference: 'FAC-2026-0001', paymentMethod: 'VIREMENT' }),
+    );
+    await new InvoicesService(prisma, new InvoiceNumberingService(prisma)).updateStatus(
+      'inv1',
+      'PAYEE',
+      undefined,
+      'VIREMENT',
+    );
+    expect(queryRaw).toHaveBeenCalledTimes(1);
+    expect(executeRaw).not.toHaveBeenCalled();
+  });
+
+  it('updateStatus revalide la transition sous verrou si le statut a changé', async () => {
     const { prisma, invoice, queryRaw } = makePrisma();
-    invoice.findUnique.mockResolvedValue(makeInvoiceRow({ status: 'ENVOYEE', reference: 'FAC-2026-0001' }));
-    invoice.update.mockResolvedValue(makeInvoiceRow({ status: 'PAYEE', reference: 'FAC-2026-0001', paymentMethod: 'VIREMENT' }));
-    await new InvoicesService(prisma, new InvoiceNumberingService(prisma)).updateStatus('inv1', 'PAYEE', undefined, 'VIREMENT');
-    expect(queryRaw).not.toHaveBeenCalled();
+    invoice.findUnique.mockResolvedValue(
+      makeInvoiceRow({ status: 'ENVOYEE', reference: 'FAC-2026-0001' }),
+    );
+    queryRaw.mockResolvedValueOnce([{ status: 'ANNULEE', reference: 'FAC-2026-0001' }]);
+
+    await expect(
+      new InvoicesService(prisma, new InvoiceNumberingService(prisma)).updateStatus(
+        'inv1',
+        'PAYEE',
+        undefined,
+        'VIREMENT',
+      ),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(invoice.update).not.toHaveBeenCalled();
   });
 
   // --- Machine à états : transitions interdites --------------------------
@@ -465,7 +560,12 @@ describe('InvoicesService', () => {
     const { prisma, invoice } = makePrisma();
     invoice.findUnique.mockResolvedValue(makeInvoiceRow({ status: 'BROUILLON', reference: null }));
     await expect(
-      new InvoicesService(prisma, new InvoiceNumberingService(prisma)).updateStatus('inv1', 'PAYEE', undefined, 'VIREMENT'),
+      new InvoicesService(prisma, new InvoiceNumberingService(prisma)).updateStatus(
+        'inv1',
+        'PAYEE',
+        undefined,
+        'VIREMENT',
+      ),
     ).rejects.toBeInstanceOf(ConflictException);
     expect(invoice.update).not.toHaveBeenCalled();
   });
@@ -476,7 +576,10 @@ describe('InvoicesService', () => {
       makeInvoiceRow({ status: 'PAYEE', reference: 'FAC-2026-0001', paymentMethod: 'CHEQUE' }),
     );
     await expect(
-      new InvoicesService(prisma, new InvoiceNumberingService(prisma)).updateStatus('inv1', 'BROUILLON'),
+      new InvoicesService(prisma, new InvoiceNumberingService(prisma)).updateStatus(
+        'inv1',
+        'BROUILLON',
+      ),
     ).rejects.toBeInstanceOf(ConflictException);
     expect(invoice.update).not.toHaveBeenCalled();
   });
@@ -487,7 +590,10 @@ describe('InvoicesService', () => {
       makeInvoiceRow({ status: 'ANNULEE', reference: 'FAC-2026-0002' }),
     );
     await expect(
-      new InvoicesService(prisma, new InvoiceNumberingService(prisma)).updateStatus('inv1', 'ENVOYEE'),
+      new InvoicesService(prisma, new InvoiceNumberingService(prisma)).updateStatus(
+        'inv1',
+        'ENVOYEE',
+      ),
     ).rejects.toBeInstanceOf(ConflictException);
     expect(invoice.update).not.toHaveBeenCalled();
   });
@@ -495,7 +601,9 @@ describe('InvoicesService', () => {
   // --- Envoi par courriel ------------------------------------------------
 
   function fakePdf() {
-    return { generate: jest.fn().mockResolvedValue(Buffer.from('pdf')) } as unknown as InvoicePdfService;
+    return {
+      generate: jest.fn().mockResolvedValue(Buffer.from('pdf')),
+    } as unknown as InvoicePdfService;
   }
   function fakeIssuer() {
     return { get: jest.fn().mockResolvedValue(null) } as unknown as IssuerService;
@@ -510,15 +618,14 @@ describe('InvoicesService', () => {
   it('sendInvoice finalise un brouillon puis envoie le courriel', async () => {
     const { prisma, invoice } = makePrisma();
     invoice.findUnique.mockResolvedValue(makeInvoiceRow({ status: 'BROUILLON', reference: null }));
-    invoice.update.mockResolvedValue(makeInvoiceRow({ status: 'ENVOYEE', reference: 'FAC-2026-0001' }));
-    const mail = fakeMail();
-    const res = await new InvoiceMailingService(prisma, new InvoiceNumberingService(prisma)).sendInvoice(
-      'inv1',
-      { to: 'a@b.com', subject: 'Facture' },
-      fakePdf(),
-      fakeIssuer(),
-      mail,
+    invoice.update.mockResolvedValue(
+      makeInvoiceRow({ status: 'ENVOYEE', reference: 'FAC-2026-0001' }),
     );
+    const mail = fakeMail();
+    const res = await new InvoiceMailingService(
+      prisma,
+      new InvoiceNumberingService(prisma),
+    ).sendInvoice('inv1', { to: 'a@b.com', subject: 'Facture' }, fakePdf(), fakeIssuer(), mail);
     expect(res).toEqual({ sent: true, newStatus: 'ENVOYEE' });
     expect(mail.sendInvoiceEmail).toHaveBeenCalledTimes(1);
   });
@@ -548,7 +655,12 @@ describe('InvoicesService', () => {
       return Promise.resolve([{ lastNumber: 1 }]);
     });
     invoice.findUnique.mockResolvedValue(
-      makeInvoiceRow({ status: 'ENVOYEE', reference: 'FAC-2026-0001', sequenceYear: 2026, sequenceNo: 1 }),
+      makeInvoiceRow({
+        status: 'ENVOYEE',
+        reference: 'FAC-2026-0001',
+        sequenceYear: 2026,
+        sequenceNo: 1,
+      }),
     );
     const res = await new InvoiceNumberingService(prisma).finalizeToEnvoyee('inv1');
     expect(executeRaw).not.toHaveBeenCalled(); // pas d'insertion/incrément du compteur
@@ -575,7 +687,12 @@ describe('InvoicesService', () => {
     const { prisma, invoice } = makePrisma();
     invoice.findUnique.mockResolvedValue(makeInvoiceRow({ status: 'BROUILLON', reference: null }));
     invoice.update.mockResolvedValue(
-      makeInvoiceRow({ status: 'ENVOYEE', reference: 'FAC-2026-0001', sequenceYear: 2026, sequenceNo: 1 }),
+      makeInvoiceRow({
+        status: 'ENVOYEE',
+        reference: 'FAC-2026-0001',
+        sequenceYear: 2026,
+        sequenceNo: 1,
+      }),
     );
     const mail = {
       isConfigured: true,

@@ -116,7 +116,12 @@ export class InvoicesService {
         _sum: { totalCents: true },
         where: { status: { not: 'ANNULEE' }, issueDate: { gte: monthStart } },
       }),
-      db.invoice.findMany({ where: { archivedAt: null }, orderBy: { number: 'desc' }, take: 5, include: { client: true } }),
+      db.invoice.findMany({
+        where: { archivedAt: null },
+        orderBy: { number: 'desc' },
+        take: 5,
+        include: { client: true },
+      }),
     ]);
 
     const countByStatus: Record<InvoiceStatus, number> = {
@@ -233,7 +238,9 @@ export class InvoicesService {
     let paymentData: { paidAt: Date | null; paymentMethod: PaymentMethod | null };
     if (status === 'PAYEE') {
       if (!paymentMethod) {
-        throw new BadRequestException('La méthode de paiement est requise pour marquer une facture payée.');
+        throw new BadRequestException(
+          'La méthode de paiement est requise pour marquer une facture payée.',
+        );
       }
       paymentData = { paidAt: paidAt ? new Date(paidAt) : new Date(), paymentMethod };
     } else {
@@ -247,10 +254,32 @@ export class InvoicesService {
       return this.numbering.finalizeToEnvoyee(id);
     }
 
-    const row = await this.prisma.client.invoice.update({
-      where: { id },
-      data: { status, ...paymentData },
-      include: INCLUDE_FULL,
+    const row = await this.prisma.client.$transaction(async (tx) => {
+      const locked = await tx.$queryRaw<Array<{ status: InvoiceStatus; reference: string | null }>>`
+        SELECT "status", "reference" FROM "invoices" WHERE "id" = ${id} FOR UPDATE
+      `;
+      if (locked.length === 0) {
+        throw new NotFoundException('Facture introuvable');
+      }
+
+      const actual = locked[0];
+      if (!isAllowedStatusTransition(actual.status, status)) {
+        throw new ConflictException(
+          `Transition de statut interdite : ${actual.status} → ${status}.`,
+        );
+      }
+
+      if (status === 'ENVOYEE' && actual.status === 'BROUILLON' && actual.reference === null) {
+        throw new ConflictException(
+          'La finalisation doit attribuer une référence officielle avant de passer en envoyée.',
+        );
+      }
+
+      return tx.invoice.update({
+        where: { id },
+        data: { status, ...paymentData },
+        include: INCLUDE_FULL,
+      });
     });
     return toInvoice(row);
   }
