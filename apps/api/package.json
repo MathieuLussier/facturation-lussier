@@ -60,6 +60,9 @@
     ],
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
+    "setupFiles": [
+      "<rootDir>/test-setup.ts"
+    ],
     "moduleNameMapper": {
       "^@facturation/core$": "<rootDir>/../../../packages/core/src/index.ts"
     },

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { Invoice } from '@facturation/core';
 import { PrismaService } from '../prisma/prisma.service';
@@ -15,25 +15,35 @@ export class InvoiceNumberingService {
 
   /**
    * Assigne la référence officielle et passe la facture en « Envoyée », dans une
-   * transaction sérialisable (numérotation sans trou). IDEMPOTENT : la référence
-   * est re-vérifiée À L'INTÉRIEUR de la transaction ; si la facture est déjà
-   * numérotée (finalisation concurrente ou rejouée), on retourne son état courant
-   * SANS consommer un second numéro.
+   * transaction sérialisable (numérotation sans trou). La ligne de la facture est
+   * VERROUILLÉE (SELECT ... FOR UPDATE) et son statut ET sa référence sont
+   * re-vérifiés DANS la transaction :
+   *  - déjà numérotée (reference != null) → idempotent, aucun 2e numéro ;
+   *  - statut ≠ BROUILLON (ex. ANNULEE par une requête concurrente) → ConflictException
+   *    SANS consommer de numéro (une facture annulée ne peut pas être « ressuscitée »).
+   * Le verrou sérialise finalisation vs changement de statut concurrent.
    */
   async finalizeToEnvoyee(id: string): Promise<Invoice> {
     const year = new Date().getFullYear();
     const row = await this.prisma.client.$transaction(
       async (tx) => {
-        const existing = await tx.invoice.findUnique({
-          where: { id },
-          select: { reference: true },
-        });
-        if (!existing) {
+        const locked = await tx.$queryRaw<Array<{ status: string; reference: string | null }>>`
+          SELECT "status", "reference" FROM "invoices" WHERE "id" = ${id} FOR UPDATE
+        `;
+        if (locked.length === 0) {
           throw new NotFoundException('Facture introuvable');
         }
+        const current = locked[0];
         // Déjà finalisée → idempotent : ne pas ré-attribuer de numéro.
-        if (existing.reference !== null) {
+        if (current.reference !== null) {
           return tx.invoice.findUnique({ where: { id }, include: INCLUDE_FULL });
+        }
+        // Le statut a changé entre-temps (annulation concurrente, etc.) : ne pas
+        // finaliser ni consommer de numéro.
+        if (current.status !== 'BROUILLON') {
+          throw new ConflictException(
+            `Facture non finalisable depuis le statut ${current.status}.`,
+          );
         }
 
         await tx.$executeRaw`

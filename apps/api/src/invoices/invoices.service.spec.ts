@@ -90,7 +90,18 @@ function makePrisma() {
   const project = { findUnique: jest.fn() };
   const contact = { findUnique: jest.fn() };
   const executeRaw = jest.fn().mockResolvedValue(1);
-  const queryRaw = jest.fn().mockResolvedValue([{ lastNumber: 1 }]);
+  // queryRaw sert 2 requêtes dans finalizeToEnvoyee : le verrou (SELECT ... FOR
+  // UPDATE) renvoie {status,reference}, l'incrément renvoie {lastNumber}. Défaut :
+  // facture BROUILLON non numérotée (chemin nominal). Les tests surchargent au besoin.
+  const queryRaw = jest.fn(
+    (strings: unknown): Promise<Array<Record<string, unknown>>> => {
+      const text = Array.isArray(strings) ? strings.join(' ') : String(strings);
+      if (text.includes('FOR UPDATE')) {
+        return Promise.resolve([{ status: 'BROUILLON', reference: null }]);
+      }
+      return Promise.resolve([{ lastNumber: 1 }]);
+    },
+  );
   // $transaction supporte les deux formes : tableau (Promise.all) et callback interactif.
   const c: Record<string, unknown> = {
     invoice,
@@ -527,13 +538,37 @@ describe('InvoicesService', () => {
   });
 
   it('finalizeToEnvoyee est idempotent si déjà numérotée (aucun 2e numéro)', async () => {
-    const { prisma, invoice, queryRaw } = makePrisma();
+    const { prisma, invoice, executeRaw, queryRaw } = makePrisma();
+    // Le verrou (FOR UPDATE) voit une facture déjà numérotée.
+    queryRaw.mockImplementation((strings: unknown) => {
+      const text = Array.isArray(strings) ? strings.join(' ') : String(strings);
+      if (text.includes('FOR UPDATE')) {
+        return Promise.resolve([{ status: 'ENVOYEE', reference: 'FAC-2026-0001' }]);
+      }
+      return Promise.resolve([{ lastNumber: 1 }]);
+    });
     invoice.findUnique.mockResolvedValue(
       makeInvoiceRow({ status: 'ENVOYEE', reference: 'FAC-2026-0001', sequenceYear: 2026, sequenceNo: 1 }),
     );
     const res = await new InvoiceNumberingService(prisma).finalizeToEnvoyee('inv1');
-    expect(queryRaw).not.toHaveBeenCalled(); // pas d'incrément du compteur
+    expect(executeRaw).not.toHaveBeenCalled(); // pas d'insertion/incrément du compteur
     expect(res.reference).toBe('FAC-2026-0001');
+  });
+
+  it('finalizeToEnvoyee refuse une facture dont le statut a changé (ex. ANNULEE concurrente)', async () => {
+    const { prisma, executeRaw, queryRaw } = makePrisma();
+    // Le verrou (FOR UPDATE) voit une facture ANNULEE, non numérotée.
+    queryRaw.mockImplementation((strings: unknown) => {
+      const text = Array.isArray(strings) ? strings.join(' ') : String(strings);
+      if (text.includes('FOR UPDATE')) {
+        return Promise.resolve([{ status: 'ANNULEE', reference: null }]);
+      }
+      return Promise.resolve([{ lastNumber: 1 }]);
+    });
+    await expect(
+      new InvoiceNumberingService(prisma).finalizeToEnvoyee('inv1'),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(executeRaw).not.toHaveBeenCalled(); // aucun numéro consommé
   });
 
   it('sendInvoice ré-ouvre le brouillon (compensation) si l’envoi échoue', async () => {
