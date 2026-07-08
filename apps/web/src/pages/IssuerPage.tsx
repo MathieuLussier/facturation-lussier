@@ -3,6 +3,7 @@ import { Button, Card, Input } from '@facturation/ui';
 import type { UpsertIssuerRequest } from '@facturation/core';
 import { ApiError } from '../lib/api';
 import { getIssuer, issuerLogoUrl, uploadIssuerLogo, upsertIssuer } from '../lib/issuer';
+import { useApiResource } from '../lib/useApiResource';
 import {
   CANADA_PROVINCES,
   formatPhone,
@@ -68,41 +69,31 @@ function toPayload(f: IssuerFields): UpsertIssuerRequest {
 export function IssuerPage() {
   const { notify } = useToast();
   const [fields, setFields] = useState<IssuerFields>(EMPTY);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [logoUploading, setLogoUploading] = useState(false);
 
+  const { data: issuer, loading, error: fetchError } = useApiResource(() => getIssuer(), []);
+  // Bannière d'erreur : erreur de chargement OU erreur de validation du formulaire.
+  const error = fetchError ?? formError;
+
+  // Peuple le formulaire (avec formatage) quand le profil est chargé.
   useEffect(() => {
-    let active = true;
-    void (async () => {
-      try {
-        const issuer = await getIssuer();
-        if (active && issuer) {
-          setFields({
-            legalName: issuer.legalName,
-            email: issuer.email ?? '',
-            phone: formatPhone(issuer.phone ?? ''),
-            addressLine: issuer.addressLine ?? '',
-            city: issuer.city ?? '',
-            province: issuer.province ?? 'QC',
-            postalCode: formatPostalCode(issuer.postalCode ?? ''),
-            gstNumber: issuer.gstNumber ?? '',
-            qstNumber: issuer.qstNumber ?? '',
-          });
-          if (issuer.logoPath) setLogoUrl(issuerLogoUrl(issuer.logoPath));
-        }
-      } catch (err) {
-        if (active) setError(err instanceof Error ? err.message : 'Erreur de chargement.');
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, []);
+    if (!issuer) return;
+    setFields({
+      legalName: issuer.legalName,
+      email: issuer.email ?? '',
+      phone: formatPhone(issuer.phone ?? ''),
+      addressLine: issuer.addressLine ?? '',
+      city: issuer.city ?? '',
+      province: issuer.province ?? 'QC',
+      postalCode: formatPostalCode(issuer.postalCode ?? ''),
+      gstNumber: issuer.gstNumber ?? '',
+      qstNumber: issuer.qstNumber ?? '',
+    });
+    if (issuer.logoPath) setLogoUrl(issuerLogoUrl(issuer.logoPath));
+  }, [issuer]);
 
   const change = (key: keyof IssuerFields, value: string) =>
     setFields((prev) => ({ ...prev, [key]: value }));
@@ -125,17 +116,17 @@ export function IssuerPage() {
 
   const submit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
-    setError('');
+    setFormError('');
     if (!fields.legalName.trim()) {
-      setError('La raison sociale est requise.');
+      setFormError('La raison sociale est requise.');
       return;
     }
     if (!isValidPhone(fields.phone)) {
-      setError('Le numéro de téléphone est incomplet.');
+      setFormError('Le numéro de téléphone est incomplet.');
       return;
     }
     if (!isValidPostalCode(fields.postalCode)) {
-      setError('Le code postal est invalide (format A1A 1A1).');
+      setFormError('Le code postal est invalide (format A1A 1A1).');
       return;
     }
     setSubmitting(true);

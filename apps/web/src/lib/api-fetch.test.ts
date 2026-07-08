@@ -5,6 +5,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   apiFetch,
+  apiFetchBlob,
   ApiError,
   setAccessToken,
   getAccessToken,
@@ -244,5 +245,49 @@ describe('ApiError', () => {
   it('est une instance de Error', () => {
     const err = new ApiError(500, 'Erreur');
     expect(err).toBeInstanceOf(Error);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// apiFetchBlob — téléchargements binaires avec refresh 401
+// ---------------------------------------------------------------------------
+
+function makeBlobResponse(status: number) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    blob: vi.fn().mockResolvedValue(new Blob(['pdf'])),
+  };
+}
+
+describe('apiFetchBlob', () => {
+  it('retourne un Blob sur 200', async () => {
+    setAccessToken('tok');
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(makeBlobResponse(200));
+    const blob = await apiFetchBlob('/invoices/1/pdf');
+    expect(blob).toBeInstanceOf(Blob);
+  });
+
+  it('sur 401, rafraîchit le token et rejoue la requête', async () => {
+    setAccessToken('expired');
+    registerRefreshFn(async () => 'fresh-token');
+    (fetch as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce(makeBlobResponse(401))
+      .mockResolvedValueOnce(makeBlobResponse(200));
+
+    const blob = await apiFetchBlob('/invoices/1/pdf');
+    expect(blob).toBeInstanceOf(Blob);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    // Le 2e appel porte le nouveau token.
+    const secondCall = (fetch as ReturnType<typeof vi.fn>).mock.calls[1];
+    const secondInit = (secondCall?.[1] ?? {}) as { headers?: Record<string, string> };
+    expect(secondInit.headers?.Authorization).toBe('Bearer fresh-token');
+  });
+
+  it('sur 401 sans refresh possible, lève ApiError(401)', async () => {
+    setAccessToken('expired');
+    registerRefreshFn(async () => null);
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(makeBlobResponse(401));
+    await expect(apiFetchBlob('/invoices/1/pdf')).rejects.toBeInstanceOf(ApiError);
   });
 });

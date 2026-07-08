@@ -35,10 +35,13 @@ export class IssuerService {
   }
 
   async upsert(data: UpsertIssuerRequest): Promise<IssuerProfile> {
-    const existing = await this.prisma.client.issuerProfile.findFirst();
-    const row = existing
-      ? await this.prisma.client.issuerProfile.update({ where: { id: existing.id }, data })
-      : await this.prisma.client.issuerProfile.create({ data });
+    // Upsert ATOMIQUE sur le verrou de singleton (slot=1) : deux requêtes
+    // concurrentes ne peuvent plus créer deux en-têtes distincts.
+    const row = await this.prisma.client.issuerProfile.upsert({
+      where: { slot: 1 },
+      create: { ...data, slot: 1 },
+      update: data,
+    });
     return toIssuer(row);
   }
 

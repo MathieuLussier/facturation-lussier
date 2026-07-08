@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Badge, Button, Card } from '@facturation/ui';
 import {
   Archive,
@@ -16,6 +16,7 @@ import {
   listProducts,
   unarchiveProduct,
 } from '../lib/products';
+import { useApiResource } from '../lib/useApiResource';
 import { useToast } from '../components/Toast';
 import { useConfirm } from '../components/Confirm';
 import { ProductFormModal } from './products/ProductFormModal';
@@ -25,33 +26,18 @@ const PAGE_SIZE = 20;
 export function ProductsPage() {
   const { notify } = useToast();
   const confirm = useConfirm();
-  const [items, setItems] = useState<Product[]>([]);
-  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [showArchived, setShowArchived] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
 
-  const load = useCallback(async (): Promise<void> => {
-    setLoading(true);
-    setError('');
-    try {
-      const res = await listProducts({ page, pageSize: PAGE_SIZE, search, archivedOnly: showArchived });
-      setItems(res.items);
-      setTotal(res.total);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur de chargement.');
-    } finally {
-      setLoading(false);
-    }
-  }, [page, search, showArchived]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const { data, loading, error, reload } = useApiResource(
+    () => listProducts({ page, pageSize: PAGE_SIZE, search, archivedOnly: showArchived }),
+    [page, search, showArchived],
+  );
+  const items = data?.items ?? [];
+  const total = data?.total ?? 0;
 
   const openCreate = (): void => {
     setEditing(null);
@@ -67,7 +53,7 @@ export function ProductsPage() {
       if (product.archivedAt) await unarchiveProduct(product.id);
       else await archiveProduct(product.id);
       notify(product.archivedAt ? 'Produit désarchivé' : 'Produit archivé', 'success');
-      void load();
+      reload();
     } catch (err) {
       notify(err instanceof Error ? err.message : "Erreur lors de l'archivage.", 'error');
     }
@@ -78,7 +64,7 @@ export function ProductsPage() {
     try {
       await deleteProduct(product.id);
       notify('Produit supprimé', 'success');
-      void load();
+      reload();
     } catch (err) {
       notify(err instanceof Error ? err.message : 'Erreur lors de la suppression.', 'error');
     }
@@ -221,7 +207,7 @@ export function ProductsPage() {
         open={modalOpen}
         product={editing}
         onClose={() => setModalOpen(false)}
-        onSaved={() => void load()}
+        onSaved={() => reload()}
       />
     </div>
   );

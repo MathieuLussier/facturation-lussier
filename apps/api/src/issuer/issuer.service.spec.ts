@@ -28,6 +28,7 @@ function makePrisma() {
     findFirst: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
+    upsert: jest.fn(),
   };
   return {
     prisma: { client: { issuerProfile: model } } as unknown as PrismaService,
@@ -50,23 +51,25 @@ describe('IssuerService', () => {
     expect(res?.createdAt).toBe('2026-01-01T00:00:00.000Z');
   });
 
-  it('upsert crée si aucun profil existant', async () => {
+  it('upsert fait un upsert atomique sur le verrou de singleton (slot=1)', async () => {
     const { prisma, model } = makePrisma();
-    model.findFirst.mockResolvedValue(null);
-    model.create.mockResolvedValue(makeRow());
+    model.upsert.mockResolvedValue(makeRow());
     await new IssuerService(prisma).upsert({ legalName: 'Lussier inc.' });
-    expect(model.create).toHaveBeenCalledWith({ data: { legalName: 'Lussier inc.' } });
-    expect(model.update).not.toHaveBeenCalled();
+    expect(model.upsert).toHaveBeenCalledWith({
+      where: { slot: 1 },
+      create: { legalName: 'Lussier inc.', slot: 1 },
+      update: { legalName: 'Lussier inc.' },
+    });
   });
 
   it('upsert met à jour le profil existant', async () => {
     const { prisma, model } = makePrisma();
-    model.findFirst.mockResolvedValue(makeRow());
-    model.update.mockResolvedValue(makeRow({ city: 'Québec' }));
+    model.upsert.mockResolvedValue(makeRow({ city: 'Québec' }));
     const res = await new IssuerService(prisma).upsert({ legalName: 'Lussier inc.', city: 'Québec' });
-    expect(model.update).toHaveBeenCalledWith({
-      where: { id: 'i1' },
-      data: { legalName: 'Lussier inc.', city: 'Québec' },
+    expect(model.upsert).toHaveBeenCalledWith({
+      where: { slot: 1 },
+      create: { legalName: 'Lussier inc.', city: 'Québec', slot: 1 },
+      update: { legalName: 'Lussier inc.', city: 'Québec' },
     });
     expect(res.city).toBe('Québec');
   });

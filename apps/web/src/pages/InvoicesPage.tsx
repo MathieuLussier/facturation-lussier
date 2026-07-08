@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, buttonClasses } from '@facturation/ui';
 import { Layers, Plus } from 'lucide-react';
@@ -9,6 +9,7 @@ import {
   unarchiveInvoice,
   updateInvoiceStatus,
 } from '../lib/invoices';
+import { useApiResource } from '../lib/useApiResource';
 import { useToast } from '../components/Toast';
 import { InvoiceTable } from './invoices/InvoiceTable';
 import { PaymentModal } from '../components/PaymentModal';
@@ -29,44 +30,24 @@ const FILTER_CHIPS: Array<{ id: FilterChip; label: string }> = [
 export function InvoicesPage() {
   const { notify } = useToast();
   const [items, setItems] = useState<Invoice[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [showArchived, setShowArchived] = useState(false);
   const [activeFilter, setActiveFilter] = useState<FilterChip>('all');
   const [groupBy, setGroupBy] = useState<InvoiceGroupBy>('none');
-  const [hitLimit, setHitLimit] = useState(false);
   const [pendingPayeeId, setPendingPayeeId] = useState<string | null>(null);
   const [reminderInvoice, setReminderInvoice] = useState<Invoice | null>(null);
 
-  const fetchInvoices = useCallback(
-    async (filter: FilterChip, archivedOnly: boolean): Promise<void> => {
-      setLoading(true);
-      setError('');
-      try {
-        const status: InvoiceStatus | undefined =
-          filter !== 'all' && filter !== 'overdue' ? filter : undefined;
-        const overdue = filter === 'overdue' ? true : undefined;
+  const { data, loading, error } = useApiResource(() => {
+    const status: InvoiceStatus | undefined =
+      activeFilter !== 'all' && activeFilter !== 'overdue' ? activeFilter : undefined;
+    const overdue = activeFilter === 'overdue' ? true : undefined;
+    return listInvoices({ status, overdue, archivedOnly: showArchived, pageSize: 500 });
+  }, [activeFilter, showArchived]);
 
-        const res = await listInvoices({
-          status,
-          overdue,
-          archivedOnly,
-          pageSize: 500,
-        });
-        setItems(res.items);
-        setHitLimit(res.items.length === 500);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Erreur de chargement.');
-      } finally {
-        setLoading(false);
-      }
-    },
-    [],
-  );
-
+  // Copie locale éditable : les mutations de statut/archivage sont optimistes.
   useEffect(() => {
-    void fetchInvoices(activeFilter, showArchived);
-  }, [fetchInvoices, activeFilter, showArchived]);
+    if (data) setItems(data.items);
+  }, [data]);
+  const hitLimit = (data?.items.length ?? 0) === 500;
 
   const handleFilterClick = (chip: FilterChip): void => {
     setActiveFilter(chip);

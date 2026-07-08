@@ -1,4 +1,5 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import type { Client as DbClient } from '@prisma/client';
 import type {
   Client,
@@ -93,53 +94,81 @@ export class ClientsService {
 
   /**
    * Annuaire unifié : entreprises + particuliers (Client) + contacts rattachés,
-   * trié par nom, filtré par recherche/archivage, paginé en mémoire.
+   * trié par nom, filtré par recherche/archivage. La fusion, le tri et la
+   * pagination sont faits CÔTÉ BASE (UNION + ORDER/LIMIT/OFFSET) : on ne charge
+   * plus toutes les tables en mémoire. Le terme de recherche est paramétré
+   * (aucune injection) ; les noms de colonnes sont statiques.
    */
   async directory(params: ListParams): Promise<Paginated<DirectoryEntry>> {
     const page = params.page ?? DEFAULT_PAGE;
     const pageSize = params.pageSize ?? DEFAULT_PAGE_SIZE;
+    const skip = (page - 1) * pageSize;
     const db = this.prisma.client;
-    const archived = params.archivedOnly ? { archivedAt: { not: null } } : { archivedAt: null };
     const search = params.search?.trim();
+    const like = search ? `%${search}%` : null;
 
-    const clientWhere = {
-      ...archived,
-      ...(search ? { companyName: { contains: search, mode: 'insensitive' as const } } : {}),
-    };
-    const contactWhere = {
-      ...archived,
-      ...(search ? { name: { contains: search, mode: 'insensitive' as const } } : {}),
+    // Conditions d'archivage (statiques) et de recherche (paramétrées).
+    const clientArchived = params.archivedOnly
+      ? Prisma.sql`"archivedAt" IS NOT NULL`
+      : Prisma.sql`"archivedAt" IS NULL`;
+    const contactArchived = params.archivedOnly
+      ? Prisma.sql`c."archivedAt" IS NOT NULL`
+      : Prisma.sql`c."archivedAt" IS NULL`;
+    const clientSearch = like ? Prisma.sql`AND "companyName" ILIKE ${like}` : Prisma.empty;
+    const contactSearch = like ? Prisma.sql`AND c.name ILIKE ${like}` : Prisma.empty;
+
+    // Sous-requête fusionnée (entreprises/particuliers + contacts).
+    const union = Prisma.sql`
+      SELECT
+        id,
+        "companyName" AS name,
+        CASE WHEN type::text = 'INDIVIDUAL' THEN 'individual' ELSE 'company' END AS kind,
+        NULLIF(concat_ws(' · ', city, email), '') AS subtitle,
+        NULL::text AS "companyId",
+        "archivedAt"
+      FROM "clients"
+      WHERE ${clientArchived} ${clientSearch}
+      UNION ALL
+      SELECT
+        c.id,
+        c.name,
+        'contact' AS kind,
+        comp."companyName" AS subtitle,
+        c."companyId",
+        c."archivedAt"
+      FROM "contacts" c
+      JOIN "clients" comp ON comp.id = c."companyId"
+      WHERE ${contactArchived} ${contactSearch}
+    `;
+
+    type DirRow = {
+      id: string;
+      name: string;
+      kind: DirectoryEntry['kind'];
+      subtitle: string | null;
+      companyId: string | null;
+      archivedAt: Date | null;
     };
 
-    const [clients, contacts] = await Promise.all([
-      db.client.findMany({ where: clientWhere }),
-      db.contact.findMany({
-        where: contactWhere,
-        include: { company: { select: { companyName: true } } },
-      }),
+    const [rows, countRows] = await Promise.all([
+      db.$queryRaw<DirRow[]>(
+        Prisma.sql`SELECT * FROM (${union}) AS dir ORDER BY name ASC LIMIT ${pageSize} OFFSET ${skip}`,
+      ),
+      db.$queryRaw<Array<{ count: bigint }>>(
+        Prisma.sql`SELECT COUNT(*)::bigint AS count FROM (${union}) AS dir`,
+      ),
     ]);
 
-    const entries: DirectoryEntry[] = [
-      ...clients.map((c) => ({
-        kind: (c.type === 'INDIVIDUAL' ? 'individual' : 'company') as DirectoryEntry['kind'],
-        id: c.id,
-        name: c.companyName,
-        subtitle: [c.city, c.email].filter(Boolean).join(' · ') || null,
-        companyId: null,
-        archivedAt: c.archivedAt ? c.archivedAt.toISOString() : null,
-      })),
-      ...contacts.map((ct) => ({
-        kind: 'contact' as const,
-        id: ct.id,
-        name: ct.name,
-        subtitle: ct.company.companyName,
-        companyId: ct.companyId,
-        archivedAt: ct.archivedAt ? ct.archivedAt.toISOString() : null,
-      })),
-    ].sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+    const items: DirectoryEntry[] = rows.map((r) => ({
+      kind: r.kind,
+      id: r.id,
+      name: r.name,
+      subtitle: r.subtitle,
+      companyId: r.companyId,
+      archivedAt: r.archivedAt ? r.archivedAt.toISOString() : null,
+    }));
 
-    const start = (page - 1) * pageSize;
-    return { items: entries.slice(start, start + pageSize), total: entries.length, page, pageSize };
+    return { items, total: Number(countRows[0]?.count ?? 0), page, pageSize };
   }
 
   async findById(id: string): Promise<Client> {

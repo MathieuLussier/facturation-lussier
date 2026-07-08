@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, session, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, session, shell } from 'electron';
 import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs/promises';
@@ -45,6 +45,14 @@ function createWindow(): void {
     if (!isAllowedOrigin(url)) {
       log.warn(`Navigation bloquée : ${url}`);
       event.preventDefault();
+    }
+  });
+  // Les sous-frames (iframes) ont leur propre événement : on applique la même
+  // restriction d'origine (« will-navigate » ne couvre que la frame principale).
+  mainWindow.webContents.on('will-frame-navigate', (details) => {
+    if (!isAllowedOrigin(details.url)) {
+      log.warn(`Navigation (sous-frame) bloquée : ${details.url}`);
+      details.preventDefault();
     }
   });
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -147,9 +155,25 @@ function setupAutoUpdater(): void {
   autoUpdater.on('update-available', (info) => {
     log.info(`Mise à jour disponible : v${info.version}`);
   });
-  autoUpdater.on('update-downloaded', () => {
-    log.info('Mise à jour téléchargée — installation au redémarrage.');
-    autoUpdater.quitAndInstall(true, true);
+  autoUpdater.on('update-downloaded', (info) => {
+    log.info(`Mise à jour téléchargée : v${info.version}`);
+    // Demander confirmation avant de fermer l'app (ne pas tuer un travail en
+    // cours sans prévenir). Sinon, la mise à jour s'installe au prochain quit.
+    void dialog
+      .showMessageBox({
+        type: 'info',
+        buttons: ['Redémarrer maintenant', 'Plus tard'],
+        defaultId: 0,
+        cancelId: 1,
+        title: 'Mise à jour disponible',
+        message: `Une nouvelle version (v${info.version}) est prête.`,
+        detail: 'Redémarrer maintenant pour l’installer, ou plus tard à la fermeture.',
+      })
+      .then((res) => {
+        if (res.response === 0) {
+          autoUpdater.quitAndInstall();
+        }
+      });
   });
   autoUpdater.on('error', (err) => {
     log.error('Erreur auto-update :', err);

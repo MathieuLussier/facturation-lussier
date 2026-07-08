@@ -77,14 +77,17 @@ export class AuthService {
       throw new UnauthorizedException('Identifiants invalides');
     }
 
-    // Raccourci DÉVELOPPEMENT : hors production, un mot de passe vide connecte
-    // directement (pratique en local quand le mot de passe est oublié).
-    // JAMAIS actif en production (NODE_ENV === 'production').
-    const devEmptyPasswordLogin = process.env.NODE_ENV !== 'production' && password === '';
+    // Raccourci DÉVELOPPEMENT : un mot de passe vide connecte directement
+    // (pratique en local quand le mot de passe est oublié). Défaut SÛR
+    // (fail-closed) : le raccourci n'est actif QUE si NODE_ENV vaut
+    // explicitement 'development'. Toute autre valeur — y compris NODE_ENV
+    // absent — le désactive, pour ne jamais dépendre d'une variable manquante
+    // (un déploiement qui oublie NODE_ENV=production reste protégé).
+    const devEmptyPasswordLogin = process.env.NODE_ENV === 'development' && password === '';
 
     if (devEmptyPasswordLogin) {
       this.logger.warn(
-        `Connexion DEV sans mot de passe pour ${user.email} (NODE_ENV != production).`,
+        `Connexion DEV sans mot de passe pour ${user.email} (NODE_ENV === development).`,
       );
     } else {
       const passwordValid = await bcrypt.compare(password, user.passwordHash);

@@ -10,7 +10,7 @@ import type {
   SendInvoiceResponse,
   UpdateInvoiceRequest,
 } from '@facturation/core';
-import { ApiError, apiFetch, buildApiPath, getAccessToken, httpErrorMessage } from './api';
+import { apiFetch, apiFetchBlob } from './api';
 
 export interface ListInvoicesParams {
   page?: number;
@@ -115,17 +115,9 @@ export function unarchiveInvoice(id: string): Promise<Invoice> {
   return apiFetch<Invoice>(`/invoices/${id}/unarchive`, { method: 'PATCH' });
 }
 
-/** Récupère le PDF d'une facture (fetch authentifié → blob). */
-export async function fetchInvoicePdfBlob(id: string): Promise<Blob> {
-  const token = getAccessToken();
-  const res = await fetch(buildApiPath(`/invoices/${id}/pdf`), {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-    credentials: 'include',
-  });
-  if (!res.ok) {
-    throw new ApiError(res.status, httpErrorMessage(res.status));
-  }
-  return res.blob();
+/** Récupère le PDF d'une facture (fetch authentifié + refresh 401 → blob). */
+export function fetchInvoicePdfBlob(id: string): Promise<Blob> {
+  return apiFetchBlob(`/invoices/${id}/pdf`);
 }
 
 /** Ouvre le PDF d'une facture dans un nouvel onglet (pour impression). */
@@ -203,15 +195,7 @@ export async function downloadInvoiceAttachment(
   attId: string,
   fileName: string,
 ): Promise<void> {
-  const token = getAccessToken();
-  const res = await fetch(buildApiPath(`/invoices/${invoiceId}/attachments/${attId}/download`), {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-    credentials: 'include',
-  });
-  if (!res.ok) {
-    throw new ApiError(res.status, httpErrorMessage(res.status));
-  }
-  const blob = await res.blob();
+  const blob = await apiFetchBlob(`/invoices/${invoiceId}/attachments/${attId}/download`);
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;

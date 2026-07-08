@@ -10,15 +10,17 @@ import {
   Post,
   Query,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { Throttle } from '@nestjs/throttler';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import type { Response } from 'express';
 import type { AuthUser, Invoice, InvoiceStats, Paginated, SendInvoiceResponse } from '@facturation/core';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { IssuerService } from '../issuer/issuer.service';
 import { MailService } from '../mail/mail.service';
 import { InvoicesService } from './invoices.service';
+import { InvoiceMailingService } from './invoice-mailing.service';
 import { InvoicePdfService } from './invoice-pdf.service';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
 import { ListInvoicesQuery } from './dto/list-invoices.query';
@@ -31,6 +33,7 @@ import { UpdateInvoiceStatusDto } from './dto/update-invoice-status.dto';
 export class InvoicesController {
   constructor(
     private readonly invoices: InvoicesService,
+    private readonly mailing: InvoiceMailingService,
     private readonly issuer: IssuerService,
     private readonly pdf: InvoicePdfService,
     private readonly mail: MailService,
@@ -70,17 +73,21 @@ export class InvoicesController {
     return this.invoices.create(dto, user.id);
   }
 
-  // Envoi par courriel : limité à 3 par minute par IP (anti-abus).
+  // Envoi par courriel : limité à 3 par minute par IP (anti-abus). Le
+  // @UseGuards(ThrottlerGuard) est requis pour que @Throttle soit effectif
+  // (le ThrottlerGuard n'est pas enregistré globalement).
   @Post(':id/send')
+  @UseGuards(ThrottlerGuard)
   @Throttle({ default: { limit: 3, ttl: 60_000 } })
   send(@Param('id') id: string, @Body() dto: SendInvoiceDto): Promise<SendInvoiceResponse> {
-    return this.invoices.sendInvoice(id, dto, this.pdf, this.issuer, this.mail);
+    return this.mailing.sendInvoice(id, dto, this.pdf, this.issuer, this.mail);
   }
 
   @Post(':id/remind')
+  @UseGuards(ThrottlerGuard)
   @Throttle({ default: { limit: 3, ttl: 60_000 } })
   remind(@Param('id') id: string, @Body() dto: SendInvoiceDto): Promise<{ sent: boolean }> {
-    return this.invoices.sendReminder(id, dto, this.pdf, this.issuer, this.mail);
+    return this.mailing.sendReminder(id, dto, this.pdf, this.issuer, this.mail);
   }
 
   @Patch(':id')
