@@ -5,6 +5,7 @@ import { Badge, Button } from '@facturation/ui';
 import { archiveClient, deleteClient, getClient, unarchiveClient } from '../lib/clients';
 import { listContacts } from '../lib/contacts';
 import { listProjects } from '../lib/projects';
+import { useApiResource } from '../lib/useApiResource';
 import { useConfirm } from '../components/Confirm';
 import { useToast } from '../components/Toast';
 import { InfosTab } from './client-detail/InfosTab';
@@ -23,8 +24,6 @@ export function ClientDetailPage() {
   const [client, setClient] = useState<Client | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState('');
   const [archiving, setArchiving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showArchivedContacts, setShowArchivedContacts] = useState(false);
@@ -45,24 +44,17 @@ export function ClientDetailPage() {
 
   const [tab, setTab] = useState<Tab>('infos');
 
-  const load = useCallback(async (): Promise<void> => {
-    if (!id) return;
-    setLoading(true);
-    setLoadError('');
-    try {
-      const loaded = await getClient(id);
-      setClient(loaded);
-      setTab(resolveInitialTab(loaded));
-    } catch (err) {
-      setLoadError(err instanceof Error ? err.message : 'Erreur de chargement.');
-    } finally {
-      setLoading(false);
-    }
-  }, [id, resolveInitialTab]);
+  const { data: clientData, loading, error: loadError } = useApiResource(
+    () => (id ? getClient(id) : Promise.reject(new Error('Client introuvable'))),
+    [id],
+  );
 
+  // Copie locale éditable (mutations d'archivage/infos) + onglet initial depuis l'URL.
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (!clientData) return;
+    setClient(clientData);
+    setTab(resolveInitialTab(clientData));
+  }, [clientData, resolveInitialTab]);
 
   const refreshContacts = useCallback(async (): Promise<void> => {
     if (!id) return;
