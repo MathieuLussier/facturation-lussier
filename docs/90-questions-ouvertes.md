@@ -6,20 +6,39 @@ Ces questions doivent être résolues avant de figer les exigences détaillées.
 
 Confirmé :
 
-- lors du premier envoi de facture, un spécimen de chèque est joint;
 - le mode observé est le dépôt direct;
 - un avis de dépôt est reçu par courriel;
 - le courriel indique les numéros des factures payées;
-- la responsable utilise le bouton existant pour marquer la facture payée et saisir la date réelle du paiement.
+- un même dépôt peut régler plusieurs factures;
+- plusieurs numéros de facture figurent alors dans le même avis;
+- la responsable utilise déjà un bouton pour marquer une facture payée et saisir la date réelle du paiement;
+- le système cible doit conserver un paiement unique et ses affectations aux différentes factures.
 
 À confirmer :
 
-- un même dépôt peut-il couvrir plusieurs factures;
 - les paiements partiels existent-ils;
 - l'avis indique-t-il toujours le montant total du dépôt;
+- indique-t-il un montant pour chaque facture ou seulement les numéros;
 - une retenue contractuelle peut-elle s'appliquer;
 - comment gérer un dépôt en trop, insuffisant, annulé ou attribué à la mauvaise facture;
-- faut-il conserver le courriel ou seulement sa référence dans l'application.
+- faut-il conserver le courriel complet, sa pièce jointe ou seulement sa référence dans l'application.
+
+## Spécimen de chèque
+
+Confirmé :
+
+- le spécimen sert à transmettre les coordonnées de dépôt direct;
+- il peut être joint aux courriels de facture;
+- son stockage doit être privé;
+- sa présence doit être visible avant l'envoi;
+- le système doit permettre une politique configurable.
+
+À confirmer :
+
+- politique par défaut : chaque facture ou premier envoi seulement;
+- faut-il appliquer une exception à certains clients ou projets;
+- confirmer que les relances ne doivent jamais le joindre automatiquement;
+- qui peut remplacer la version active du spécimen.
 
 ## Courriels
 
