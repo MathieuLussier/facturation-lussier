@@ -116,23 +116,37 @@ Le bouton **Préparer le courriel** génère un brouillon contenant :
 - objet;
 - message;
 - facture PDF;
-- justificatifs sélectionnés.
+- justificatifs sélectionnés;
+- spécimen de chèque, selon la politique applicable.
 
-La responsable relit et déclenche l'envoi.
+La responsable voit toutes les pièces jointes, peut les retirer, relit le message et déclenche l'envoi.
 
-## Premier envoi et spécimen de chèque
+## Spécimen de chèque
 
-Lors du premier envoi de facture à un nouveau client ou à un nouveau profil de facturation de projet, la responsable joint un spécimen de chèque afin que le destinataire puisse configurer le dépôt direct.
+Le spécimen permet au destinataire de configurer le dépôt direct. Il contient des renseignements sensibles et doit être conservé dans un stockage privé.
 
-Le système devrait :
+Le système doit proposer une politique configurable :
 
-- indiquer si les instructions bancaires ont déjà été transmises à ce profil de facturation;
-- proposer le spécimen seulement lors du premier envoi;
-- exiger une sélection et une validation explicites avant de joindre ce document sensible;
-- conserver la date, le destinataire, l'utilisateur et la version du document envoyé;
-- permettre de le joindre de nouveau sur demande, sans le joindre automatiquement à toutes les factures.
+- premier envoi seulement;
+- chaque courriel de facture;
+- jamais automatiquement.
 
-Le spécimen de chèque doit être conservé dans un stockage privé et protégé. Il ne doit jamais être exposé dans un dépôt public ou une URL non authentifiée.
+Ordre de résolution proposé :
+
+1. choix effectué pour le courriel en cours;
+2. politique du profil de facturation du projet;
+3. politique du client;
+4. politique par défaut de l'entreprise.
+
+Même lorsqu'une politique ajoute automatiquement le spécimen :
+
+- sa présence est clairement affichée dans le composeur;
+- la responsable peut le retirer avant l'envoi;
+- l'historique conserve la version transmise;
+- les coordonnées bancaires ne sont pas recopiées dans les journaux;
+- le document n'est pas ajouté automatiquement aux relances.
+
+La recommandation actuelle, à confirmer, est de le cocher par défaut pour chaque courriel de facture et de le laisser décoché pour les relances.
 
 ## Historique des envois
 
@@ -146,31 +160,49 @@ Conserver :
 - canal;
 - statut de remise disponible;
 - erreur éventuelle;
-- indication qu'un spécimen de chèque a été transmis, sans exposer ses données dans les journaux.
+- indication qu'un spécimen de chèque a été transmis;
+- version du document bancaire transmis, sans exposer son contenu dans les journaux.
 
 ## Paiement par dépôt direct
 
 Le mode de paiement observé est le dépôt direct.
 
-Flux actuel :
+Un seul dépôt peut régler plusieurs factures et l'avis reçu par courriel contient alors plusieurs numéros de facture.
 
-1. le client dépose l'argent dans le compte communiqué;
-2. un avis de dépôt arrive par courriel;
-3. le courriel indique les numéros de factures payées;
-4. la responsable recherche les factures concernées;
-5. elle utilise le bouton déjà présent **Marquer comme payée**;
-6. elle inscrit ou confirme la date réelle de réception du paiement.
+### Paiement d'une seule facture
 
-Lorsqu'une facture est marquée payée, l'application doit :
+Le bouton existant **Marquer comme payée** reste disponible :
+
+1. la responsable ouvre la facture;
+2. elle clique sur **Marquer comme payée**;
+3. elle inscrit ou confirme la date réelle de réception;
+4. elle confirme le mode `DEPOT_DIRECT`;
+5. la facture passe à `PAYEE` lorsque son solde est nul.
+
+### Dépôt couvrant plusieurs factures
+
+Un parcours **Enregistrer un dépôt** doit permettre :
+
+1. d'entrer la date réelle du dépôt;
+2. d'entrer son montant total lorsqu'il est connu;
+3. de saisir ou d'extraire les numéros mentionnés dans l'avis;
+4. de retrouver et sélectionner les factures;
+5. d'afficher leur montant et leur solde;
+6. d'affecter le paiement à chacune;
+7. de comparer le montant du dépôt au total affecté;
+8. de confirmer l'ensemble en une seule action.
+
+Le système enregistre une seule opération de paiement et plusieurs affectations, une par facture. Il ne doit pas fabriquer plusieurs dépôts indépendants pour représenter la même transaction bancaire.
+
+Lorsqu'une facture est entièrement réglée, l'application doit :
 
 - enregistrer la date de paiement;
-- enregistrer le mode `DEPOT_DIRECT`;
-- conserver l'utilisateur et l'horodatage de l'action;
+- conserver le paiement et son affectation;
 - passer la facture au statut `PAYEE`;
 - arrêter ou annuler les brouillons de relance encore prévus;
-- permettre une référence ou une note liée à l'avis de dépôt.
+- conserver l'utilisateur et l'horodatage de l'action.
 
-Dans le MVP, la réception d'un courriel ne doit pas modifier automatiquement le statut d'une facture. Une future extraction peut proposer les factures mentionnées dans l'avis, mais la responsable doit confirmer le rapprochement.
+Dans le MVP, la réception d'un courriel ne modifie pas automatiquement le statut d'une facture. Une future extraction peut proposer les factures mentionnées dans l'avis, mais la responsable doit confirmer le rapprochement.
 
 Voir [`paiements.md`](paiements.md) pour les exigences détaillées.
 
