@@ -44,3 +44,10 @@
 - **RM-042** — Même lorsqu'il est ajouté automatiquement, le spécimen doit être visible et retirable dans le composeur avant l'envoi.
 - **RM-043** — Une relance ne joint pas automatiquement le spécimen de chèque, sauf sélection explicite.
 - **RM-044** — La réception d'un avis de dépôt peut préparer un rapprochement, mais ne doit pas modifier automatiquement les statuts dans le MVP.
+- **RM-045** — Le système doit soutenir le format d'avis observé qui fournit un montant total de dépôt et un montant payé pour chaque facture.
+- **RM-046** — Chaque ligne d'avis importée doit pouvoir conserver la référence et la date de facture, le montant, la retenue, l'escompte et le montant payé.
+- **RM-047** — La date imprimée sur l'avis est distincte de la date réelle d'encaissement; `paidAt` doit être confirmé par la responsable.
+- **RM-048** — Avant de confirmer un dépôt, la somme des montants payés par facture doit être comparée au montant total annoncé.
+- **RM-049** — Une retenue, un escompte ou un écart non nul exige une révision explicite et ne doit pas marquer automatiquement la facture entièrement payée.
+- **RM-050** — Le PDF original de l'avis doit rester lié au rapprochement dans un stockage privé, sans exposer les identifiants bancaires dans les journaux.
+- **RM-051** — Toute valeur extraite d'un avis reste une proposition avec une confiance et peut être corrigée avant validation humaine.
