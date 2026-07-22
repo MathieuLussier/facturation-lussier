@@ -34,20 +34,28 @@
 - **RM-032** — La date de remise d'un bon est distincte de la date à laquelle le travail a été exécuté.
 - **RM-033** — Un spécimen de chèque peut être joint à un courriel de facture afin de permettre le dépôt direct.
 - **RM-034** — Le spécimen de chèque est une pièce sensible; son stockage doit être privé et sa présence doit être clairement visible avant l'envoi.
-- **RM-035** — Le mode de paiement actuellement observé est le dépôt direct, confirmé par un avis reçu par courriel.
-- **RM-036** — L'avis de dépôt contient les numéros des factures payées et sert au rapprochement manuel.
+- **RM-035** — Le mode de paiement actuellement observé est le dépôt direct, confirmé par une information reçue après le paiement.
+- **RM-036** — L'information de dépôt peut contenir les numéros des factures payées et sert au rapprochement manuel.
 - **RM-037** — La responsable confirme manuellement le paiement et enregistre la date réelle de réception.
 - **RM-038** — Une facture entièrement payée ne doit plus générer de nouvelles relances; l'action doit rester auditée.
-- **RM-039** — Un seul dépôt peut régler plusieurs factures et un même avis de dépôt peut contenir plusieurs numéros de facture.
+- **RM-039** — Un seul dépôt peut régler plusieurs factures et une même information de dépôt peut contenir plusieurs numéros de facture.
 - **RM-040** — Un dépôt multi-factures doit être enregistré comme une seule opération de paiement reliée à plusieurs factures par des affectations distinctes.
 - **RM-041** — La politique d'inclusion du spécimen doit être configurable au niveau de l'entreprise, du client ou du profil de facturation.
 - **RM-042** — Même lorsqu'il est ajouté automatiquement, le spécimen doit être visible et retirable dans le composeur avant l'envoi.
 - **RM-043** — Une relance ne joint pas automatiquement le spécimen de chèque, sauf sélection explicite.
-- **RM-044** — La réception d'un avis de dépôt peut préparer un rapprochement, mais ne doit pas modifier automatiquement les statuts dans le MVP.
+- **RM-044** — La réception d'une information de dépôt peut préparer un rapprochement, mais ne doit pas modifier automatiquement les statuts dans le MVP.
 - **RM-045** — Le système doit soutenir le format d'avis observé qui fournit un montant total de dépôt et un montant payé pour chaque facture.
 - **RM-046** — Chaque ligne d'avis importée doit pouvoir conserver la référence et la date de facture, le montant, la retenue, l'escompte et le montant payé.
-- **RM-047** — La date imprimée sur l'avis est distincte de la date réelle d'encaissement; `paidAt` doit être confirmé par la responsable.
-- **RM-048** — Avant de confirmer un dépôt, la somme des montants payés par facture doit être comparée au montant total annoncé.
+- **RM-047** — La date imprimée sur un avis est distincte de la date réelle d'encaissement; `paidAt` doit être confirmé par la responsable.
+- **RM-048** — Avant de confirmer un dépôt, la somme des montants affectés par facture doit être comparée au montant total annoncé lorsqu'il est connu.
 - **RM-049** — Une retenue, un escompte ou un écart non nul exige une révision explicite et ne doit pas marquer automatiquement la facture entièrement payée.
-- **RM-050** — Le PDF original de l'avis doit rester lié au rapprochement dans un stockage privé, sans exposer les identifiants bancaires dans les journaux.
-- **RM-051** — Toute valeur extraite d'un avis reste une proposition avec une confiance et peut être corrigée avant validation humaine.
+- **RM-050** — Une source originale de paiement doit rester liée au rapprochement dans un stockage privé lorsqu'elle existe, sans exposer les identifiants bancaires dans les journaux.
+- **RM-051** — Toute valeur extraite d'une source de paiement reste une proposition avec une confiance et peut être corrigée avant validation humaine.
+- **RM-052** — Tous les clients ne fournissent pas un PDF; le parcours **Enregistrer un dépôt** doit fonctionner avec un courriel, une image, une autre source ou une saisie manuelle.
+- **RM-053** — Un paiement peut être enregistré sans avis structuré ni fichier, à condition de conserver l'utilisateur, l'horodatage et une note ou référence disponible.
+- **RM-054** — Un client peut payer seulement une partie d'une facture.
+- **RM-055** — Une facture ne devient `PAYEE` que lorsque son solde atteint zéro; sinon elle reste ouverte avec un état `PARTIELLEMENT_PAYEE` ou équivalent.
+- **RM-056** — Une même facture peut recevoir plusieurs affectations provenant de paiements distincts jusqu'au règlement complet.
+- **RM-057** — Une affectation inférieure au solde est un paiement partiel valide et ne doit pas être traitée comme une erreur de rapprochement.
+- **RM-058** — Les retenues et escomptes observés ont toujours été à zéro; le système conserve néanmoins ces champs et exige une révision si une valeur non nulle apparaît.
+- **RM-059** — Les relances ne sont annulées automatiquement que pour une facture dont le solde atteint zéro; le traitement du solde partiel doit rester visible et contrôlable.
