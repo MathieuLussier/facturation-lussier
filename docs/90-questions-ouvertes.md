@@ -54,7 +54,7 @@ Ces questions doivent être résolues avant de figer les exigences détaillées.
 
 ## Projets saisonniers
 
-- Comment fonctionne le contrat de neige avec DM Choquette?
+- Comment fonctionne un contrat direct de déneigement saisonnier?
 - Est-ce facturé à l'heure, au passage, à la sortie ou au forfait?
 - Y a-t-il des feuilles ou preuves différentes?
 - Le même projet revient-il chaque saison?
