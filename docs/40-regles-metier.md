@@ -32,9 +32,15 @@
 - **RM-030** — Les conditions de paiement peuvent varier par client, projet ou facture.
 - **RM-031** — Les chauffeurs remettent normalement à la responsable les bons et billets papier de la semaine le vendredi.
 - **RM-032** — La date de remise d'un bon est distincte de la date à laquelle le travail a été exécuté.
-- **RM-033** — Lors du premier envoi de facture à un nouveau client ou profil de facturation, un spécimen de chèque est joint afin de permettre le dépôt direct.
-- **RM-034** — Le spécimen de chèque est une pièce sensible; sa sélection et son envoi exigent une validation explicite et son stockage doit être privé.
+- **RM-033** — Un spécimen de chèque peut être joint à un courriel de facture afin de permettre le dépôt direct.
+- **RM-034** — Le spécimen de chèque est une pièce sensible; son stockage doit être privé et sa présence doit être clairement visible avant l'envoi.
 - **RM-035** — Le mode de paiement actuellement observé est le dépôt direct, confirmé par un avis reçu par courriel.
 - **RM-036** — L'avis de dépôt contient les numéros des factures payées et sert au rapprochement manuel.
-- **RM-037** — La responsable marque manuellement la facture comme payée et enregistre la date réelle de réception du paiement.
-- **RM-038** — Une facture marquée payée ne doit plus générer de nouvelles relances; l'action doit rester auditée.
+- **RM-037** — La responsable confirme manuellement le paiement et enregistre la date réelle de réception.
+- **RM-038** — Une facture entièrement payée ne doit plus générer de nouvelles relances; l'action doit rester auditée.
+- **RM-039** — Un seul dépôt peut régler plusieurs factures et un même avis de dépôt peut contenir plusieurs numéros de facture.
+- **RM-040** — Un dépôt multi-factures doit être enregistré comme une seule opération de paiement reliée à plusieurs factures par des affectations distinctes.
+- **RM-041** — La politique d'inclusion du spécimen doit être configurable au niveau de l'entreprise, du client ou du profil de facturation.
+- **RM-042** — Même lorsqu'il est ajouté automatiquement, le spécimen doit être visible et retirable dans le composeur avant l'envoi.
+- **RM-043** — Une relance ne joint pas automatiquement le spécimen de chèque, sauf sélection explicite.
+- **RM-044** — La réception d'un avis de dépôt peut préparer un rapprochement, mais ne doit pas modifier automatiquement les statuts dans le MVP.
