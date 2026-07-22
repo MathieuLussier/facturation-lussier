@@ -24,12 +24,13 @@ Le code explique comment l'application fonctionne. Ce dossier explique **pourquo
 - [`30-facturation/workflow.md`](30-facturation/workflow.md) — facturation, impression et envoi;
 - [`30-facturation/surcharge-carburant.md`](30-facturation/surcharge-carburant.md) — calcul hebdomadaire de surcharge;
 - [`30-facturation/paiements.md`](30-facturation/paiements.md) — spécimen de chèque, dépôt direct, avis et paiements multi-factures;
+- [`30-facturation/avis-depot.md`](30-facturation/avis-depot.md) — format observé et parcours **Enregistrer un dépôt**;
 - [`40-regles-metier.md`](40-regles-metier.md) — règles métier numérotées;
 - [`50-modele-domaine.md`](50-modele-domaine.md) — modèle conceptuel proposé;
 - [`60-roadmap.md`](60-roadmap.md) — phases de livraison;
 - [`70-decisions-architecture.md`](70-decisions-architecture.md) — décisions fonctionnelles structurantes;
 - [`80-scenarios-acceptation.md`](80-scenarios-acceptation.md) — scénarios métier généraux et futurs critères de test;
-- [`80-scenarios-paiements.md`](80-scenarios-paiements.md) — paiements multi-factures et instructions bancaires;
+- [`80-scenarios-paiements.md`](80-scenarios-paiements.md) — paiements multi-factures, import d'avis et instructions bancaires;
 - [`90-questions-ouvertes.md`](90-questions-ouvertes.md) — éléments à confirmer.
 
 ## Gouvernance
@@ -45,14 +46,15 @@ Le code explique comment l'application fonctionne. Ce dossier explique **pourquo
 Le dépôt est public. Les exemples de production doivent donc être anonymisés :
 
 - aucun scan de bon signé ou de facture client ne doit être versionné;
+- aucun avis de dépôt réel ne doit être versionné;
 - aucune signature, plaque réelle ou coordonnée personnelle ne doit être versionnée;
 - aucun spécimen de chèque ni renseignement bancaire ne doit être versionné;
-- les noms de personnes, numéros de bons et données de clients sont remplacés par des exemples génériques lorsque nécessaire.
+- les noms de personnes, numéros de bons, montants et données de clients sont remplacés par des exemples génériques lorsque nécessaire.
 
-Les documents opérationnels réels et les instructions bancaires appartiennent au stockage applicatif protégé, pas à Git.
+Les documents opérationnels réels, les avis de dépôt et les instructions bancaires appartiennent au stockage applicatif protégé, pas à Git.
 
 ## Statut
 
-Version initiale issue des entrevues avec la responsable de facturation et un chauffeur-propriétaire, ainsi que de l'analyse d'un vrai SMS de call, de deux bons papier et d'une facture correspondante.
+Version initiale issue des entrevues avec la responsable de facturation et un chauffeur-propriétaire, ainsi que de l'analyse d'exemples réels de SMS, bons papier, facture et avis de dépôt.
 
 Cette version est une base de travail : les points non confirmés demeurent dans `90-questions-ouvertes.md`.
