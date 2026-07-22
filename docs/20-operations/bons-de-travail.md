@@ -71,6 +71,30 @@ Le client détient une copie du bon. Le numéro du bon doit donc apparaître com
 
 Les travaux au voyage ou à la tonne peuvent reposer principalement sur des billets de carrière. Un dossier peut contenir plusieurs billets. Ceux-ci sont des pièces justificatives structurées, distinctes du bon de travail.
 
+## Remise hebdomadaire des documents
+
+Dans le processus actuel, les chauffeurs conservent les bons et billets papier pendant la semaine, puis les remettent à la responsable de facturation le vendredi, à la fin de la semaine de travail.
+
+Flux observé :
+
+1. chaque chauffeur remplit et fait signer son bon après le travail;
+2. il conserve sa copie destinée au bureau avec les billets associés;
+3. le vendredi, il remet l'ensemble des documents de la semaine à la responsable;
+4. la responsable vérifie, classe, numérise et prépare la facturation hebdomadaire.
+
+La date de remise doit pouvoir être enregistrée séparément de la date du travail. Un bon peut donc être exécuté plusieurs jours avant son arrivée au bureau.
+
+Le système futur devrait permettre de suivre, par semaine et par camion :
+
+- les bons attendus;
+- les bons reçus;
+- les billets reçus;
+- les documents manquants;
+- la date et la personne ayant remis les documents;
+- la personne ayant confirmé leur réception.
+
+L'endroit exact où les documents sont conservés avant le vendredi et la méthode actuelle utilisée pour détecter un bon manquant restent à confirmer.
+
 ## Numérisation
 
 Flux cible intermédiaire :
