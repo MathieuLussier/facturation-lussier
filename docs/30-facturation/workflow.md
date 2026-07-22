@@ -167,7 +167,16 @@ Conserver :
 
 Le mode de paiement observé est le dépôt direct.
 
-Un seul dépôt peut régler plusieurs factures et l'avis reçu par courriel contient alors plusieurs numéros de facture.
+Un seul dépôt peut régler plusieurs factures. Dans le format réel analysé, l'avis reçu par courriel contient :
+
+- le montant total du dépôt;
+- plusieurs numéros et dates de facture;
+- un montant par facture;
+- une retenue;
+- un escompte;
+- un montant payé par facture.
+
+L'avis précise aussi que les fonds peuvent prendre jusqu'à 48 heures ouvrables pour être reçus. La date de l'avis et la date réelle d'encaissement doivent rester distinctes.
 
 ### Paiement d'une seule facture
 
@@ -183,28 +192,32 @@ Le bouton existant **Marquer comme payée** reste disponible :
 
 Un parcours **Enregistrer un dépôt** doit permettre :
 
-1. d'entrer la date réelle du dépôt;
-2. d'entrer son montant total lorsqu'il est connu;
-3. de saisir ou d'extraire les numéros mentionnés dans l'avis;
-4. de retrouver et sélectionner les factures;
+1. d'importer le PDF de l'avis ou de sélectionner un avis reçu;
+2. d'extraire le numéro, la date et le montant total de l'avis;
+3. d'extraire les références, dates, montants, retenues, escomptes et montants payés par facture;
+4. de retrouver et sélectionner les factures correspondantes;
 5. d'afficher leur montant et leur solde;
-6. d'affecter le paiement à chacune;
-7. de comparer le montant du dépôt au total affecté;
-8. de confirmer l'ensemble en une seule action.
+6. de comparer chaque ligne aux données internes;
+7. de comparer la somme des montants payés au total annoncé;
+8. de confirmer la date réelle de réception du paiement;
+9. d'affecter le paiement à chaque facture;
+10. de confirmer l'ensemble en une seule action.
 
 Le système enregistre une seule opération de paiement et plusieurs affectations, une par facture. Il ne doit pas fabriquer plusieurs dépôts indépendants pour représenter la même transaction bancaire.
+
+Une retenue, un escompte, une référence inconnue ou un écart de montant bloque la confirmation ordinaire et exige une révision humaine.
 
 Lorsqu'une facture est entièrement réglée, l'application doit :
 
 - enregistrer la date de paiement;
-- conserver le paiement et son affectation;
+- conserver le paiement, la ligne d'avis et son affectation;
 - passer la facture au statut `PAYEE`;
 - arrêter ou annuler les brouillons de relance encore prévus;
 - conserver l'utilisateur et l'horodatage de l'action.
 
-Dans le MVP, la réception d'un courriel ne modifie pas automatiquement le statut d'une facture. Une future extraction peut proposer les factures mentionnées dans l'avis, mais la responsable doit confirmer le rapprochement.
+Dans le MVP, la réception d'un courriel ne modifie pas automatiquement le statut d'une facture. L'extraction propose les données et la responsable confirme le rapprochement.
 
-Voir [`paiements.md`](paiements.md) pour les exigences détaillées.
+Voir [`paiements.md`](paiements.md) et [`avis-depot.md`](avis-depot.md) pour les exigences détaillées.
 
 ## Relances
 
