@@ -23,12 +23,13 @@ Le code explique comment l'application fonctionne. Ce dossier explique **pourquo
 - [`20-operations/bons-de-travail.md`](20-operations/bons-de-travail.md) — opérations terrain, remise hebdomadaire et bons;
 - [`30-facturation/workflow.md`](30-facturation/workflow.md) — facturation, impression et envoi;
 - [`30-facturation/surcharge-carburant.md`](30-facturation/surcharge-carburant.md) — calcul hebdomadaire de surcharge;
-- [`30-facturation/paiements.md`](30-facturation/paiements.md) — spécimen de chèque, dépôt direct et avis de dépôt;
+- [`30-facturation/paiements.md`](30-facturation/paiements.md) — spécimen de chèque, dépôt direct, avis et paiements multi-factures;
 - [`40-regles-metier.md`](40-regles-metier.md) — règles métier numérotées;
 - [`50-modele-domaine.md`](50-modele-domaine.md) — modèle conceptuel proposé;
 - [`60-roadmap.md`](60-roadmap.md) — phases de livraison;
 - [`70-decisions-architecture.md`](70-decisions-architecture.md) — décisions fonctionnelles structurantes;
-- [`80-scenarios-acceptation.md`](80-scenarios-acceptation.md) — scénarios métier et futurs critères de test;
+- [`80-scenarios-acceptation.md`](80-scenarios-acceptation.md) — scénarios métier généraux et futurs critères de test;
+- [`80-scenarios-paiements.md`](80-scenarios-paiements.md) — paiements multi-factures et instructions bancaires;
 - [`90-questions-ouvertes.md`](90-questions-ouvertes.md) — éléments à confirmer.
 
 ## Gouvernance
