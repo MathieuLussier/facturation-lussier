@@ -138,4 +138,47 @@ Les valeurs incertaines doivent être validées avant de marquer le bon comme v�
 
 **alors** la ligne de facture utilise l'unité appropriée et reste traçable jusqu'aux billets concernés.
 
-Le format détaillé de ces scénarios demeure à compléter pendant la découverte.
+## SC-014 — Remettre les bons de la semaine
+
+**Étant donné** qu'un chauffeur a conservé ses bons et billets papier pendant la semaine,
+
+**quand** il les remet à la responsable le vendredi,
+
+**alors** le système doit pouvoir enregistrer :
+
+- le chauffeur et le camion;
+- la semaine concernée;
+- la date de remise;
+- les bons et billets reçus;
+- les documents encore manquants;
+- la personne ayant confirmé la réception.
+
+La date de remise ne doit pas remplacer la date réelle du travail.
+
+## SC-015 — Envoyer une première facture avec les instructions bancaires
+
+**Étant donné** qu'aucun envoi d'instructions bancaires n'est enregistré pour le profil de facturation,
+
+**quand** la responsable prépare la première facture,
+
+**alors** l'application propose le spécimen de chèque comme pièce jointe sensible sans l'envoyer automatiquement.
+
+La responsable doit le sélectionner explicitement. Après l'envoi, l'historique conserve le destinataire, la date, l'utilisateur et la version du document, sans exposer les coordonnées bancaires dans les journaux.
+
+## SC-016 — Enregistrer un paiement annoncé par courriel
+
+**Étant donné** qu'un avis de dépôt reçu par courriel mentionne le numéro d'une facture,
+
+**quand** la responsable ouvre cette facture et clique sur **Marquer comme payée**,
+
+**alors** elle peut saisir la date réelle de réception et confirmer le mode `DEPOT_DIRECT`.
+
+Après confirmation, l'application :
+
+- passe la facture au statut `PAYEE`;
+- conserve l'utilisateur et l'horodatage;
+- permet d'ajouter une référence ou une note;
+- arrête les relances prévues;
+- n'effectue aucune modification automatique uniquement parce qu'un courriel a été reçu.
+
+Le format détaillé des scénarios de paiements partiels ou de dépôts couvrant plusieurs factures demeure à compléter pendant la découverte.
