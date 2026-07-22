@@ -6,8 +6,8 @@ Ces questions doivent être résolues avant de figer les exigences détaillées.
 
 Confirmé :
 
-- le mode observé est le dépôt direct;
-- une information de dépôt est généralement reçue après le paiement;
+- les modes observés incluent le dépôt direct et le virement Interac;
+- une information de dépôt est généralement reçue par courriel;
 - tous les clients ne fournissent pas un PDF;
 - le parcours **Enregistrer un dépôt** doit donc fonctionner avec ou sans fichier;
 - une source peut être un PDF, du texte de courriel, une image, une autre pièce ou une saisie manuelle;
@@ -17,7 +17,7 @@ Confirmé :
 - le format PDF réel analysé affiche le montant total du dépôt;
 - il affiche également un montant pour chaque facture;
 - chaque ligne contient une référence et une date de facture, un montant, une retenue, un escompte et un montant payé;
-- dans l'exemple analysé, les retenues et les escomptes valent zéro et chaque facture est payée intégralement;
+- dans l'exemple PDF analysé, les retenues et les escomptes valent zéro et chaque facture est payée intégralement;
 - selon l'expérience actuelle, les retenues et escomptes observés ont toujours été à zéro;
 - un client peut toutefois effectuer un paiement partiel sur une facture;
 - la date de l'avis et la date réelle d'encaissement doivent rester distinctes lorsqu'un avis existe;
@@ -28,8 +28,6 @@ Confirmé :
 
 À confirmer :
 
-- quels formats précis sont utilisés par les clients qui ne fournissent pas de PDF;
-- ces clients donnent-ils le montant total et un montant par facture dans le texte du courriel;
 - la date réelle utilisée vient-elle du relevé bancaire, du courriel ou d'une autre confirmation;
 - après un paiement partiel, quand faut-il relancer le solde restant;
 - quel texte utiliser pour une relance après paiement partiel;
@@ -38,6 +36,32 @@ Confirmé :
 - comment gérer un dépôt annoncé qui n'apparaît pas après le délai indiqué;
 - faut-il conserver le courriel complet, son texte, ses pièces jointes ou seulement une référence dans l'application;
 - les retenues ou escomptes peuvent-ils un jour être réellement utilisés avec une valeur non nulle.
+
+## Virements Interac
+
+Confirmé à partir d'un exemple réel reçu directement dans le courriel :
+
+- aucun PDF séparé n'est nécessaire;
+- le courriel affiche le montant annoncé;
+- il identifie l'expéditeur;
+- il contient une date d'envoi;
+- il contient un numéro de référence;
+- il contient une date d'expiration;
+- son message libre peut contenir une référence de facture;
+- la référence de facture peut être abrégée et omettre le préfixe officiel `FAC/`;
+- le message observé demande de choisir une institution financière pour déposer les fonds;
+- la réception du courriel ne doit donc pas être confondue avec l'encaissement réel;
+- la source doit pouvoir rester en état `A_ENCAISSER` avant la création ou la finalisation du paiement;
+- le dépôt bancaire demeure extérieur à Facturation Lussier.
+
+À confirmer :
+
+- tous les virements Interac sont-ils déposés manuellement ou certains utilisent-ils le dépôt automatique;
+- à quel moment la responsable considère-t-elle un Interac comme reçu : après l'action de dépôt ou lorsqu'il apparaît au compte;
+- un virement Interac peut-il couvrir plusieurs factures;
+- que fait la responsable lorsqu'un virement expire;
+- le courriel complet doit-il être conservé ou une copie structurée avec sa référence suffit-elle;
+- faut-il afficher une liste distincte **Virements à encaisser** sur le tableau de bord.
 
 ## Spécimen de chèque
 
@@ -119,4 +143,5 @@ Confirmé :
 - Qui peut modifier un tarif?
 - Qui peut finaliser, annuler ou marquer payée une facture?
 - Qui peut enregistrer, corriger ou annuler un paiement?
+- Qui peut consulter les courriels, avis et références Interac?
 - Quelle durée de conservation est requise pour les documents?
