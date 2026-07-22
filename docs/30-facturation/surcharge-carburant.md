@@ -45,10 +45,10 @@ Lorsqu'une surcharge est appliquée, elle doit être visible sur la facture. La 
 - les heures;
 - le montant calculé.
 
-Exemple de ligne :
+Exemple anonymisé de ligne :
 
 ```text
-Service de 12 roues — bon 131493
+Service de 12 roues — bon BON-100001
 Tarif de base 140,00 $/h + surcharge carburant 6,00 %
 9,50 h × 148,40 $/h = 1 409,80 $
 ```
