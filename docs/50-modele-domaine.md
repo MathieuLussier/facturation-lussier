@@ -172,28 +172,73 @@ Cette entité enregistre la preuve de transmission sans recopier les coordonnée
 
 ### DepositNotice
 
-Représente l'avis de dépôt reçu par courriel :
+Représente l'avis de dépôt reçu par courriel ou importé comme PDF :
 
-- date et heure de réception;
+- référence ou numéro de l'avis;
+- date de l'avis (`noticeDate`);
+- date et heure de réception (`receivedAt`);
 - expéditeur;
-- objet;
+- payeur;
+- objet du courriel;
 - référence du message;
-- numéros de factures mentionnés;
-- montant total, lorsqu'il est fourni;
-- détail par facture, lorsqu'il est fourni;
-- pièce jointe éventuelle;
+- montant total annoncé;
+- nombre de factures annoncé;
+- fichier PDF source;
 - statut de traitement;
+- résultat global d'extraction;
 - utilisateur ayant validé le rapprochement;
 - paiement créé après validation, le cas échéant.
 
+Les identifiants de compte ou de vendeur présents sur le document doivent être chiffrés ou masqués et ne doivent pas apparaître en clair dans les journaux.
+
+Statuts suggérés :
+
+- `RECU`;
+- `EXTRAIT`;
+- `A_VALIDER`;
+- `ECART_A_TRAITER`;
+- `RAPPROCHE`;
+- `ANNULE`.
+
 Le contenu brut et les pièces doivent être stockés de façon privée. Dans le MVP, l'avis sert de preuve ou d'aide au rapprochement; il ne modifie pas automatiquement les factures.
+
+### DepositNoticeLine
+
+Représente une ligne de facture extraite de l'avis :
+
+- avis de dépôt;
+- position de la ligne;
+- référence brute de facture;
+- date de facture indiquée;
+- montant de facture indiqué;
+- retenue indiquée;
+- escompte indiqué;
+- montant payé indiqué;
+- facture reconnue facultative;
+- statut de correspondance;
+- confiance d'extraction;
+- valeurs brutes extraites;
+- corrections manuelles;
+- utilisateur ayant validé la ligne.
+
+Statuts suggérés :
+
+- `NON_TRAITEE`;
+- `CORRESPONDANCE_PROPOSEE`;
+- `CORRESPONDANCE_CONFIRMEE`;
+- `REFERENCE_INCONNUE`;
+- `FACTURE_DEJA_PAYEE`;
+- `ECART_DE_MONTANT`;
+- `A_REVISER`.
+
+Une ligne conserve toujours les valeurs présentes sur l'avis, même si elles diffèrent des données internes.
 
 ### Payment
 
 Représente une seule opération financière reçue. Un paiement peut régler une ou plusieurs factures.
 
-- date réelle de réception;
-- montant total, lorsqu'il est connu;
+- date réelle de réception (`paidAt`);
+- montant total;
 - mode de paiement;
 - référence;
 - avis de dépôt facultatif;
@@ -203,11 +248,14 @@ Représente une seule opération financière reçue. Un paiement peut régler un
 - date de création;
 - note.
 
+La date réelle de réception est distincte de la date de l'avis et de la date de réception du courriel.
+
 Statuts suggérés :
 
 - `BROUILLON`;
 - `A_RAPPROCHER`;
 - `RAPPROCHE`;
+- `ECART_A_TRAITER`;
 - `ANNULE`;
 - `CORRIGE`.
 
@@ -217,7 +265,10 @@ Relie une opération de paiement à une facture précise :
 
 - paiement;
 - facture;
+- ligne d'avis source facultative;
 - montant appliqué;
+- retenue observée facultative;
+- escompte observé facultatif;
 - solde avant affectation;
 - solde après affectation;
 - date et heure;
@@ -253,8 +304,11 @@ InvoiceLine -> WorkOrder/QuarryTicket sources
 Invoice -> InvoiceDelivery[]
 Invoice -> PaymentReminder[]
 BillingProfile/Client -> BankingInstructionDelivery[]
+DepositNotice -> DepositNoticeLine[]
 DepositNotice -> Payment? (après validation)
+DepositNoticeLine -> Invoice? (correspondance proposée ou confirmée)
 Payment -> PaymentAllocation[]
+PaymentAllocation -> DepositNoticeLine?
 PaymentAllocation -> Invoice
 Invoice -> PaymentAllocation[]
 ```
@@ -315,7 +369,11 @@ Les champs existants `paidAt` et `paymentMethod` peuvent être conservés comme 
 
 1. Un dépôt reçu est enregistré une seule fois, même s'il règle plusieurs factures.
 2. Chaque facture réglée par ce dépôt possède sa propre affectation.
-3. La somme des affectations ne doit pas dépasser le montant du paiement lorsqu'il est connu, sauf correction explicite et auditée.
-4. Une facture devient `PAYEE` seulement lorsque son solde atteint zéro.
-5. Une annulation ou correction de paiement ne supprime pas l'historique original.
-6. La réception d'un avis de dépôt ne crée aucune affectation définitive sans validation humaine.
+3. La somme des montants payés provenant des lignes d'avis est comparée au total annoncé.
+4. La somme des affectations ne doit pas dépasser le montant du paiement lorsqu'il est connu, sauf correction explicite et auditée.
+5. Une facture devient `PAYEE` seulement lorsque son solde atteint zéro.
+6. La date de l'avis, la réception du courriel, la réception réelle des fonds et l'enregistrement applicatif sont des événements distincts.
+7. Une retenue, un escompte ou un écart non nul bloque la confirmation automatique et exige une décision humaine.
+8. Une annulation ou correction de paiement ne supprime pas l'historique original.
+9. La réception d'un avis de dépôt ne crée aucune affectation définitive sans validation humaine.
+10. Les valeurs brutes du document source sont conservées même après correction ou normalisation.
