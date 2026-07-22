@@ -2,6 +2,8 @@
 
 Cette documentation décrit le métier réel de Transport Lussier et Fils et sert de référence pour la conception du produit.
 
+Le code explique comment l'application fonctionne. Ce dossier explique **pourquoi** elle doit fonctionner ainsi, quelles règles métier elle doit respecter et quelles décisions restent à valider.
+
 ## Principes
 
 - documenter le métier avant les écrans;
@@ -9,7 +11,8 @@ Cette documentation décrit le métier réel de Transport Lussier et Fils et ser
 - éviter la ressaisie;
 - préserver les preuves terrain et l'historique;
 - soutenir un flux hybride numérique et papier;
-- ne pas remplacer immédiatement les habitudes qui fonctionnent.
+- ne pas remplacer immédiatement les habitudes qui fonctionnent;
+- distinguer clairement une règle confirmée d'une hypothèse ou d'un point ouvert.
 
 ## Structure
 
@@ -25,6 +28,26 @@ Cette documentation décrit le métier réel de Transport Lussier et Fils et ser
 - [`60-roadmap.md`](60-roadmap.md) — phases de livraison;
 - [`90-questions-ouvertes.md`](90-questions-ouvertes.md) — éléments à confirmer.
 
+## Gouvernance
+
+1. Une règle métier confirmée reçoit un identifiant stable `RM-XXX`.
+2. Une décision structurante doit être documentée avant son implémentation.
+3. Une hypothèse ne doit pas être transformée silencieusement en exigence.
+4. Les documents doivent évoluer dans la même pull request que le code concerné.
+5. Une facture finalisée et les pièces qui la justifient doivent rester traçables.
+
+## Confidentialité
+
+Le dépôt est public. Les exemples de production doivent donc être anonymisés :
+
+- aucun scan de bon signé ou de facture client ne doit être versionné;
+- aucune signature, plaque réelle ou coordonnée personnelle ne doit être versionnée;
+- les noms de personnes, numéros de bons et données de clients sont remplacés par des exemples génériques lorsque nécessaire.
+
+Les documents opérationnels réels appartiennent au stockage applicatif protégé, pas à Git.
+
 ## Statut
 
 Version initiale issue des entrevues avec la responsable de facturation et un chauffeur-propriétaire, ainsi que de l'analyse d'un vrai SMS de call, de deux bons papier et d'une facture correspondante.
+
+Cette version est une base de travail : les points non confirmés demeurent dans `90-questions-ouvertes.md`.
