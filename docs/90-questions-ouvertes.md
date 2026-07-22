@@ -11,16 +11,25 @@ Confirmé :
 - le courriel indique les numéros des factures payées;
 - un même dépôt peut régler plusieurs factures;
 - plusieurs numéros de facture figurent alors dans le même avis;
+- le format réel analysé affiche le montant total du dépôt;
+- il affiche également un montant pour chaque facture;
+- chaque ligne contient une référence et une date de facture, un montant, une retenue, un escompte et un montant payé;
+- le format analysé totalise quatre factures dans un seul dépôt;
+- dans cet exemple, les retenues et les escomptes valent zéro et chaque facture est payée intégralement;
+- l'avis précise que les fonds peuvent prendre jusqu'à 48 heures ouvrables pour être reçus;
+- la date de l'avis et la date réelle d'encaissement doivent donc rester distinctes;
 - la responsable utilise déjà un bouton pour marquer une facture payée et saisir la date réelle du paiement;
 - le système cible doit conserver un paiement unique et ses affectations aux différentes factures.
 
 À confirmer :
 
-- les paiements partiels existent-ils;
-- l'avis indique-t-il toujours le montant total du dépôt;
-- indique-t-il un montant pour chaque facture ou seulement les numéros;
-- une retenue contractuelle peut-elle s'appliquer;
+- une retenue est-elle parfois supérieure à zéro;
+- un escompte est-il parfois appliqué;
+- les paiements partiels existent-ils indépendamment d'une retenue ou d'un escompte;
+- la date réelle utilisée vient-elle du relevé bancaire, de l'avis ou d'une autre confirmation;
+- le PDF joint possède-t-il un format stable selon chaque client;
 - comment gérer un dépôt en trop, insuffisant, annulé ou attribué à la mauvaise facture;
+- comment gérer un dépôt annoncé qui n'apparaît pas après le délai indiqué;
 - faut-il conserver le courriel complet, sa pièce jointe ou seulement sa référence dans l'application.
 
 ## Spécimen de chèque
