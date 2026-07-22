@@ -4,13 +4,13 @@
 
 Chaque camion remplit son propre bon, même lorsque plusieurs camions travaillent sur le même call et le même chantier.
 
-Chaque camion possède son propre carnet papier. Le numéro seul n'est donc pas garanti unique dans tout le système. La référence fonctionnelle doit inclure au minimum la plaque et le numéro du bon.
+Chaque camion possède son propre carnet papier. Le numéro seul n'est donc pas garanti unique dans tout le système. La référence fonctionnelle doit inclure au minimum la plaque ou l'identifiant du camion et le numéro du bon.
 
-Exemple :
+Exemple anonymisé :
 
 ```text
-L 874072 / 131493
-L 998726 / 748985
+CAMION-A / BON-100001
+CAMION-B / BON-200001
 ```
 
 ## Informations minimales
