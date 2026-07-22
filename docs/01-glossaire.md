@@ -26,7 +26,7 @@ Association entre un call, un camion et un chauffeur. Un call demandant deux cam
 
 ## Chauffeur-propriétaire
 
-Conducteur utilisant son propre camion. Dans le contexte actuel, Mathieu et Michel ont chacun leur camion et leur propre carnet de bons.
+Conducteur utilisant son propre camion. Dans le contexte actuel, deux chauffeurs-propriétaires réguliers disposent chacun de leur camion et de leur propre carnet de bons.
 
 ## Bon de travail
 
