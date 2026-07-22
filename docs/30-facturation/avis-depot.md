@@ -100,14 +100,14 @@ Avant confirmation :
 6. les renseignements bancaires doivent être masqués;
 7. le document source doit rester attaché au paiement dans un stockage privé.
 
-Un écart n'est jamais corrigé silencieusement. Il produit un état `ECART_A_RESoudre` ou équivalent et exige une décision auditée.
+Un écart n'est jamais corrigé silencieusement. Il produit un état `ECART_A_TRAITER` ou équivalent et exige une décision auditée.
 
 ## États suggérés
 
 - `RECU`
 - `EXTRAIT`
 - `A_VALIDER`
-- `ECART_A_RESoudre`
+- `ECART_A_TRAITER`
 - `RAPPROCHE`
 - `ANNULE`
 
