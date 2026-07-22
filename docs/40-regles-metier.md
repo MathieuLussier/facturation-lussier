@@ -30,3 +30,11 @@
 - **RM-028** — Le système doit soutenir l'impression d'un dossier physique complet.
 - **RM-029** — Les courriels de facture et de relance sont préparés automatiquement, mais envoyés après validation humaine.
 - **RM-030** — Les conditions de paiement peuvent varier par client, projet ou facture.
+- **RM-031** — Les chauffeurs remettent normalement à la responsable les bons et billets papier de la semaine le vendredi.
+- **RM-032** — La date de remise d'un bon est distincte de la date à laquelle le travail a été exécuté.
+- **RM-033** — Lors du premier envoi de facture à un nouveau client ou profil de facturation, un spécimen de chèque est joint afin de permettre le dépôt direct.
+- **RM-034** — Le spécimen de chèque est une pièce sensible; sa sélection et son envoi exigent une validation explicite et son stockage doit être privé.
+- **RM-035** — Le mode de paiement actuellement observé est le dépôt direct, confirmé par un avis reçu par courriel.
+- **RM-036** — L'avis de dépôt contient les numéros des factures payées et sert au rapprochement manuel.
+- **RM-037** — La responsable marque manuellement la facture comme payée et enregistre la date réelle de réception du paiement.
+- **RM-038** — Une facture marquée payée ne doit plus générer de nouvelles relances; l'action doit rester auditée.
