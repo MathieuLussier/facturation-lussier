@@ -7,30 +7,37 @@ Ces questions doivent être résolues avant de figer les exigences détaillées.
 Confirmé :
 
 - le mode observé est le dépôt direct;
-- un avis de dépôt est reçu par courriel;
-- le courriel indique les numéros des factures payées;
+- une information de dépôt est généralement reçue après le paiement;
+- tous les clients ne fournissent pas un PDF;
+- le parcours **Enregistrer un dépôt** doit donc fonctionner avec ou sans fichier;
+- une source peut être un PDF, du texte de courriel, une image, une autre pièce ou une saisie manuelle;
+- l'information reçue peut indiquer les numéros des factures payées;
 - un même dépôt peut régler plusieurs factures;
-- plusieurs numéros de facture figurent alors dans le même avis;
-- le format réel analysé affiche le montant total du dépôt;
+- plusieurs numéros de facture peuvent figurer dans la même information;
+- le format PDF réel analysé affiche le montant total du dépôt;
 - il affiche également un montant pour chaque facture;
 - chaque ligne contient une référence et une date de facture, un montant, une retenue, un escompte et un montant payé;
-- le format analysé totalise quatre factures dans un seul dépôt;
-- dans cet exemple, les retenues et les escomptes valent zéro et chaque facture est payée intégralement;
-- l'avis précise que les fonds peuvent prendre jusqu'à 48 heures ouvrables pour être reçus;
-- la date de l'avis et la date réelle d'encaissement doivent donc rester distinctes;
+- dans l'exemple analysé, les retenues et les escomptes valent zéro et chaque facture est payée intégralement;
+- selon l'expérience actuelle, les retenues et escomptes observés ont toujours été à zéro;
+- un client peut toutefois effectuer un paiement partiel sur une facture;
+- la date de l'avis et la date réelle d'encaissement doivent rester distinctes lorsqu'un avis existe;
 - la responsable utilise déjà un bouton pour marquer une facture payée et saisir la date réelle du paiement;
-- le système cible doit conserver un paiement unique et ses affectations aux différentes factures.
+- le système cible doit conserver un paiement unique et ses affectations aux différentes factures;
+- une facture ne doit devenir `PAYEE` que lorsque son solde atteint zéro;
+- une même facture peut recevoir plusieurs paiements successifs.
 
 À confirmer :
 
-- une retenue est-elle parfois supérieure à zéro;
-- un escompte est-il parfois appliqué;
-- les paiements partiels existent-ils indépendamment d'une retenue ou d'un escompte;
-- la date réelle utilisée vient-elle du relevé bancaire, de l'avis ou d'une autre confirmation;
-- le PDF joint possède-t-il un format stable selon chaque client;
-- comment gérer un dépôt en trop, insuffisant, annulé ou attribué à la mauvaise facture;
+- quels formats précis sont utilisés par les clients qui ne fournissent pas de PDF;
+- ces clients donnent-ils le montant total et un montant par facture dans le texte du courriel;
+- la date réelle utilisée vient-elle du relevé bancaire, du courriel ou d'une autre confirmation;
+- après un paiement partiel, quand faut-il relancer le solde restant;
+- quel texte utiliser pour une relance après paiement partiel;
+- faut-il permettre à la responsable de reporter manuellement la prochaine relance;
+- comment gérer un dépôt en trop, annulé ou attribué à la mauvaise facture;
 - comment gérer un dépôt annoncé qui n'apparaît pas après le délai indiqué;
-- faut-il conserver le courriel complet, sa pièce jointe ou seulement sa référence dans l'application.
+- faut-il conserver le courriel complet, son texte, ses pièces jointes ou seulement une référence dans l'application;
+- les retenues ou escomptes peuvent-ils un jour être réellement utilisés avec une valeur non nulle.
 
 ## Spécimen de chèque
 
@@ -111,4 +118,5 @@ Confirmé :
 - Peuvent-ils corriger un bon après signature?
 - Qui peut modifier un tarif?
 - Qui peut finaliser, annuler ou marquer payée une facture?
+- Qui peut enregistrer, corriger ou annuler un paiement?
 - Quelle durée de conservation est requise pour les documents?
