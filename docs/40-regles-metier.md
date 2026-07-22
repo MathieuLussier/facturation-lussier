@@ -59,3 +59,12 @@
 - **RM-057** — Une affectation inférieure au solde est un paiement partiel valide et ne doit pas être traitée comme une erreur de rapprochement.
 - **RM-058** — Les retenues et escomptes observés ont toujours été à zéro; le système conserve néanmoins ces champs et exige une révision si une valeur non nulle apparaît.
 - **RM-059** — Les relances ne sont annulées automatiquement que pour une facture dont le solde atteint zéro; le traitement du solde partiel doit rester visible et contrôlable.
+- **RM-060** — Certains clients paient par virement Interac et les renseignements peuvent apparaître directement dans le corps du courriel, sans PDF.
+- **RM-061** — Un virement Interac doit être distingué d'un dépôt direct par le type de source `INTERAC_EMAIL` et le mode de paiement `VIREMENT_INTERAC`.
+- **RM-062** — La réception d'un courriel Interac annonce des fonds, mais ne prouve pas leur encaissement; aucune facture ne devient payée avant confirmation humaine du dépôt.
+- **RM-063** — Une source Interac doit pouvoir conserver l'expéditeur, le montant, la devise, la date d'envoi, la référence, l'expiration, le message et les références de facture proposées.
+- **RM-064** — Une source Interac non encaissée doit être représentée par un état `A_ENCAISSER` ou équivalent; une source expirée ou annulée ne crée aucun paiement valide.
+- **RM-065** — Une référence de facture abrégée dans un message, par exemple sans le préfixe `FAC/`, peut être normalisée pour la recherche, mais la correspondance reste une proposition à confirmer.
+- **RM-066** — Facturation Lussier ne doit jamais ouvrir automatiquement un lien bancaire, demander des identifiants bancaires ni réaliser le dépôt Interac.
+- **RM-067** — La référence du virement, l'expéditeur et le montant doivent servir à détecter un doublon avant de créer une seconde transaction.
+- **RM-068** — La date de réception du courriel, la date d'envoi, l'expiration, la date de dépôt et la date comptable `paidAt` sont des événements distincts et ne doivent pas s'écraser mutuellement.
