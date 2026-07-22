@@ -1,14 +1,25 @@
 # Questions ouvertes
 
-Ces questions doivent être résolues avant de figer les exigences détaillées.
+Ces questions doivent être résolues avant de figer les exigences détaillées. Les faits confirmés sont rappelés pour éviter de les redemander.
 
 ## Paiements
 
-- Quels modes sont réellement utilisés : chèque, virement, dépôt direct, comptant?
-- Les paiements partiels existent-ils?
-- Comment la responsable apprend-elle qu'un paiement est reçu?
-- Comment associe-t-elle un paiement à une facture?
-- Une retenue contractuelle peut-elle s'appliquer?
+Confirmé :
+
+- lors du premier envoi de facture, un spécimen de chèque est joint;
+- le mode observé est le dépôt direct;
+- un avis de dépôt est reçu par courriel;
+- le courriel indique les numéros des factures payées;
+- la responsable utilise le bouton existant pour marquer la facture payée et saisir la date réelle du paiement.
+
+À confirmer :
+
+- un même dépôt peut-il couvrir plusieurs factures;
+- les paiements partiels existent-ils;
+- l'avis indique-t-il toujours le montant total du dépôt;
+- une retenue contractuelle peut-elle s'appliquer;
+- comment gérer un dépôt en trop, insuffisant, annulé ou attribué à la mauvaise facture;
+- faut-il conserver le courriel ou seulement sa référence dans l'application.
 
 ## Courriels
 
@@ -20,10 +31,17 @@ Ces questions doivent être résolues avant de figer les exigences détaillées.
 
 ## Remise des bons
 
-- À quel moment les chauffeurs remettent-ils les bons?
-- Peut-il s'écouler plusieurs jours?
-- Où les documents sont-ils entreposés avant numérisation?
-- Qui vérifie qu'aucun bon ne manque?
+Confirmé :
+
+- les chauffeurs remettent les bons et billets papier à la responsable le vendredi, à la fin de la semaine.
+
+À confirmer :
+
+- où les documents sont-ils conservés par chaque chauffeur avant le vendredi;
+- qui vérifie qu'aucun bon ne manque;
+- que se passe-t-il lorsqu'un bon ne peut pas être remis le vendredi;
+- la facturation commence-t-elle le vendredi, la fin de semaine ou la semaine suivante;
+- faut-il enregistrer un lot de remise par chauffeur et par semaine.
 
 ## Exceptions terrain
 
