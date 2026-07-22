@@ -6,22 +6,37 @@ Le mode de paiement observé est le dépôt direct dans le compte bancaire de Tr
 
 Lors de l'envoi d'une facture, un spécimen de chèque peut être joint afin de transmettre les coordonnées nécessaires au dépôt direct. Historiquement, ce document est surtout utilisé au premier contact avec un nouveau client ou un nouveau profil de facturation.
 
-Après le paiement, un avis de dépôt est reçu par courriel. Un seul dépôt peut régler plusieurs factures et le même avis contient alors plusieurs numéros de facture.
+Après le paiement, la responsable reçoit une information de dépôt. Un seul dépôt peut régler plusieurs factures. L'information reçue peut contenir le montant total ainsi qu'un montant attribué à chaque facture.
 
-L'exemple réel analysé confirme que l'avis peut contenir :
+Un format réel analysé est un PDF détaillé contenant une ligne par facture, une retenue, un escompte et le montant payé. Ce format n'est toutefois pas universel : tous les clients ne fournissent pas un PDF. Le parcours **Enregistrer un dépôt** ne doit donc jamais dépendre de la présence d'un fichier.
 
-- le montant total annoncé du dépôt;
-- une ligne par facture;
-- la référence et la date de chaque facture;
-- le montant de chaque facture;
-- une colonne de retenue;
-- une colonne d'escompte;
-- le montant payé par facture;
-- le total du nombre de factures et des montants.
+Il est également confirmé qu'un client peut payer seulement une partie d'une facture.
 
-La responsable utilise ensuite la fonction déjà présente dans l'application pour marquer les factures comme payées et inscrire la date réelle de réception du paiement.
+Voir [`avis-depot.md`](avis-depot.md) pour le format observé et les différents modes de saisie.
 
-Voir [`avis-depot.md`](avis-depot.md) pour le format observé et les exigences d'importation.
+## Principe : séparer le paiement de son avis
+
+Le paiement reçu est l'événement financier principal. L'avis, le courriel, le PDF ou la note manuelle servent de preuve ou d'aide au rapprochement.
+
+Ainsi :
+
+- un `Payment` peut exister sans PDF;
+- un avis ou document source peut être lié au paiement lorsqu'il existe;
+- l'absence de document ne doit pas empêcher l'enregistrement d'un dépôt;
+- toute saisie manuelle doit conserver l'utilisateur, la date et une note ou une référence lorsque disponible;
+- aucune source reçue ne modifie automatiquement les factures sans validation humaine.
+
+## Sources possibles d'un dépôt
+
+Le système doit soutenir au minimum :
+
+- `PDF_ATTACHMENT` — avis PDF joint à un courriel;
+- `EMAIL_BODY` — renseignements directement écrits dans le corps du courriel;
+- `IMAGE_ATTACHMENT` — capture, image ou document numérisé;
+- `MANUAL_ENTRY` — saisie manuelle à partir d'une information reçue autrement;
+- `OTHER` — autre source avec note descriptive.
+
+La source est facultative pour le paiement, mais son type doit être enregistré lorsqu'elle existe.
 
 ## Envoi du spécimen de chèque
 
@@ -51,89 +66,125 @@ Pour le fonctionnement décrit, la politique la plus simple serait :
 - spécimen non coché sur les **relances**;
 - possibilité de remplacer ce comportement pour un client ou un projet particulier.
 
-Cette approche évite les oublis tout en gardant le document visible et révocable avant l'envoi.
+Cette approche évite les oublis tout en gardant le document visible et retirable avant l'envoi.
 
-## Date de l'avis et date réelle du paiement
+## Dates à distinguer
 
-L'avis analysé précise que le dépôt peut ne pas être reçu avant un délai pouvant atteindre 48 heures ouvrables.
+Lorsqu'un avis existe, le système peut devoir distinguer :
 
-Le système doit donc distinguer :
+- `noticeDate` — date inscrite sur l'avis;
+- `receivedAt` — date et heure de réception du courriel, du fichier ou de l'information;
+- `paidAt` — date réelle où les fonds sont considérés reçus;
+- `recordedAt` — date et heure où la responsable enregistre le paiement.
 
-- la date imprimée sur l'avis;
-- la date de réception du courriel;
-- la date réelle où les fonds sont considérés reçus;
-- la date où la responsable enregistre le paiement.
+La date de l'avis ne remplit jamais automatiquement `paidAt`. La responsable confirme la date réelle avant de finaliser le rapprochement.
 
-La date de l'avis ne remplit jamais automatiquement `paidAt`. La responsable confirme la date réelle de réception avant de finaliser le rapprochement.
+## Parcours cible — Enregistrer un dépôt
 
-## Réception d'un dépôt couvrant plusieurs factures
+Le parcours doit fonctionner avec ou sans document source :
 
-Flux actuel et cible :
+1. La responsable ouvre **Enregistrer un dépôt**.
+2. Elle choisit éventuellement une source : PDF, courriel, image ou autre.
+3. Si aucune source structurée n'existe, elle choisit **Saisir manuellement**.
+4. Elle inscrit ou confirme la date réelle du dépôt.
+5. Elle inscrit ou confirme le montant total.
+6. Elle ajoute les références de factures et les montants payés pour chacune.
+7. L'application recherche les factures correspondantes et affiche leur solde.
+8. Elle compare le total des affectations au montant du dépôt.
+9. La responsable corrige ou confirme les données.
+10. L'application crée un seul `Payment` et une `PaymentAllocation` par facture.
+11. Chaque facture est mise à jour selon son nouveau solde.
 
-1. Le client effectue un dépôt direct.
-2. Un avis de dépôt arrive par courriel.
-3. L'avis indique plusieurs numéros de facture lorsqu'un seul dépôt en règle plusieurs.
-4. L'avis indique le montant total du dépôt et un montant par facture dans le format observé.
-5. La responsable ouvre **Enregistrer un dépôt**.
-6. Elle importe le PDF ou sélectionne l'avis reçu.
-7. L'application propose les données extraites et recherche les factures correspondantes.
-8. La responsable confirme les factures, les montants et la date réelle de réception.
-9. Elle enregistre une seule opération de paiement.
-10. Une affectation distincte relie cette opération à chaque facture.
-11. Les factures entièrement réglées passent au statut `PAYEE`.
-12. Les relances encore prévues pour ces factures sont arrêtées.
+Le bouton existant **Marquer comme payée** reste utile pour une seule facture réglée intégralement. **Enregistrer un dépôt** devient le parcours général pour :
 
-Le bouton existant **Marquer comme payée** reste utile pour un paiement simple portant sur une seule facture. Le parcours **Enregistrer un dépôt** traite plusieurs factures en une seule opération.
+- plusieurs factures;
+- un paiement partiel;
+- une preuve non structurée;
+- une saisie sans PDF;
+- un écart nécessitant une vérification.
 
-## Rapprochement proposé
+## Rapprochement assisté
 
-Lorsqu'un avis de dépôt est traité, l'application peut :
+Lorsqu'une source structurée est disponible, l'application peut proposer :
 
-- extraire ou permettre de saisir le numéro et la date de l'avis;
-- extraire le montant total;
-- extraire les références et dates de factures;
-- extraire, pour chaque facture, le montant, la retenue, l'escompte et le montant payé;
-- rechercher toutes les factures correspondantes;
-- afficher leur client, leur montant et leur solde;
-- comparer les données de l'avis aux données internes;
-- proposer de sélectionner toutes les factures reconnues ensemble;
-- comparer la somme des montants payés au montant total du dépôt;
-- signaler une référence inconnue, annulée ou déjà payée;
-- signaler une retenue, un escompte ou un écart non nul;
-- demander une confirmation humaine avant toute modification.
+- la référence et la date de l'avis;
+- le montant total;
+- les références et dates de factures;
+- pour chaque facture, le montant, la retenue, l'escompte et le montant payé;
+- les factures correspondantes dans l'application;
+- l'écart entre le total annoncé et les affectations.
 
-La réception d'un courriel ne doit jamais, à elle seule, marquer automatiquement les factures comme payées dans le MVP.
+Lorsqu'aucun PDF n'est disponible, la même grille de rapprochement est remplie manuellement ou à partir du texte du courriel.
+
+Dans tous les cas :
+
+- une valeur extraite reste une proposition;
+- une référence inconnue, annulée ou déjà payée est signalée;
+- la responsable confirme avant toute modification;
+- le système ne crée jamais artificiellement plusieurs dépôts pour représenter une seule transaction bancaire.
+
+## Paiement partiel
+
+Un paiement partiel est une affectation dont le montant est inférieur au solde de la facture avant paiement.
+
+Exemple :
+
+```text
+Solde avant paiement : 3 000,00 $
+Montant reçu :         1 000,00 $
+Solde restant :        2 000,00 $
+```
+
+Après confirmation :
+
+- la facture ne passe pas à `PAYEE`;
+- son statut devient `PARTIELLEMENT_PAYEE`, ou cet état est dérivé de son solde;
+- le paiement et son affectation sont conservés;
+- le solde restant demeure visible;
+- un paiement ultérieur peut être affecté à la même facture;
+- la facture passe à `PAYEE` seulement lorsque son solde atteint zéro;
+- les relances ne sont pas toutes annulées automatiquement tant qu'un solde demeure.
+
+Le texte et le calendrier exacts d'une relance après paiement partiel restent à confirmer avec la responsable.
+
+## Retenue et escompte
+
+Dans l'exemple analysé et selon l'expérience actuelle, les colonnes de retenue et d'escompte ont toujours été à zéro.
+
+Le système doit néanmoins conserver ces champs lorsqu'ils sont fournis par un client, sans leur attribuer automatiquement une signification comptable. Une valeur non nulle déclenche une révision manuelle et une note d'audit.
 
 ## Données à conserver
 
-### Avis de dépôt
+### Information ou avis de dépôt
 
-- référence ou numéro de l'avis;
-- date de l'avis;
+- type de source;
+- référence ou numéro de l'avis, lorsque disponible;
+- date de l'avis, lorsque disponible;
 - date et heure de réception;
 - payeur;
 - montant total annoncé;
-- nombre de factures;
-- document PDF source;
-- référence du courriel source, lorsque disponible;
+- nombre de factures annoncé;
+- fichier source facultatif;
+- texte source facultatif;
+- référence du courriel facultative;
 - statut de traitement;
 - utilisateur ayant validé le rapprochement.
 
 Les numéros de compte ou de vendeur doivent être masqués dans l'interface et exclus des journaux en clair.
 
-### Ligne d'avis de dépôt
+### Ligne d'avis ou de saisie
 
 Pour chaque facture mentionnée :
 
 - référence brute de la facture;
-- date de facture indiquée;
-- montant indiqué;
+- date de facture indiquée, lorsque disponible;
+- montant de facture indiqué, lorsque disponible;
 - retenue indiquée;
 - escompte indiqué;
 - montant payé indiqué;
-- facture reconnue, lorsqu'une correspondance est trouvée;
+- facture reconnue;
 - état de rapprochement;
-- niveau de confiance de l'extraction;
+- niveau de confiance lorsque la valeur est extraite;
 - corrections manuelles éventuelles.
 
 ### Paiement
@@ -141,8 +192,8 @@ Pour chaque facture mentionnée :
 - date réelle de réception;
 - montant total;
 - mode, avec `DEPOT_DIRECT` comme valeur observée;
-- référence de dépôt ou d'avis;
-- avis de dépôt source facultatif;
+- référence facultative;
+- source ou avis facultatif;
 - utilisateur ayant enregistré le paiement;
 - date et heure de l'enregistrement;
 - note facultative.
@@ -152,55 +203,52 @@ Pour chaque facture mentionnée :
 Pour chaque facture liée au dépôt :
 
 - facture;
-- ligne d'avis source facultative;
+- ligne source facultative;
 - montant affecté;
-- retenue observée, le cas échéant;
-- escompte observé, le cas échéant;
+- retenue observée facultative;
+- escompte observé facultatif;
 - solde avant affectation;
 - solde après affectation;
 - utilisateur;
 - date et heure.
 
-Même lorsque les factures sont toutes payées intégralement, cette séparation conserve la preuve qu'elles provenaient d'un seul dépôt.
+Une facture peut recevoir plusieurs affectations provenant de paiements distincts.
 
 ## Contrôles proposés
 
 Avant de confirmer un dépôt, l'application devrait :
 
-- afficher chaque numéro de facture et son montant;
-- afficher les retenues, escomptes et montants payés provenant de l'avis;
+- afficher chaque numéro de facture, son total et son solde actuel;
+- afficher le montant payé prévu pour chaque facture;
 - demander la date réelle du paiement;
 - permettre de confirmer le mode de paiement;
-- afficher le total sélectionné;
-- comparer la somme des montants payés au montant total annoncé;
-- comparer le montant payé au solde de chaque facture;
+- afficher le montant total du dépôt et le total affecté;
+- comparer les deux totaux;
 - avertir si une facture est déjà payée ou annulée;
-- bloquer la confirmation automatique si une retenue ou un escompte est non nul;
-- exiger une décision explicite en cas d'écart;
+- avertir si une affectation dépasse le solde;
+- accepter une affectation inférieure au solde comme paiement partiel;
+- exiger une décision explicite pour une retenue, un escompte ou tout autre écart;
 - enregistrer l'action dans l'historique;
-- annuler les brouillons de relance des factures entièrement payées.
+- annuler les relances seulement pour les factures dont le solde atteint zéro.
 
 ## Gestion des écarts
 
-Un avis peut contenir une retenue, un escompte, un montant inférieur au solde, un trop-perçu ou une référence inconnue.
+Un dépôt peut être partiel, supérieur au solde, insuffisant par rapport au détail annoncé, annulé ou attribué à la mauvaise facture.
 
 Dans ces cas :
 
-- aucune facture n'est marquée entièrement payée par défaut;
-- le dépôt peut rester en état `A_RAPPROCHER` ou `ECART_A_RESoudre`;
+- le dépôt peut rester en état `A_RAPPROCHER` ou `ECART_A_TRAITER`;
 - la responsable choisit le traitement approprié;
-- toute correction conserve l'avis original et un historique audit-able;
-- le système ne modifie jamais le montant original de la facture pour forcer une égalité.
+- toute correction conserve la source et l'historique originaux;
+- le système ne modifie jamais le montant original de la facture pour forcer une égalité;
+- une correction ou annulation doit être auditée plutôt que supprimée silencieusement.
 
 ## Points à confirmer
 
-Les éléments suivants demeurent ouverts :
-
-- les retenues sont-elles parfois supérieures à zéro;
-- les escomptes sont-ils parfois appliqués;
-- les paiements partiels existent-ils indépendamment des retenues;
-- la date réelle utilisée vient-elle du relevé bancaire, de l'avis ou d'une autre confirmation;
-- comment gérer un dépôt en trop, insuffisant, annulé ou attribué à la mauvaise facture;
-- faut-il conserver le courriel complet, sa pièce jointe ou seulement sa référence;
-- confirmer la politique par défaut du spécimen : chaque facture, premier envoi seulement ou autre;
-- le format du PDF est-il stable selon chaque client payeur.
+- Quels formats les clients utilisent-ils lorsqu'ils ne fournissent pas de PDF?
+- La date réelle du paiement vient-elle du relevé bancaire, du courriel ou d'une autre confirmation?
+- Après un paiement partiel, à quel moment et avec quel texte faut-il relancer le solde?
+- Les retenues ou escomptes peuvent-ils un jour être réellement utilisés?
+- Comment gérer un trop-perçu, un dépôt annulé ou une mauvaise affectation?
+- Faut-il conserver le courriel complet, son texte, ses pièces jointes ou seulement une référence?
+- Confirmer la politique par défaut du spécimen : chaque facture, premier envoi seulement ou autre.
