@@ -4,6 +4,8 @@
 
 Une facture est généralement produite par semaine pour un projet donné.
 
+Les chauffeurs remettent normalement les bons et billets de la semaine le vendredi. Cette remise alimente la vérification et la préparation des factures hebdomadaires.
+
 ## Destinataire
 
 La facture peut être adressée :
@@ -118,7 +120,21 @@ Le bouton **Préparer le courriel** génère un brouillon contenant :
 
 La responsable relit et déclenche l'envoi.
 
-## Historique
+## Premier envoi et spécimen de chèque
+
+Lors du premier envoi de facture à un nouveau client ou à un nouveau profil de facturation de projet, la responsable joint un spécimen de chèque afin que le destinataire puisse configurer le dépôt direct.
+
+Le système devrait :
+
+- indiquer si les instructions bancaires ont déjà été transmises à ce profil de facturation;
+- proposer le spécimen seulement lors du premier envoi;
+- exiger une sélection et une validation explicites avant de joindre ce document sensible;
+- conserver la date, le destinataire, l'utilisateur et la version du document envoyé;
+- permettre de le joindre de nouveau sur demande, sans le joindre automatiquement à toutes les factures.
+
+Le spécimen de chèque doit être conservé dans un stockage privé et protégé. Il ne doit jamais être exposé dans un dépôt public ou une URL non authentifiée.
+
+## Historique des envois
 
 Conserver :
 
@@ -129,7 +145,34 @@ Conserver :
 - pièces jointes;
 - canal;
 - statut de remise disponible;
-- erreur éventuelle.
+- erreur éventuelle;
+- indication qu'un spécimen de chèque a été transmis, sans exposer ses données dans les journaux.
+
+## Paiement par dépôt direct
+
+Le mode de paiement observé est le dépôt direct.
+
+Flux actuel :
+
+1. le client dépose l'argent dans le compte communiqué;
+2. un avis de dépôt arrive par courriel;
+3. le courriel indique les numéros de factures payées;
+4. la responsable recherche les factures concernées;
+5. elle utilise le bouton déjà présent **Marquer comme payée**;
+6. elle inscrit ou confirme la date réelle de réception du paiement.
+
+Lorsqu'une facture est marquée payée, l'application doit :
+
+- enregistrer la date de paiement;
+- enregistrer le mode `DEPOT_DIRECT`;
+- conserver l'utilisateur et l'horodatage de l'action;
+- passer la facture au statut `PAYEE`;
+- arrêter ou annuler les brouillons de relance encore prévus;
+- permettre une référence ou une note liée à l'avis de dépôt.
+
+Dans le MVP, la réception d'un courriel ne doit pas modifier automatiquement le statut d'une facture. Une future extraction peut proposer les factures mentionnées dans l'avis, mais la responsable doit confirmer le rapprochement.
+
+Voir [`paiements.md`](paiements.md) pour les exigences détaillées.
 
 ## Relances
 
