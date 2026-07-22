@@ -1,0 +1,32 @@
+# Règles métier initiales
+
+- **RM-001** — Un call peut provenir d'un broker, d'un client direct, d'un contrat récurrent ou d'une source interne.
+- **RM-002** — Le broker transmet le travail mais ne gère pas la facturation.
+- **RM-003** — L'entreprise ou le profil de facturation du projet est facturé directement.
+- **RM-004** — Un call peut demander un ou plusieurs camions.
+- **RM-005** — Chaque camion affecté produit son propre bon de travail.
+- **RM-006** — Chaque camion possède son propre carnet de bons papier.
+- **RM-007** — La référence d'un bon doit inclure au minimum la plaque et le numéro du bon.
+- **RM-008** — Le numéro du bon doit apparaître sur la facture pour permettre le rapprochement avec la copie du client.
+- **RM-009** — Le signataire est une personne reconnue par le client; il peut varier et ne doit pas nécessairement être préenregistré.
+- **RM-010** — Les modes de facturation soutenus sont l'heure, le voyage, la tonne, le forfait et une unité exceptionnelle.
+- **RM-011** — La facturation à l'heure représente le scénario principal.
+- **RM-012** — Les heures peuvent être calculées automatiquement à partir du début, de la fin et des pauses, mais doivent rester vérifiables.
+- **RM-013** — Plusieurs bons peuvent être regroupés lorsqu'ils concernent le même profil de facturation, le même projet, une même période et des conditions compatibles.
+- **RM-014** — Des lieux de travail différents produisent généralement des factures séparées.
+- **RM-015** — Chaque projet peut posséder son propre profil de facturation; sinon, celui du client est utilisé.
+- **RM-016** — Le tarif de base est défini par projet.
+- **RM-017** — Une facture est généralement produite par semaine.
+- **RM-018** — La surcharge carburant est saisie manuellement en pourcentage au niveau de la facture hebdomadaire.
+- **RM-019** — La surcharge augmente le taux horaire avant multiplication par les heures.
+- **RM-020** — Les taxes sont calculées sur le montant incluant la surcharge.
+- **RM-021** — Lorsqu'une surcharge s'applique, elle doit être clairement visible sur la facture.
+- **RM-022** — Une surcharge n'altère jamais le tarif de base contractuel du projet.
+- **RM-023** — Les tarifs et calculs d'une facture finalisée sont figés historiquement.
+- **RM-024** — Chaque ligne facturée doit être traçable jusqu'aux bons ou billets justificatifs.
+- **RM-025** — Les billets de carrière sont des documents distincts des bons de travail.
+- **RM-026** — L'OCR et l'extraction de SMS proposent des valeurs, mais un humain valide les champs critiques.
+- **RM-027** — Le SMS original doit être conservé avec le call.
+- **RM-028** — Le système doit soutenir l'impression d'un dossier physique complet.
+- **RM-029** — Les courriels de facture et de relance sont préparés automatiquement, mais envoyés après validation humaine.
+- **RM-030** — Les conditions de paiement peuvent varier par client, projet ou facture.
