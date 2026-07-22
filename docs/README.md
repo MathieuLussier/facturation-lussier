@@ -26,6 +26,8 @@ Le code explique comment l'application fonctionne. Ce dossier explique **pourquo
 - [`40-regles-metier.md`](40-regles-metier.md) — règles métier numérotées;
 - [`50-modele-domaine.md`](50-modele-domaine.md) — modèle conceptuel proposé;
 - [`60-roadmap.md`](60-roadmap.md) — phases de livraison;
+- [`70-decisions-architecture.md`](70-decisions-architecture.md) — décisions fonctionnelles structurantes;
+- [`80-scenarios-acceptation.md`](80-scenarios-acceptation.md) — scénarios métier et futurs critères de test;
 - [`90-questions-ouvertes.md`](90-questions-ouvertes.md) — éléments à confirmer.
 
 ## Gouvernance
