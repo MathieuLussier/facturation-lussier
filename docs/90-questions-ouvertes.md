@@ -39,29 +39,36 @@ Confirmé :
 
 ## Virements Interac
 
-Confirmé à partir d'un exemple réel reçu directement dans le courriel :
+Confirmé à partir d'un exemple réel et de l'expérience de l'entreprise :
 
 - aucun PDF séparé n'est nécessaire;
-- le courriel affiche le montant annoncé;
-- il identifie l'expéditeur;
-- il contient une date d'envoi;
-- il contient un numéro de référence;
-- il contient une date d'expiration;
+- le courriel peut afficher le montant annoncé;
+- il peut identifier l'expéditeur;
+- il peut contenir une date d'envoi;
+- il peut contenir un numéro de référence;
+- il peut contenir une date d'expiration;
 - son message libre peut contenir une référence de facture;
 - la référence de facture peut être abrégée et omettre le préfixe officiel `FAC/`;
-- le message observé demande de choisir une institution financière pour déposer les fonds;
-- la réception du courriel ne doit donc pas être confondue avec l'encaissement réel;
-- la source doit pouvoir rester en état `A_ENCAISSER` avant la création ou la finalisation du paiement;
-- le dépôt bancaire demeure extérieur à Facturation Lussier.
+- certains virements exigent une acceptation manuelle dans l'institution financière;
+- d'autres utilisent le dépôt automatique;
+- le mode dépend au moins en partie du client;
+- un virement manuel reste `A_ENCAISSER` tant que son acceptation et la réception réelle ne sont pas confirmées;
+- un dépôt automatique reste `DEPOT_AUTOMATIQUE_A_CONFIRMER` ou équivalent tant que la réception réelle et le rapprochement ne sont pas confirmés;
+- le mode du virement courant doit être enregistré comme `MANUAL_ACCEPTANCE`, `AUTO_DEPOSIT` ou `UNKNOWN`;
+- une préférence habituelle peut être mémorisée par client ou profil de facturation, sans remplacer la validation du virement courant;
+- la réception du courriel ne doit pas être confondue avec l'encaissement réel, même en dépôt automatique;
+- le dépôt bancaire demeure extérieur à Facturation Lussier;
+- aucune facture ne devient payée uniquement à la réception d'un courriel Interac.
 
 À confirmer :
 
-- tous les virements Interac sont-ils déposés manuellement ou certains utilisent-ils le dépôt automatique;
-- à quel moment la responsable considère-t-elle un Interac comme reçu : après l'action de dépôt ou lorsqu'il apparaît au compte;
+- le même client utilise-t-il toujours le même mode ou peut-il alterner entre acceptation manuelle et dépôt automatique;
+- pour un dépôt automatique, comment la responsable confirme-t-elle que les fonds sont réellement reçus : courriel, relevé bancaire ou consultation du compte;
+- à quel moment `paidAt` est-il fixé pour chacun des deux modes;
 - un virement Interac peut-il couvrir plusieurs factures;
-- que fait la responsable lorsqu'un virement expire;
+- que fait la responsable lorsqu'un virement manuel expire;
 - le courriel complet doit-il être conservé ou une copie structurée avec sa référence suffit-elle;
-- faut-il afficher une liste distincte **Virements à encaisser** sur le tableau de bord.
+- faut-il afficher une liste distincte **Virements à encaisser** et une liste **Dépôts automatiques à confirmer** sur le tableau de bord.
 
 ## Spécimen de chèque
 
