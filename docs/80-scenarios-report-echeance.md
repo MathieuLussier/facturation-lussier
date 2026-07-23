@@ -41,6 +41,7 @@ La valeur proposée ne devient jamais définitive sans confirmation.
 **alors** l'application affiche et conserve séparément :
 
 - échéance originale : 30 juin;
+- échéance brute du report;
 - échéance effective du solde : 15 juillet;
 - durée du report;
 - unité de calcul : jours calendaires;
@@ -70,7 +71,7 @@ La nouvelle date ne remplace pas l'historique contractuel de la facture.
 **alors** l'application prépare un brouillon de relance qui :
 
 - mentionne le solde restant;
-- utilise la nouvelle échéance;
+- utilise la nouvelle échéance effective;
 - conserve la référence de la facture originale;
 - exige une validation humaine avant l'envoi.
 
@@ -137,7 +138,7 @@ Le projet et le client ne sont pas modifiés.
 
 **quand** le projet est plus tard modifié pour utiliser 30 jours,
 
-**alors** le report déjà confirmé conserve 45 jours, son origine, son unité en jours calendaires, l'horodatage du courriel et sa nouvelle date calculée.
+**alors** le report déjà confirmé conserve 45 jours, son origine, son unité en jours calendaires, l'horodatage du courriel, sa date brute et sa date effective.
 
 Seuls les futurs reports utilisent la nouvelle configuration du projet.
 
@@ -159,7 +160,7 @@ Seuls les futurs reports utilisent la nouvelle configuration du projet.
 - la date de création du brouillon n'est pas utilisée comme point de départ;
 - le report et l'envoi restent liés dans l'historique.
 
-La nouvelle échéance brute est le 9 août 2026.
+La date brute est le dimanche 9 août 2026. Elle est déplacée au lundi 10 août 2026, à condition que cette date soit ouvrable dans le calendrier configuré.
 
 ## SC-DUE-013 — Ne pas activer un report en brouillon
 
@@ -171,7 +172,7 @@ La nouvelle échéance brute est le 9 août 2026.
 
 - le report demeure `DRAFT`;
 - `extensionEmailSentAt` reste vide;
-- `newDueDate` n'est pas finalisée;
+- les dates brute et effective ne sont pas finalisées;
 - les relances existantes ne sont pas reportées comme si le client avait été avisé;
 - l'interface indique que le délai n'est pas encore communiqué.
 
@@ -211,11 +212,35 @@ Un nouveau point de départ exige qu'un autre report soit explicitement créé, 
 
 La date brute calculée est le samedi 25 juillet 2026. Le système ne transforme pas ce délai en 15 jours ouvrables.
 
-Le traitement final d'une échéance qui tombe elle-même une fin de semaine ou un jour férié demeure à confirmer.
+## SC-DUE-017 — Déplacer une échéance de fin de semaine
+
+**Étant donné** que la date brute d'un report est le samedi 25 juillet 2026,
+
+**quand** le système applique le calendrier de l'entreprise,
+
+**alors** :
+
+- la date brute demeure enregistrée comme le 25 juillet;
+- l'échéance effective est déplacée au lundi 27 juillet 2026;
+- la raison `WEEKEND` est conservée;
+- les relances utilisent le 27 juillet;
+- l'historique permet de voir les deux dates.
+
+## SC-DUE-018 — Traverser un jour férié configuré
+
+**Étant donné** qu'une date brute tombe un dimanche,
+
+**et** que le lundi suivant est défini comme jour férié dans le calendrier de l'entreprise,
+
+**quand** l'application cherche le prochain jour ouvrable,
+
+**alors** elle déplace l'échéance au mardi suivant.
+
+La raison de l'ajustement et le calendrier utilisé demeurent auditables. Une modification future du calendrier ne recalcule pas rétroactivement un report déjà confirmé.
 
 ## Points à préciser
 
-- si une échéance tombe un samedi, un dimanche ou un jour férié, doit-elle rester à cette date ou être déplacée;
+- calendrier de jours fériés et de fermetures à configurer par défaut;
 - contenu exact du courriel de confirmation;
 - délai entre la nouvelle échéance et la prochaine relance;
 - fréquence réelle des reports successifs;
