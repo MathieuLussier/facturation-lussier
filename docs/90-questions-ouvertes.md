@@ -25,11 +25,12 @@ Confirmé :
 - le système cible doit conserver un paiement unique et ses affectations aux différentes factures;
 - une facture ne doit devenir `PAYEE` que lorsque son solde atteint zéro;
 - une même facture peut recevoir plusieurs paiements successifs;
-- pour un dépôt automatique Interac, la responsable vérifie le courriel et le compte bancaire avant de confirmer le paiement.
+- pour un dépôt automatique Interac, la responsable vérifie le courriel et le compte bancaire avant de confirmer le paiement;
+- la date bancaire est la suggestion recommandée pour `paidAt`, mais le choix final reste à la discrétion d'une personne autorisée;
+- l'application doit conserver la date finalement choisie, la base du choix et une justification lorsqu'une autre date est retenue.
 
 À confirmer :
 
-- quelle date exacte doit alimenter `paidAt` : la date visible au compte, la date de valeur bancaire, la date du courriel ou une autre date;
 - après un paiement partiel, quand faut-il relancer le solde restant;
 - quel texte utiliser pour une relance après paiement partiel;
 - faut-il permettre à la responsable de reporter manuellement la prochaine relance;
@@ -60,13 +61,13 @@ Confirmé à partir d'un exemple réel et de l'expérience de l'entreprise :
 - la réception du courriel ne doit pas être confondue avec l'encaissement réel, même en dépôt automatique;
 - pour un dépôt automatique, la responsable vérifie à la fois la notification reçue et le compte bancaire;
 - les deux vérifications doivent pouvoir être tracées séparément sans conserver d'identifiants bancaires;
+- `paidAt` est confirmé manuellement et peut utiliser la date bancaire ou une autre date choisie explicitement;
 - le dépôt bancaire demeure extérieur à Facturation Lussier;
 - aucune facture ne devient payée uniquement à la réception d'un courriel Interac.
 
 À confirmer :
 
 - le même client utilise-t-il toujours le même mode ou peut-il alterner entre acceptation manuelle et dépôt automatique;
-- à quel moment `paidAt` est-il fixé pour chacun des deux modes;
 - la double vérification courriel + compte est-elle également appliquée après une acceptation manuelle;
 - un virement Interac peut-il couvrir plusieurs factures;
 - que fait la responsable lorsqu'un virement manuel expire;
