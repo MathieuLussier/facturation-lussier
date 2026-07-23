@@ -17,18 +17,18 @@
 - associe le report à la personne qui l'a confirmé;
 - reporte les relances fondées sur l'ancienne date.
 
-## SC-DUE-002 — Choisir librement la nouvelle date
+## SC-DUE-002 — Choisir un délai standard
 
 **Étant donné** qu'un paiement partiel vient d'être enregistré,
 
-**quand** l'application propose une nouvelle échéance,
+**quand** l'application propose un nouveau délai,
 
-**alors** la responsable peut :
+**alors** la responsable peut choisir :
 
-- accepter la suggestion;
-- choisir une autre date;
-- ajouter une note;
-- ne pas accorder de report dans un cas exceptionnel.
+- 15 jours;
+- 30 jours;
+- 45 jours;
+- 60 jours.
 
 La valeur proposée ne devient jamais définitive sans confirmation.
 
@@ -36,12 +36,14 @@ La valeur proposée ne devient jamais définitive sans confirmation.
 
 **Étant donné** une facture initialement échue le 30 juin,
 
-**quand** un nouveau délai au 15 juillet est accordé,
+**quand** un nouveau délai mène à une échéance effective au 15 juillet,
 
 **alors** l'application affiche et conserve séparément :
 
 - échéance originale : 30 juin;
 - échéance effective du solde : 15 juillet;
+- durée du report;
+- origine de la valeur utilisée;
 - date de la décision;
 - solde concerné;
 - utilisateur ayant accordé le délai.
@@ -84,10 +86,65 @@ La nouvelle date ne remplace pas l'historique contractuel de la facture.
 - les deux restent visibles dans l'historique;
 - le prochain calendrier de relance utilise uniquement le report actif.
 
+## SC-DUE-007 — Hériter du délai du client
+
+**Étant donné** qu'un client possède un délai après paiement partiel de 30 jours,
+
+**et** que le projet et la facture ne possèdent aucune valeur propre,
+
+**quand** la responsable enregistre un paiement partiel,
+
+**alors** l'application propose 30 jours et indique que la valeur provient du client.
+
+## SC-DUE-008 — Remplacer le délai du client par celui du projet
+
+**Étant donné** qu'un client possède un délai de 30 jours,
+
+**et** que le projet possède un délai de 45 jours,
+
+**et** que la facture ne possède aucune valeur propre,
+
+**quand** la responsable enregistre un paiement partiel,
+
+**alors** l'application propose 45 jours et indique que la valeur provient du projet.
+
+La valeur du client demeure inchangée.
+
+## SC-DUE-009 — Remplacer le projet sur une facture précise
+
+**Étant donné** qu'un projet possède un délai de 45 jours,
+
+**et** que la facture courante possède un délai propre de 15 jours,
+
+**quand** la responsable confirme le report,
+
+**alors** l'application utilise 15 jours et indique que la valeur provient de la facture.
+
+Le projet et le client ne sont pas modifiés.
+
+## SC-DUE-010 — Exiger un choix lorsqu'aucune valeur n'existe
+
+**Étant donné** qu'aucun délai n'est configuré sur la facture, le projet ou le client,
+
+**quand** un paiement partiel est enregistré,
+
+**alors** l'application exige que la responsable choisisse 15, 30, 45 ou 60 jours avant de confirmer le report.
+
+## SC-DUE-011 — Figer la valeur historique du report
+
+**Étant donné** qu'un report de 45 jours provenant du projet a été confirmé,
+
+**quand** le projet est plus tard modifié pour utiliser 30 jours,
+
+**alors** le report déjà confirmé conserve 45 jours, son origine et sa nouvelle date calculée.
+
+Seuls les futurs reports utilisent la nouvelle configuration du projet.
+
 ## Points à préciser
 
-- méthode habituelle de choix de la nouvelle date;
+- date de départ utilisée pour calculer les 15, 30, 45 ou 60 jours;
 - canal utilisé pour communiquer le délai au client;
 - contenu du courriel éventuel de confirmation;
 - délai entre la nouvelle échéance et la prochaine relance;
-- fréquence réelle des reports successifs.
+- fréquence réelle des reports successifs;
+- possibilité d'une date exceptionnelle hors des quatre délais standards.
