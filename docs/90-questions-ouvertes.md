@@ -24,11 +24,12 @@ Confirmé :
 - la responsable utilise déjà un bouton pour marquer une facture payée et saisir la date réelle du paiement;
 - le système cible doit conserver un paiement unique et ses affectations aux différentes factures;
 - une facture ne doit devenir `PAYEE` que lorsque son solde atteint zéro;
-- une même facture peut recevoir plusieurs paiements successifs.
+- une même facture peut recevoir plusieurs paiements successifs;
+- pour un dépôt automatique Interac, la responsable vérifie le courriel et le compte bancaire avant de confirmer le paiement.
 
 À confirmer :
 
-- la date réelle utilisée vient-elle du relevé bancaire, du courriel ou d'une autre confirmation;
+- quelle date exacte doit alimenter `paidAt` : la date visible au compte, la date de valeur bancaire, la date du courriel ou une autre date;
 - après un paiement partiel, quand faut-il relancer le solde restant;
 - quel texte utiliser pour une relance après paiement partiel;
 - faut-il permettre à la responsable de reporter manuellement la prochaine relance;
@@ -57,16 +58,19 @@ Confirmé à partir d'un exemple réel et de l'expérience de l'entreprise :
 - le mode du virement courant doit être enregistré comme `MANUAL_ACCEPTANCE`, `AUTO_DEPOSIT` ou `UNKNOWN`;
 - une préférence habituelle peut être mémorisée par client ou profil de facturation, sans remplacer la validation du virement courant;
 - la réception du courriel ne doit pas être confondue avec l'encaissement réel, même en dépôt automatique;
+- pour un dépôt automatique, la responsable vérifie à la fois la notification reçue et le compte bancaire;
+- les deux vérifications doivent pouvoir être tracées séparément sans conserver d'identifiants bancaires;
 - le dépôt bancaire demeure extérieur à Facturation Lussier;
 - aucune facture ne devient payée uniquement à la réception d'un courriel Interac.
 
 À confirmer :
 
 - le même client utilise-t-il toujours le même mode ou peut-il alterner entre acceptation manuelle et dépôt automatique;
-- pour un dépôt automatique, comment la responsable confirme-t-elle que les fonds sont réellement reçus : courriel, relevé bancaire ou consultation du compte;
 - à quel moment `paidAt` est-il fixé pour chacun des deux modes;
+- la double vérification courriel + compte est-elle également appliquée après une acceptation manuelle;
 - un virement Interac peut-il couvrir plusieurs factures;
 - que fait la responsable lorsqu'un virement manuel expire;
+- que fait-elle lorsque le courriel annonce un montant qui ne correspond pas au crédit visible au compte;
 - le courriel complet doit-il être conservé ou une copie structurée avec sa référence suffit-elle;
 - faut-il afficher une liste distincte **Virements à encaisser** et une liste **Dépôts automatiques à confirmer** sur le tableau de bord.
 
