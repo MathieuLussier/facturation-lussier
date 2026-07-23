@@ -12,6 +12,7 @@ Ce document précise le modèle de paiement confirmé par la découverte métier
 4. Une facture peut recevoir plusieurs paiements successifs.
 5. Une facture devient payée seulement lorsque son solde atteint zéro.
 6. Les valeurs extraites d'un document ne deviennent jamais définitives sans validation humaine.
+7. La date comptable d'un paiement est choisie par une personne autorisée; le système suggère une valeur, mais conserve le choix final et sa base.
 
 ## PaymentSource
 
@@ -90,7 +91,9 @@ Représente une seule transaction financière reçue.
 Champs proposés :
 
 - `id`;
-- `paidAt` — date réelle de réception des fonds;
+- `paidAt` — date comptable confirmée pour la réception des fonds;
+- `paidAtBasis` — base utilisée pour choisir `paidAt`;
+- `paidAtOverrideNote` facultative — justification d'une date manuelle ou différente de la suggestion;
 - `totalAmountCents`;
 - `method`;
 - `reference` facultative;
@@ -102,6 +105,16 @@ Champs proposés :
 - `recordedAt`;
 - `createdAt`;
 - `updatedAt`.
+
+Valeurs proposées pour `paidAtBasis` :
+
+- `BANK_POSTING_DATE` — date d'inscription visible au compte;
+- `BANK_VALUE_DATE` — date de valeur bancaire;
+- `EMAIL_NOTICE_DATE` — date de la notification;
+- `TRANSFER_SENT_DATE` — date annoncée d'envoi;
+- `MANUAL_OTHER` — autre date choisie explicitement.
+
+La date bancaire peut être proposée par défaut. Le choix final reste modifiable par une personne autorisée et n'écrase jamais les autres dates conservées sur la source de paiement.
 
 Statuts suggérés :
 
@@ -172,6 +185,8 @@ Le champ existant `Invoice.paidAt` peut rester une valeur de synthèse : il corr
 8. Une source de paiement est facultative; la traçabilité utilisateur demeure obligatoire.
 9. Une source extraite ne crée aucune affectation sans validation humaine.
 10. Une correction ou annulation conserve l'opération originale dans l'audit.
+11. La valeur finale de `paidAt` et sa base de sélection sont conservées ensemble.
+12. Une date suggérée n'est jamais transformée silencieusement en date définitive.
 
 ## Compatibilité avec le modèle actuel
 
