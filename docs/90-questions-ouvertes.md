@@ -51,6 +51,8 @@ Confirmé :
 - la date du paiement partiel, la création du brouillon et la préparation du report ne démarrent pas le compteur;
 - les délais sont calculés en jours calendaires;
 - les samedis et dimanches sont inclus dans le compteur;
+- si la date brute tombe un samedi, un dimanche ou un jour férié configuré, l'échéance effective est déplacée au prochain jour ouvrable;
+- la date brute, la date effective et la raison de l'ajustement sont conservées;
 - un brouillon non envoyé, un envoi annulé ou un échec d'envoi n'active pas le report;
 - l'envoi de courriel ayant activé le report doit rester lié à celui-ci dans l'historique;
 - le renvoi technique du même courriel ne redémarre pas automatiquement le délai;
@@ -58,7 +60,7 @@ Confirmé :
 
 À confirmer :
 
-- si l'échéance calculée tombe un samedi, un dimanche ou un jour férié, doit-elle rester à cette date ou être déplacée;
+- quel calendrier de jours fériés et de fermetures doit être configuré par défaut;
 - quel texte exact utiliser dans le courriel confirmant le paiement partiel, le solde restant et la nouvelle échéance;
 - combien de jours après la nouvelle échéance faut-il préparer la prochaine relance;
 - plusieurs reports successifs sont-ils parfois accordés au même client;
