@@ -54,15 +54,28 @@ Les samedis et les dimanches sont donc inclus dans le compteur. Le système ne s
 termUnit = CALENDAR_DAYS
 ```
 
+Le calcul produit d'abord une échéance brute :
+
+```text
+rawDueDate = addCalendarDays(extensionEmailSentAt, extensionTermDays)
+```
+
+Si cette échéance brute tombe un samedi, un dimanche ou un jour férié défini dans le calendrier de l'entreprise, elle est déplacée au prochain jour ouvrable :
+
+```text
+effectiveDueDate = moveToNextBusinessDay(rawDueDate, businessCalendar)
+```
+
 Exemple :
 
 ```text
 Courriel envoyé : vendredi 10 juillet 2026
 Délai confirmé : 15 jours calendaires
-Échéance calculée : samedi 25 juillet 2026
+Échéance brute : samedi 25 juillet 2026
+Échéance effective : lundi 27 juillet 2026
 ```
 
-Le traitement à appliquer lorsque la date calculée tombe elle-même un samedi, un dimanche ou un jour férié demeure un point distinct à confirmer. Le calcul brut conserve néanmoins tous les jours du calendrier.
+Si le lundi est lui-même un jour férié configuré, l'échéance est déplacée au mardi suivant. La date brute, la date effective et la raison de l'ajustement doivent toutes rester auditables.
 
 ## Point de départ du nouveau délai
 
@@ -79,7 +92,8 @@ Le point de départ n'est donc pas automatiquement :
 La date de communication utilisée doit provenir de l'envoi réussi du courriel :
 
 ```text
-newDueDate = addCalendarDays(extensionEmailSentAt, extensionTermDays)
+rawDueDate = addCalendarDays(extensionEmailSentAt, extensionTermDays)
+effectiveDueDate = moveToNextBusinessDay(rawDueDate, businessCalendar)
 ```
 
 Exemple :
@@ -87,7 +101,8 @@ Exemple :
 ```text
 Courriel envoyé : 10 juillet 2026
 Délai confirmé : 30 jours calendaires
-Nouvelle échéance brute du solde : 9 août 2026
+Nouvelle échéance brute : dimanche 9 août 2026
+Nouvelle échéance effective : lundi 10 août 2026
 ```
 
 Tant que le courriel n'a pas été envoyé avec succès, le nouveau délai n'est pas actif et les relances ne doivent pas être recalculées comme si l'entente avait déjà été communiquée.
@@ -101,10 +116,13 @@ La date d'échéance originale de la facture doit rester conservée. Le nouveau 
 Le système doit distinguer :
 
 - `originalDueDate` — échéance contractuelle ou initiale de la facture;
-- `effectiveBalanceDueDate` — date actuellement convenue pour le solde restant;
+- `rawBalanceDueDate` — date obtenue après l'ajout des jours calendaires, avant ajustement;
+- `effectiveBalanceDueDate` — date réellement convenue après déplacement au prochain jour ouvrable, si nécessaire;
 - `extensionTermDays` — durée confirmée : 15, 30, 45 ou 60 jours;
 - `extensionTermUnit` — `CALENDAR_DAYS`;
 - `extensionTermSource` — niveau ayant fourni la valeur : facture, projet ou client;
+- `businessCalendarId` — calendrier utilisé pour reconnaître les jours non ouvrables;
+- `dueDateAdjustmentReason` — aucune, fin de semaine ou jour férié;
 - `extensionEmailSentAt` — date et heure de l'envoi réussi qui déclenche le délai;
 - `extensionEmailDeliveryId` — référence facultative vers l'historique d'envoi;
 - `nextReminderAt` — prochaine date de relance prévue;
@@ -114,7 +132,7 @@ Le système doit distinguer :
 - la date de la décision;
 - une note ou raison facultative.
 
-Cette séparation permet de comprendre plus tard pourquoi une facture initialement échue n'a pas été relancée pendant une certaine période, quelle configuration avait été utilisée et à quel moment le nouveau délai a réellement été communiqué.
+Cette séparation permet de comprendre plus tard pourquoi une facture initialement échue n'a pas été relancée pendant une certaine période, quelle configuration avait été utilisée, à quel moment le nouveau délai a été communiqué et pourquoi l'échéance a éventuellement été déplacée.
 
 ## Parcours cible
 
@@ -125,11 +143,12 @@ Cette séparation permet de comprendre plus tard pourquoi une facture initialeme
 5. La responsable confirme la valeur ou la remplace sur cette facture.
 6. L'application prépare un courriel indiquant le paiement reçu, le solde restant et le délai accordé.
 7. La responsable vérifie les destinataires, le texte et le délai, puis envoie le courriel.
-8. Après confirmation de l'envoi réussi, l'application enregistre `extensionEmailSentAt` et calcule la nouvelle échéance en jours calendaires.
-9. Elle affiche l'échéance originale, la nouvelle date et le solde visé.
-10. Les brouillons ou relances prévus selon l'ancienne date sont annulés, reportés ou marqués comme remplacés.
-11. Le prochain cycle de relance utilise la nouvelle date pour le solde restant.
-12. La facture demeure `PARTIELLEMENT_PAYEE` jusqu'à ce que son solde atteigne zéro.
+8. Après confirmation de l'envoi réussi, l'application enregistre `extensionEmailSentAt` et calcule l'échéance brute en jours calendaires.
+9. Si la date brute est non ouvrable, elle la déplace au prochain jour ouvrable selon le calendrier configuré.
+10. Elle affiche l'échéance originale, la date brute, la date effective et le solde visé.
+11. Les brouillons ou relances prévus selon l'ancienne date sont annulés, reportés ou marqués comme remplacés.
+12. Le prochain cycle de relance utilise la date effective pour le solde restant.
+13. La facture demeure `PARTIELLEMENT_PAYEE` jusqu'à ce que son solde atteigne zéro.
 
 ## Discrétion de la responsable
 
@@ -173,6 +192,16 @@ Valeurs permises : `15 | 30 | 45 | 60`.
 
 L'unité confirmée est `CALENDAR_DAYS`.
 
+### Calendrier d'entreprise
+
+Le système doit disposer d'un calendrier définissant au minimum :
+
+- les samedis et dimanches comme jours non ouvrables;
+- les jours fériés ou fermetures configurés par l'entreprise;
+- le fuseau horaire utilisé pour interpréter l'envoi du courriel et la date d'échéance.
+
+Le calendrier précis des jours fériés demeure configurable afin de ne pas coder en dur une liste qui pourrait varier.
+
 ### PaymentDeadlineExtension
 
 Représente un report accordé pour le solde d'une facture.
@@ -183,10 +212,13 @@ Champs proposés :
 - `invoiceId`;
 - `triggerPaymentId` facultatif — paiement partiel ayant motivé le report;
 - `previousEffectiveDueDate`;
+- `rawDueDate` facultative tant que le courriel n'est pas envoyé;
 - `newDueDate` facultative tant que le courriel n'est pas envoyé;
 - `termDays` — 15, 30, 45 ou 60;
 - `termUnit` — `CALENDAR_DAYS`;
 - `termSource` — `INVOICE`, `PROJECT` ou `CLIENT`;
+- `businessCalendarId` facultatif;
+- `adjustmentReason` — `NONE`, `WEEKEND` ou `HOLIDAY`;
 - `remainingBalanceCents` au moment de la décision;
 - `reason`;
 - `note` facultative;
@@ -212,8 +244,9 @@ Une facture ne possède qu'un report actif à la fois, mais conserve l'historiqu
 
 La date effective utilisée pour les relances est déterminée ainsi :
 
-1. date du report actif, calculée en jours calendaires depuis l'envoi réussi du courriel;
-2. sinon, échéance originale de la facture.
+1. date brute calculée en jours calendaires depuis l'envoi réussi du courriel;
+2. déplacement au prochain jour ouvrable lorsque la date brute est non ouvrable;
+3. sinon, échéance originale de la facture lorsqu'aucun report actif n'existe.
 
 Cette règle concerne la gestion du recouvrement. Elle ne modifie pas la date d'émission, l'échéance originale ni l'historique du document facturé.
 
@@ -226,17 +259,18 @@ Avant d'envoyer et d'activer un nouveau délai :
 - le délai résolu, son unité et son origine doivent être visibles;
 - le courriel doit afficher le solde restant et le délai accordé;
 - les destinataires doivent être confirmés;
-- la nouvelle date calculée doit être prévisualisée;
+- la date brute et la date effective doivent être prévisualisées lorsqu'elles diffèrent;
+- le système doit montrer la raison du déplacement au prochain jour ouvrable;
 - le système doit montrer les relances qui seront reportées ou remplacées;
 - l'utilisateur et l'horodatage doivent être enregistrés;
 - le report ne doit jamais modifier le total original de la facture;
-- la configuration future d'un client ou projet ne doit jamais recalculer rétroactivement un report confirmé;
+- la configuration future d'un client, projet ou calendrier ne doit jamais recalculer rétroactivement un report confirmé;
 - un échec d'envoi ne doit pas activer le report;
 - l'envoi utilisé comme point de départ doit rester lié à l'historique du report.
 
 ## Points encore ouverts
 
-- Si l'échéance calculée tombe un samedi, un dimanche ou un jour férié, doit-elle rester à cette date ou être déplacée?
+- Quel calendrier de jours fériés et de fermetures doit être configuré par défaut pour l'entreprise?
 - Quel texte exact doit être utilisé dans le courriel confirmant le paiement partiel, le solde et la nouvelle échéance?
 - Combien de jours après la nouvelle échéance faut-il préparer la prochaine relance?
 - Plusieurs reports successifs sont-ils parfois accordés au même client?
