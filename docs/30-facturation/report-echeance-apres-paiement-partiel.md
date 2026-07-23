@@ -44,6 +44,26 @@ Délai proposé après paiement partiel : 45 jours
 
 Une valeur choisie sur une facture ne modifie pas les valeurs du projet ou du client. Le délai résolu est copié dans le report afin que l'historique ne change pas si la configuration est modifiée plus tard.
 
+## Unité de calcul : jours calendaires
+
+Les délais de 15, 30, 45 ou 60 jours sont calculés en **jours calendaires**.
+
+Les samedis et les dimanches sont donc inclus dans le compteur. Le système ne saute pas les fins de semaine pendant le calcul.
+
+```text
+termUnit = CALENDAR_DAYS
+```
+
+Exemple :
+
+```text
+Courriel envoyé : vendredi 10 juillet 2026
+Délai confirmé : 15 jours calendaires
+Échéance calculée : samedi 25 juillet 2026
+```
+
+Le traitement à appliquer lorsque la date calculée tombe elle-même un samedi, un dimanche ou un jour férié demeure un point distinct à confirmer. Le calcul brut conserve néanmoins tous les jours du calendrier.
+
 ## Point de départ du nouveau délai
 
 Les 15, 30, 45 ou 60 jours commencent à la date où la responsable envoie au client le courriel qui communique le paiement partiel, le solde restant et le nouveau délai.
@@ -59,18 +79,18 @@ Le point de départ n'est donc pas automatiquement :
 La date de communication utilisée doit provenir de l'envoi réussi du courriel :
 
 ```text
-newDueDate = extensionEmailSentAt + extensionTermDays
+newDueDate = addCalendarDays(extensionEmailSentAt, extensionTermDays)
 ```
 
 Exemple :
 
 ```text
 Courriel envoyé : 10 juillet 2026
-Délai confirmé : 30 jours
-Nouvelle échéance du solde : 9 août 2026
+Délai confirmé : 30 jours calendaires
+Nouvelle échéance brute du solde : 9 août 2026
 ```
 
-Le calcul précis des jours calendaires ou ouvrables reste à confirmer. Tant que le courriel n'a pas été envoyé avec succès, le nouveau délai n'est pas actif et les relances ne doivent pas être recalculées comme si l'entente avait déjà été communiquée.
+Tant que le courriel n'a pas été envoyé avec succès, le nouveau délai n'est pas actif et les relances ne doivent pas être recalculées comme si l'entente avait déjà été communiquée.
 
 Un brouillon enregistré, un envoi annulé ou un échec d'envoi ne déclenche pas le délai. Un renvoi technique du même courriel ne redémarre pas automatiquement le compteur; seul un nouveau report explicitement accordé peut remplacer la date active.
 
@@ -83,6 +103,7 @@ Le système doit distinguer :
 - `originalDueDate` — échéance contractuelle ou initiale de la facture;
 - `effectiveBalanceDueDate` — date actuellement convenue pour le solde restant;
 - `extensionTermDays` — durée confirmée : 15, 30, 45 ou 60 jours;
+- `extensionTermUnit` — `CALENDAR_DAYS`;
 - `extensionTermSource` — niveau ayant fourni la valeur : facture, projet ou client;
 - `extensionEmailSentAt` — date et heure de l'envoi réussi qui déclenche le délai;
 - `extensionEmailDeliveryId` — référence facultative vers l'historique d'envoi;
@@ -100,11 +121,11 @@ Cette séparation permet de comprendre plus tard pourquoi une facture initialeme
 1. La responsable enregistre le paiement partiel dans **Enregistrer un dépôt**.
 2. L'application calcule et affiche le solde restant.
 3. Elle résout le délai selon la facture, le projet puis le client.
-4. Elle propose 15, 30, 45 ou 60 jours avec l'origine de la valeur.
+4. Elle propose 15, 30, 45 ou 60 jours calendaires avec l'origine de la valeur.
 5. La responsable confirme la valeur ou la remplace sur cette facture.
 6. L'application prépare un courriel indiquant le paiement reçu, le solde restant et le délai accordé.
 7. La responsable vérifie les destinataires, le texte et le délai, puis envoie le courriel.
-8. Après confirmation de l'envoi réussi, l'application enregistre `extensionEmailSentAt` et calcule la nouvelle échéance.
+8. Après confirmation de l'envoi réussi, l'application enregistre `extensionEmailSentAt` et calcule la nouvelle échéance en jours calendaires.
 9. Elle affiche l'échéance originale, la nouvelle date et le solde visé.
 10. Les brouillons ou relances prévus selon l'ancienne date sont annulés, reportés ou marqués comme remplacés.
 11. Le prochain cycle de relance utilise la nouvelle date pour le solde restant.
@@ -150,6 +171,8 @@ Champs facultatifs proposés :
 
 Valeurs permises : `15 | 30 | 45 | 60`.
 
+L'unité confirmée est `CALENDAR_DAYS`.
+
 ### PaymentDeadlineExtension
 
 Représente un report accordé pour le solde d'une facture.
@@ -162,6 +185,7 @@ Champs proposés :
 - `previousEffectiveDueDate`;
 - `newDueDate` facultative tant que le courriel n'est pas envoyé;
 - `termDays` — 15, 30, 45 ou 60;
+- `termUnit` — `CALENDAR_DAYS`;
 - `termSource` — `INVOICE`, `PROJECT` ou `CLIENT`;
 - `remainingBalanceCents` au moment de la décision;
 - `reason`;
@@ -188,7 +212,7 @@ Une facture ne possède qu'un report actif à la fois, mais conserve l'historiqu
 
 La date effective utilisée pour les relances est déterminée ainsi :
 
-1. date du report actif, calculée depuis l'envoi réussi du courriel;
+1. date du report actif, calculée en jours calendaires depuis l'envoi réussi du courriel;
 2. sinon, échéance originale de la facture.
 
 Cette règle concerne la gestion du recouvrement. Elle ne modifie pas la date d'émission, l'échéance originale ni l'historique du document facturé.
@@ -199,7 +223,7 @@ Avant d'envoyer et d'activer un nouveau délai :
 
 - la facture doit avoir un solde supérieur à zéro;
 - le solde affiché doit intégrer tous les paiements valides;
-- le délai résolu et son origine doivent être visibles;
+- le délai résolu, son unité et son origine doivent être visibles;
 - le courriel doit afficher le solde restant et le délai accordé;
 - les destinataires doivent être confirmés;
 - la nouvelle date calculée doit être prévisualisée;
@@ -212,7 +236,7 @@ Avant d'envoyer et d'activer un nouveau délai :
 
 ## Points encore ouverts
 
-- Les délais de 15, 30, 45 ou 60 jours sont-ils calculés en jours calendaires ou en jours ouvrables?
+- Si l'échéance calculée tombe un samedi, un dimanche ou un jour férié, doit-elle rester à cette date ou être déplacée?
 - Quel texte exact doit être utilisé dans le courriel confirmant le paiement partiel, le solde et la nouvelle échéance?
 - Combien de jours après la nouvelle échéance faut-il préparer la prochaine relance?
 - Plusieurs reports successifs sont-ils parfois accordés au même client?
