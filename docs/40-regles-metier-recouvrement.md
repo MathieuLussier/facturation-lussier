@@ -21,3 +21,4 @@ Ce complément poursuit la numérotation du registre principal.
 - **RM-097** — Un brouillon de courriel, un envoi annulé ou un échec d'envoi n'active pas le report et ne doit pas reporter les relances.
 - **RM-098** — L'envoi de courriel ayant activé le report doit rester lié à celui-ci dans l'historique avec ses destinataires, son horodatage et son statut.
 - **RM-099** — Le renvoi technique du même courriel ne redémarre pas automatiquement le délai; seul un nouveau report explicitement accordé peut remplacer le report actif.
+- **RM-100** — Les délais de 15, 30, 45 ou 60 jours sont calculés en jours calendaires; les samedis et dimanches sont inclus dans le compteur.
