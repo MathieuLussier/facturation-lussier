@@ -46,7 +46,7 @@ Elle sert à confirmer :
 5. Elle confirme séparément dans l'application :
    - **Courriel vérifié**;
    - **Fonds vérifiés au compte**.
-6. Elle confirme la date réelle d'encaissement utilisée pour `paidAt`.
+6. Elle choisit et confirme la date d'encaissement utilisée pour `paidAt`.
 7. Elle confirme les factures et les montants affectés.
 8. L'application crée ou finalise le `Payment` et ses `PaymentAllocation`.
 9. La source passe à `ENCAISSE`.
@@ -62,6 +62,8 @@ Sans stocker d'identifiants bancaires, l'application peut conserver :
 - `bankAccountCheckedAt`;
 - `bankAccountCheckedById`;
 - `bankTransactionDate` facultative;
+- `paidAtBasis`;
+- `paidAtOverrideNote` facultative;
 - `confirmationNote` facultative;
 - `paidAt` confirmé;
 - l'écart constaté, le cas échéant.
@@ -79,9 +81,27 @@ Si le courriel et le compte bancaire ne concordent pas :
 - conserver les valeurs originales;
 - permettre une correction auditée ou l'attente d'une confirmation du client.
 
-## Date comptable
+## Date comptable à discrétion contrôlée
 
-La source de vérité de `paidAt` reste à confirmer précisément avec la responsable. La recommandation fonctionnelle est d'utiliser la date où le crédit est visible ou comptabilisé dans le compte bancaire, et de conserver séparément la date du courriel, la date d'envoi et la date d'acceptation éventuelle.
+Le choix final de `paidAt` reste à la discrétion d'une personne autorisée de l'entreprise. L'application ne doit pas imposer automatiquement la date du courriel, de l'avis, du virement ou du compte bancaire.
+
+Comportement recommandé :
+
+1. proposer par défaut la date où le crédit apparaît ou est comptabilisé dans le compte bancaire;
+2. permettre à la responsable de choisir une autre date lorsqu'elle juge qu'elle représente mieux l'encaissement;
+3. conserver la base du choix;
+4. demander une note lorsque la date retenue remplace la suggestion ou utilise une valeur manuelle;
+5. ne jamais écraser les autres dates du cycle de paiement.
+
+Valeurs proposées pour `paidAtBasis` :
+
+- `BANK_POSTING_DATE` — date d'inscription visible au compte;
+- `BANK_VALUE_DATE` — date de valeur fournie par l'institution financière;
+- `EMAIL_NOTICE_DATE` — date de la notification reçue;
+- `TRANSFER_SENT_DATE` — date annoncée d'envoi du virement;
+- `MANUAL_OTHER` — autre date choisie explicitement.
+
+La politique par défaut peut être configurée pour l'entreprise, mais elle reste modifiable sur chaque paiement. Le système doit montrer la suggestion et la valeur finalement confirmée afin de préserver à la fois la souplesse opérationnelle et la traçabilité.
 
 ## Sécurité
 
