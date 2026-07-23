@@ -77,3 +77,6 @@
 - **RM-075** — Pour confirmer un dépôt automatique Interac, la responsable vérifie à la fois le courriel reçu et le compte bancaire.
 - **RM-076** — Le système doit pouvoir tracer séparément la vérification de la notification et la vérification de la réception réelle au compte, sans stocker d'identifiants bancaires.
 - **RM-077** — Si le courriel et le compte bancaire ne concordent pas, aucune facture ne devient payée; la source ou le paiement passe dans un état d'écart à traiter avec une décision auditée.
+- **RM-078** — Le choix final de la date comptable `paidAt` appartient à une personne autorisée de l'entreprise et reste modifiable pour chaque paiement.
+- **RM-079** — L'application peut suggérer par défaut la date bancaire, mais elle ne doit jamais imposer silencieusement la date du compte, du courriel, de l'avis ou de l'envoi.
+- **RM-080** — Le système doit conserver la base utilisée pour choisir `paidAt` et demander une justification lorsqu'une date manuelle ou différente de la suggestion est retenue.
