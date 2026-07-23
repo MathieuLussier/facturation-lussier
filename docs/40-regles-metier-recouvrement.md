@@ -12,7 +12,12 @@ Ce complément poursuit la numérotation du registre principal.
 - **RM-088** — Si le solde reste impayé après la nouvelle date, l'application prépare une relance soumise à validation humaine.
 - **RM-089** — Les délais standards accordés pour un solde restant sont de 15, 30, 45 ou 60 jours.
 - **RM-090** — Le délai proposé est résolu selon l'ordre de priorité suivant : valeur de la facture, sinon valeur du projet, sinon valeur du client.
-- **RM-091** — Si aucun délai n'est configuré sur la facture, le projet ou le client, la responsable doit choisir explicitement 15, 30, 45 ou 60 jours avant de confirmer le report.
+- **RM-091** — Si aucun délai n'est configuré sur la facture, le projet ou le client, la responsable doit choisir explicitement 15, 30, 45 ou 60 jours avant de préparer le report.
 - **RM-092** — Un délai choisi sur une facture ne modifie jamais les valeurs par défaut du projet ou du client.
 - **RM-093** — Le délai résolu et son niveau d'origine doivent être copiés dans le report confirmé afin qu'une modification future du client ou du projet ne change pas rétroactivement l'historique.
 - **RM-094** — Une seule valeur de report est active pour une facture à un moment donné, mais tous les reports remplacés demeurent auditables.
+- **RM-095** — Les 15, 30, 45 ou 60 jours commencent à la date et à l'heure où le courriel communiquant le nouveau délai est envoyé avec succès au client.
+- **RM-096** — La nouvelle échéance du solde est calculée selon `newDueDate = extensionEmailSentAt + termDays` et non depuis la date du paiement partiel, la date du brouillon ou l'échéance originale.
+- **RM-097** — Un brouillon de courriel, un envoi annulé ou un échec d'envoi n'active pas le report et ne doit pas reporter les relances.
+- **RM-098** — L'envoi de courriel ayant activé le report doit rester lié à celui-ci dans l'historique avec ses destinataires, son horodatage et son statut.
+- **RM-099** — Le renvoi technique du même courriel ne redémarre pas automatiquement le délai; seul un nouveau report explicitement accordé peut remplacer le report actif.
