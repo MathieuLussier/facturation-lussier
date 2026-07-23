@@ -26,6 +26,7 @@ Le code explique comment l'application fonctionne. Ce dossier explique **pourquo
 - [`30-facturation/paiements.md`](30-facturation/paiements.md) — spécimen de chèque, dépôts, sources variables et paiements partiels;
 - [`30-facturation/avis-depot.md`](30-facturation/avis-depot.md) — format PDF observé et parcours avec ou sans document;
 - [`30-facturation/virements-interac.md`](30-facturation/virements-interac.md) — courriels Interac, état à encaisser et confirmation du dépôt;
+- [`30-facturation/verification-encaissement.md`](30-facturation/verification-encaissement.md) — double vérification du courriel et du compte bancaire;
 - [`40-regles-metier.md`](40-regles-metier.md) — règles métier numérotées;
 - [`50-modele-domaine.md`](50-modele-domaine.md) — modèle conceptuel global proposé;
 - [`50-modele-paiements.md`](50-modele-paiements.md) — modèle détaillé des sources, paiements et affectations;
@@ -35,6 +36,7 @@ Le code explique comment l'application fonctionne. Ce dossier explique **pourquo
 - [`80-scenarios-acceptation.md`](80-scenarios-acceptation.md) — scénarios métier généraux et futurs critères de test;
 - [`80-scenarios-paiements.md`](80-scenarios-paiements.md) — dépôts multi-factures, saisie sans PDF et paiements partiels;
 - [`80-scenarios-virements-interac.md`](80-scenarios-virements-interac.md) — réception, dépôt, expiration et rapprochement Interac;
+- [`80-scenarios-verification-encaissement.md`](80-scenarios-verification-encaissement.md) — vérification croisée et gestion des écarts;
 - [`90-questions-ouvertes.md`](90-questions-ouvertes.md) — éléments à confirmer.
 
 ## Gouvernance
