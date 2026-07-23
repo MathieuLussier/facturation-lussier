@@ -74,3 +74,6 @@
 - **RM-072** — Un virement à dépôt automatique demeure `DEPOT_AUTOMATIQUE_A_CONFIRMER` ou équivalent jusqu'à la confirmation humaine de la réception et du rapprochement.
 - **RM-073** — Même lorsqu'un dépôt automatique est annoncé par courriel, aucune facture ne doit être marquée payée sans confirmation humaine.
 - **RM-074** — Le client ou son profil de facturation peut mémoriser un mode Interac habituel, mais le mode du virement courant reste visible, modifiable et prioritaire.
+- **RM-075** — Pour confirmer un dépôt automatique Interac, la responsable vérifie à la fois le courriel reçu et le compte bancaire.
+- **RM-076** — Le système doit pouvoir tracer séparément la vérification de la notification et la vérification de la réception réelle au compte, sans stocker d'identifiants bancaires.
+- **RM-077** — Si le courriel et le compte bancaire ne concordent pas, aucune facture ne devient payée; la source ou le paiement passe dans un état d'écart à traiter avec une décision auditée.
