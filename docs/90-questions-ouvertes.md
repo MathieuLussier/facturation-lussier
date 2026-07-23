@@ -31,13 +31,36 @@ Confirmé :
 
 À confirmer :
 
-- après un paiement partiel, quand faut-il relancer le solde restant;
-- quel texte utiliser pour une relance après paiement partiel;
-- faut-il permettre à la responsable de reporter manuellement la prochaine relance;
 - comment gérer un dépôt en trop, annulé ou attribué à la mauvaise facture;
 - comment gérer un dépôt annoncé qui n'apparaît pas après le délai indiqué;
 - faut-il conserver le courriel complet, son texte, ses pièces jointes ou seulement une référence dans l'application;
 - les retenues ou escomptes peuvent-ils un jour être réellement utilisés avec une valeur non nulle.
+
+## Reports après paiement partiel
+
+Confirmé :
+
+- après un paiement partiel, un nouveau délai est accordé pour le solde restant;
+- les délais standards sont de 15, 30, 45 ou 60 jours;
+- le délai est résolu selon la priorité : facture, puis projet, puis client;
+- une valeur propre à la facture remplace celle du projet sans modifier le projet;
+- une valeur du projet remplace celle du client sans modifier le client;
+- la valeur réellement utilisée est figée dans l'historique du report;
+- l'échéance originale de la facture demeure conservée;
+- le nouveau délai commence à la date où la responsable envoie avec succès le courriel qui informe le client du paiement partiel, du solde et du délai accordé;
+- la date du paiement partiel, la création du brouillon et la préparation du report ne démarrent pas le compteur;
+- un brouillon non envoyé, un envoi annulé ou un échec d'envoi n'active pas le report;
+- l'envoi de courriel ayant activé le report doit rester lié à celui-ci dans l'historique;
+- le renvoi technique du même courriel ne redémarre pas automatiquement le délai;
+- les relances ordinaires utilisent la nouvelle échéance uniquement après l'envoi réussi du courriel.
+
+À confirmer :
+
+- les 15, 30, 45 ou 60 jours sont-ils calculés en jours calendaires ou en jours ouvrables;
+- quel texte exact utiliser dans le courriel confirmant le paiement partiel, le solde restant et la nouvelle échéance;
+- combien de jours après la nouvelle échéance faut-il préparer la prochaine relance;
+- plusieurs reports successifs sont-ils parfois accordés au même client;
+- une date exceptionnelle hors des quatre délais standards doit-elle être permise.
 
 ## Virements Interac
 
