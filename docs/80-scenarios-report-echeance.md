@@ -43,6 +43,7 @@ La valeur proposée ne devient jamais définitive sans confirmation.
 - échéance originale : 30 juin;
 - échéance effective du solde : 15 juillet;
 - durée du report;
+- unité de calcul : jours calendaires;
 - origine de la valeur utilisée;
 - date du courriel ayant activé le report;
 - solde concerné;
@@ -136,7 +137,7 @@ Le projet et le client ne sont pas modifiés.
 
 **quand** le projet est plus tard modifié pour utiliser 30 jours,
 
-**alors** le report déjà confirmé conserve 45 jours, son origine, l'horodatage du courriel et sa nouvelle date calculée.
+**alors** le report déjà confirmé conserve 45 jours, son origine, son unité en jours calendaires, l'horodatage du courriel et sa nouvelle date calculée.
 
 Seuls les futurs reports utilisent la nouvelle configuration du projet.
 
@@ -152,11 +153,13 @@ Seuls les futurs reports utilisent la nouvelle configuration du projet.
 
 - `extensionEmailSentAt` correspond à l'envoi du 10 juillet;
 - la nouvelle échéance est calculée à partir de cette date;
+- le calcul utilise 30 jours calendaires;
+- les samedis et dimanches sont inclus;
 - la date du paiement partiel n'est pas utilisée comme point de départ;
 - la date de création du brouillon n'est pas utilisée comme point de départ;
 - le report et l'envoi restent liés dans l'historique.
 
-Le résultat exact dépendra de la règle à confirmer sur les jours calendaires ou ouvrables.
+La nouvelle échéance brute est le 9 août 2026.
 
 ## SC-DUE-013 — Ne pas activer un report en brouillon
 
@@ -196,9 +199,23 @@ Le résultat exact dépendra de la règle à confirmer sur les jours calendaires
 
 Un nouveau point de départ exige qu'un autre report soit explicitement créé, confirmé et communiqué.
 
+## SC-DUE-016 — Inclure les fins de semaine dans le compteur
+
+**Étant donné** qu'un courriel de report est envoyé le vendredi 10 juillet 2026,
+
+**et** que la responsable accorde 15 jours,
+
+**quand** l'application calcule la nouvelle échéance,
+
+**alors** elle compte chaque samedi et chaque dimanche comme un jour du délai.
+
+La date brute calculée est le samedi 25 juillet 2026. Le système ne transforme pas ce délai en 15 jours ouvrables.
+
+Le traitement final d'une échéance qui tombe elle-même une fin de semaine ou un jour férié demeure à confirmer.
+
 ## Points à préciser
 
-- les 15, 30, 45 ou 60 jours sont-ils des jours calendaires ou des jours ouvrables;
+- si une échéance tombe un samedi, un dimanche ou un jour férié, doit-elle rester à cette date ou être déplacée;
 - contenu exact du courriel de confirmation;
 - délai entre la nouvelle échéance et la prochaine relance;
 - fréquence réelle des reports successifs;
