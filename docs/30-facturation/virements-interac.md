@@ -29,18 +29,49 @@ Référence : ABC12345
 Expiration : 6 août 2026
 ```
 
+## Deux modes d'encaissement confirmés
+
+Le fonctionnement varie selon le client. Deux modes sont utilisés dans la pratique :
+
+### Acceptation manuelle
+
+Le courriel annonce que les fonds sont disponibles, mais la responsable doit choisir son institution financière et accepter le virement.
+
+Tant que cette action n'est pas effectuée et confirmée :
+
+- la source demeure `A_ENCAISSER`;
+- aucun paiement définitif n'est créé;
+- aucune facture ne devient `PAYEE`;
+- la date réelle d'encaissement reste vide.
+
+### Dépôt automatique
+
+Pour certains clients, le virement est déposé automatiquement dans le compte configuré. Aucune action d'acceptation n'est normalement requise.
+
+La réception du courriel peut alors être une notification de dépôt automatique, mais elle ne doit toujours pas modifier silencieusement les factures. La source passe dans un état comme `DEPOT_AUTOMATIQUE_A_CONFIRMER` jusqu'à ce que la responsable confirme :
+
+- que les fonds sont réellement reçus;
+- la date comptable à utiliser;
+- la ou les factures concernées;
+- les montants affectés.
+
+Le mode peut avoir une valeur habituelle par client ou profil de facturation, mais il doit aussi être enregistré pour chaque virement. Une valeur par défaut ne remplace jamais l'information du message courant ni la validation humaine.
+
 ## Distinction essentielle : virement annoncé et fonds reçus
 
-La réception du courriel ne prouve pas encore que les fonds ont été encaissés.
+La réception d'un courriel Interac ne constitue jamais, à elle seule, une autorisation suffisante pour marquer une facture payée.
 
-Dans le format observé, la responsable doit effectuer une action auprès de son institution financière pour déposer le virement. Le système doit donc distinguer :
+Le système doit distinguer :
 
 - `receivedAt` — réception du courriel;
 - `sentAt` — date annoncée du virement;
-- `expiresAt` — échéance du virement;
-- `depositedAt` — moment où le virement est effectivement déposé;
+- `expiresAt` — échéance du virement lorsqu'elle existe;
+- `acceptedAt` — action d'acceptation manuelle, lorsqu'elle existe;
+- `depositedAt` — moment où le dépôt est considéré effectué;
 - `paidAt` — date comptable retenue comme réception réelle du paiement;
 - `recordedAt` — moment où la responsable confirme l'opération dans l'application.
+
+Pour un dépôt automatique, `acceptedAt` reste vide. Pour un virement manuel, `acceptedAt` peut être conservé séparément de `paidAt` si l'argent n'est pas considéré reçu au même moment.
 
 Une facture ne devient jamais `PAYEE` uniquement parce que le courriel Interac a été reçu.
 
@@ -51,11 +82,12 @@ Valeurs proposées :
 ```text
 PaymentSource.type = INTERAC_EMAIL
 Payment.method = VIREMENT_INTERAC
+InteracMetadata.depositMode = MANUAL_ACCEPTANCE | AUTO_DEPOSIT | UNKNOWN
 ```
 
-Le courriel est une source de paiement. Le paiement réel est créé ou finalisé après confirmation du dépôt.
+Le courriel est une source de paiement. Le paiement réel est créé ou finalisé après confirmation humaine de l'encaissement.
 
-## Parcours cible
+## Parcours cible commun
 
 1. La responsable reçoit le courriel Interac.
 2. Elle ouvre **Enregistrer un dépôt**.
@@ -68,13 +100,29 @@ Le courriel est une source de paiement. Le paiement réel est créé ou finalis�
    - la référence du virement;
    - la date d'expiration;
    - le message;
-   - la ou les références de facture détectées.
+   - la ou les références de facture détectées;
+   - le mode d'encaissement probable.
 5. L'application recherche les factures correspondantes.
-6. La source reste en état `A_ENCAISSER` tant que le dépôt n'est pas confirmé.
-7. La responsable dépose les fonds en dehors de Facturation Lussier.
-8. Elle revient confirmer la date réelle de réception.
-9. L'application crée ou finalise un `Payment` et ses `PaymentAllocation`.
-10. Chaque facture est mise à jour selon le montant affecté et son solde restant.
+6. La responsable confirme le mode réel : acceptation manuelle ou dépôt automatique.
+7. Le parcours se poursuit selon ce mode.
+
+### Branche — acceptation manuelle
+
+1. La source reste `A_ENCAISSER`.
+2. La responsable accepte le virement dans son environnement bancaire habituel.
+3. Elle revient confirmer la réception réelle et sa date.
+4. L'application crée ou finalise un `Payment` et ses `PaymentAllocation`.
+5. La source passe à `ENCAISSE`.
+
+### Branche — dépôt automatique
+
+1. La source passe à `DEPOT_AUTOMATIQUE_A_CONFIRMER`.
+2. Aucune action d'acceptation bancaire n'est demandée dans Facturation Lussier.
+3. La responsable confirme que le dépôt a réellement été reçu et indique la date comptable.
+4. L'application crée ou finalise un `Payment` et ses `PaymentAllocation`.
+5. La source passe à `ENCAISSE`.
+
+Dans les deux cas, chaque facture est mise à jour selon le montant affecté et son solde restant.
 
 ## Référence de facture dans le message
 
@@ -119,12 +167,15 @@ Dans ce cas :
 - `EXTRAIT`
 - `A_VALIDER`
 - `A_ENCAISSER`
+- `DEPOT_AUTOMATIQUE_A_CONFIRMER`
 - `ENCAISSE`
 - `EXPIRE`
 - `ANNULE`
 - `ECART_A_TRAITER`
 
-L'état `A_ENCAISSER` signifie que le virement a été annoncé mais que la réception réelle des fonds n'a pas encore été confirmée.
+`A_ENCAISSER` signifie qu'une acceptation manuelle est encore nécessaire.
+
+`DEPOT_AUTOMATIQUE_A_CONFIRMER` signifie qu'aucune acceptation n'est attendue, mais que la réception réelle et le rapprochement n'ont pas encore été confirmés dans l'application.
 
 ## Données propres au virement Interac
 
@@ -138,10 +189,22 @@ L'état `A_ENCAISSER` signifie que le virement a été annoncé mais que la réc
 - numéro de référence;
 - message libre;
 - références de facture proposées;
+- mode d'encaissement : manuel, automatique ou inconnu;
 - statut d'encaissement;
+- date d'acceptation manuelle facultative;
 - date de dépôt confirmée;
 - utilisateur ayant confirmé;
 - horodatage de la confirmation.
+
+## Valeur habituelle par client
+
+Puisque le mode dépend des clients, le système peut mémoriser une préférence facultative sur le client ou son profil de facturation :
+
+```text
+preferredInteracDepositMode = MANUAL_ACCEPTANCE | AUTO_DEPOSIT | UNKNOWN
+```
+
+Cette préférence sert uniquement à préremplir le prochain rapprochement. La responsable peut la modifier pour un virement précis si le courriel indique un autre fonctionnement.
 
 ## Sécurité
 
@@ -153,7 +216,7 @@ Facturation Lussier ne doit jamais :
 - marquer automatiquement une facture payée à la réception du courriel;
 - considérer le nom affiché dans le courriel comme une preuve suffisante d'identité.
 
-L'application peut analyser le contenu reçu et préparer le rapprochement, mais le dépôt se fait dans le parcours bancaire habituel et la confirmation finale reste humaine.
+L'application peut analyser le contenu reçu et préparer le rapprochement, mais le dépôt ou sa confirmation se fait dans le parcours bancaire habituel et la confirmation finale reste humaine.
 
 ## Contrôles proposés
 
@@ -161,18 +224,20 @@ Avant de finaliser :
 
 - confirmer le montant et la devise;
 - confirmer la référence du virement;
+- confirmer le mode d'encaissement;
 - confirmer la ou les factures proposées;
 - comparer le montant au solde de chaque facture;
 - signaler une référence inconnue ou ambiguë;
-- signaler une date d'expiration dépassée;
+- signaler une date d'expiration dépassée pour un virement manuel;
 - demander la date réelle de réception des fonds;
 - empêcher la création d'un doublon pour la même référence Interac;
 - conserver le courriel ou sa référence dans un stockage privé.
 
 ## Points à confirmer
 
-- Les virements Interac sont-ils toujours déposés manuellement, ou certains utilisent-ils le dépôt automatique?
-- La responsable considère-t-elle le paiement reçu à la date du dépôt dans l'institution financière ou à la date visible sur le relevé bancaire?
+- Le même client utilise-t-il toujours le même mode, ou peut-il alterner entre acceptation manuelle et dépôt automatique?
+- Pour un dépôt automatique, comment la responsable confirme-t-elle que les fonds sont réellement reçus : courriel, relevé bancaire ou consultation du compte?
+- À quel moment `paidAt` est-il fixé pour chacun des deux modes?
 - Un virement Interac peut-il couvrir plusieurs factures dans votre pratique?
-- Que se passe-t-il lorsqu'un virement expire avant d'être déposé?
+- Que se passe-t-il lorsqu'un virement manuel expire avant d'être déposé?
 - Le courriel complet doit-il être conservé, ou une copie structurée et sa référence suffisent-elles?
