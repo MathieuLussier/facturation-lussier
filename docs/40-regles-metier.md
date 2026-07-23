@@ -63,8 +63,14 @@
 - **RM-061** — Un virement Interac doit être distingué d'un dépôt direct par le type de source `INTERAC_EMAIL` et le mode de paiement `VIREMENT_INTERAC`.
 - **RM-062** — La réception d'un courriel Interac annonce des fonds, mais ne prouve pas leur encaissement; aucune facture ne devient payée avant confirmation humaine du dépôt.
 - **RM-063** — Une source Interac doit pouvoir conserver l'expéditeur, le montant, la devise, la date d'envoi, la référence, l'expiration, le message et les références de facture proposées.
-- **RM-064** — Une source Interac non encaissée doit être représentée par un état `A_ENCAISSER` ou équivalent; une source expirée ou annulée ne crée aucun paiement valide.
+- **RM-064** — Une source Interac non encaissée doit être représentée par un état explicite; une source expirée ou annulée ne crée aucun paiement valide.
 - **RM-065** — Une référence de facture abrégée dans un message, par exemple sans le préfixe `FAC/`, peut être normalisée pour la recherche, mais la correspondance reste une proposition à confirmer.
 - **RM-066** — Facturation Lussier ne doit jamais ouvrir automatiquement un lien bancaire, demander des identifiants bancaires ni réaliser le dépôt Interac.
 - **RM-067** — La référence du virement, l'expéditeur et le montant doivent servir à détecter un doublon avant de créer une seconde transaction.
-- **RM-068** — La date de réception du courriel, la date d'envoi, l'expiration, la date de dépôt et la date comptable `paidAt` sont des événements distincts et ne doivent pas s'écraser mutuellement.
+- **RM-068** — La date de réception du courriel, la date d'envoi, l'expiration, la date d'acceptation, la date de dépôt et la date comptable `paidAt` sont des événements distincts et ne doivent pas s'écraser mutuellement.
+- **RM-069** — Les virements Interac peuvent exiger une acceptation manuelle ou utiliser le dépôt automatique selon le client.
+- **RM-070** — Chaque source Interac doit enregistrer son mode d'encaissement : `MANUAL_ACCEPTANCE`, `AUTO_DEPOSIT` ou `UNKNOWN`.
+- **RM-071** — Un virement manuel demeure `A_ENCAISSER` jusqu'à son acceptation et à la confirmation humaine de la réception réelle des fonds.
+- **RM-072** — Un virement à dépôt automatique demeure `DEPOT_AUTOMATIQUE_A_CONFIRMER` ou équivalent jusqu'à la confirmation humaine de la réception et du rapprochement.
+- **RM-073** — Même lorsqu'un dépôt automatique est annoncé par courriel, aucune facture ne doit être marquée payée sans confirmation humaine.
+- **RM-074** — Le client ou son profil de facturation peut mémoriser un mode Interac habituel, mais le mode du virement courant reste visible, modifiable et prioritaire.
