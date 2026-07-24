@@ -38,7 +38,7 @@ Tant que la relance n'est pas approuvée :
 - aucun courriel ne quitte l'application;
 - aucun statut de livraison n'est créé;
 - le client ne reçoit aucune notification;
-- la responsable peut modifier le destinataire, l'objet, le texte et les pièces jointes proposées;
+- une personne autorisée peut modifier le destinataire, l'objet, le texte et les pièces jointes proposées;
 - le brouillon reste visible dans une file **Relances à approuver**.
 
 ## Contenu proposé du brouillon
@@ -57,7 +57,7 @@ Le brouillon devrait présenter au minimum :
 - l'objet et le corps du courriel;
 - la facture ou les pièces sélectionnées pour l'envoi.
 
-Une relance ne joint pas automatiquement le spécimen de chèque. Celui-ci peut être ajouté explicitement si la responsable le juge pertinent.
+Une relance ne joint pas automatiquement le spécimen de chèque. Celui-ci peut être ajouté explicitement si une personne autorisée le juge pertinent.
 
 ## Contrôles avant approbation et envoi
 
@@ -92,6 +92,26 @@ Une approbation explicite est obligatoire.
 - statut de livraison ou erreur disponible.
 
 Si le contenu, le solde, l'échéance ou les destinataires sont modifiés après l'approbation, l'approbation précédente doit être invalidée et une nouvelle approbation doit être demandée.
+
+## Utilisateurs autorisés dans la configuration initiale
+
+La permission d'approbation est accordée aux trois membres actuels de l'entreprise :
+
+- la responsable de facturation;
+- le premier chauffeur-propriétaire;
+- le second chauffeur-propriétaire.
+
+Chacun doit utiliser son propre compte. L'application ne doit pas permettre de réutiliser l'identité ou l'approbation d'un autre utilisateur.
+
+La permission proposée est :
+
+```text
+REMINDER_APPROVE
+```
+
+Elle est attribuée explicitement et peut être retirée par un administrateur. Elle n'est pas héritée automatiquement par tous les chauffeurs ou tout nouvel utilisateur.
+
+Le nombre d'approbations nécessaires pour autoriser l'envoi demeure une décision ouverte. Tant que cette règle n'est pas confirmée, le modèle doit pouvoir soutenir une approbation unique ou un quorum supérieur sans perdre l'historique.
 
 ## États suggérés
 
@@ -131,7 +151,7 @@ Le tableau de bord peut afficher :
 
 ## Points encore ouverts
 
-- Qui peut approuver une relance : la responsable de facturation seulement, Mathieu, Michel ou plusieurs rôles?
+- Une seule approbation de l'un des trois utilisateurs autorisés suffit-elle, ou plusieurs approbations sont-elles requises?
 - L'action **Approuver et envoyer** doit-elle être combinée ou l'approbation et l'envoi doivent-ils rester deux actions séparées?
 - Quel texte exact doit être utilisé pour la première relance?
 - Après une première relance non payée, à quel rythme faut-il préparer les suivantes?
