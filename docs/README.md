@@ -29,8 +29,9 @@ Le code explique comment l'application fonctionne. Ce dossier explique **pourquo
 - [`30-facturation/verification-encaissement.md`](30-facturation/verification-encaissement.md) — double vérification du courriel et du compte bancaire;
 - [`30-facturation/report-echeance-apres-paiement-partiel.md`](30-facturation/report-echeance-apres-paiement-partiel.md) — nouveau délai accordé pour le solde restant;
 - [`30-facturation/calendrier-jours-ouvrables.md`](30-facturation/calendrier-jours-ouvrables.md) — jours fériés québécois, fermetures internes et ajustement des échéances;
+- [`30-facturation/relances-apres-echeance.md`](30-facturation/relances-apres-echeance.md) — préparation dès le lendemain, approbation obligatoire et contrôles avant envoi;
 - [`40-regles-metier.md`](40-regles-metier.md) — registre principal des règles métier;
-- [`40-regles-metier-recouvrement.md`](40-regles-metier-recouvrement.md) — règles complémentaires de recouvrement et de report;
+- [`40-regles-metier-recouvrement.md`](40-regles-metier-recouvrement.md) — règles complémentaires de recouvrement, de report et de relance;
 - [`50-modele-domaine.md`](50-modele-domaine.md) — modèle conceptuel global proposé;
 - [`50-modele-paiements.md`](50-modele-paiements.md) — modèle détaillé des sources, paiements et affectations;
 - [`50-modele-virements-interac.md`](50-modele-virements-interac.md) — spécialisation du modèle pour les virements Interac;
@@ -42,7 +43,9 @@ Le code explique comment l'application fonctionne. Ce dossier explique **pourquo
 - [`80-scenarios-verification-encaissement.md`](80-scenarios-verification-encaissement.md) — vérification croisée et gestion des écarts;
 - [`80-scenarios-report-echeance.md`](80-scenarios-report-echeance.md) — nouveau délai, historique et reprise des relances;
 - [`80-scenarios-calendrier-jours-ouvrables.md`](80-scenarios-calendrier-jours-ouvrables.md) — calendrier québécois, fermetures internes et versionnement;
-- [`90-questions-ouvertes.md`](90-questions-ouvertes.md) — éléments à confirmer.
+- [`80-scenarios-relances.md`](80-scenarios-relances.md) — génération, approbation, obsolescence et envoi contrôlé des relances;
+- [`90-questions-ouvertes.md`](90-questions-ouvertes.md) — éléments généraux à confirmer;
+- [`90-questions-relances.md`](90-questions-relances.md) — rôles, modèles et calendrier des relances à préciser.
 
 ## Gouvernance
 
@@ -68,4 +71,4 @@ Les documents opérationnels réels, les avis de dépôt, les courriels Interac 
 
 Version initiale issue des entrevues avec la responsable de facturation et un chauffeur-propriétaire, ainsi que de l'analyse d'exemples réels de SMS, bons papier, facture, avis de dépôt et virement Interac.
 
-Cette version est une base de travail : les points non confirmés demeurent dans `90-questions-ouvertes.md`.
+Cette version est une base de travail : les points non confirmés demeurent dans les documents `90-questions-*.md`.
