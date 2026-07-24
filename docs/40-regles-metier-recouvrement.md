@@ -23,3 +23,7 @@ Ce complément poursuit la numérotation du registre principal.
 - **RM-099** — Le renvoi technique du même courriel ne redémarre pas automatiquement le délai; seul un nouveau report explicitement accordé peut remplacer le report actif.
 - **RM-100** — Les délais de 15, 30, 45 ou 60 jours sont calculés en jours calendaires; les samedis et dimanches sont inclus dans le compteur.
 - **RM-101** — Si l'échéance brute tombe un samedi, un dimanche ou un jour férié défini dans le calendrier d'entreprise, l'échéance effective est déplacée au prochain jour ouvrable; la date brute et l'ajustement demeurent auditables.
+- **RM-102** — Le calendrier d'entreprise utilisé par défaut est basé sur les jours fériés applicables au Québec, avec les samedis et dimanches comme jours non ouvrables.
+- **RM-103** — L'entreprise peut ajouter ses propres journées ou périodes de fermeture; celles-ci sont traitées comme non ouvrables pour les futurs calculs.
+- **RM-104** — Le système avance jusqu'au premier jour ouvrable en traversant successivement toute fin de semaine, tout jour férié québécois configuré et toute fermeture interne.
+- **RM-105** — Le calendrier, sa version, la date brute, la date effective et les journées traversées doivent être figés dans l'historique d'un report; une modification future du calendrier ne recalcule jamais rétroactivement une échéance déjà communiquée.
