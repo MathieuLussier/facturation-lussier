@@ -32,6 +32,22 @@ Responsabilités :
 - conserver ou rapporter les billets de carrière;
 - remettre les documents à la facturation.
 
+Les deux chauffeurs-propriétaires de l'entreprise participent également au contrôle administratif du recouvrement. Dans la configuration initiale, chacun peut consulter, réviser et approuver un brouillon de relance.
+
+## Cercle d'approbation des relances
+
+Les trois membres de l'entreprise suivants possèdent la permission d'approuver une relance :
+
+- la responsable de facturation;
+- le premier chauffeur-propriétaire;
+- le second chauffeur-propriétaire.
+
+Cette permission est individuelle. Le système doit enregistrer l'utilisateur précis qui a approuvé, l'heure de l'approbation et la version du contenu approuvé.
+
+L'autorisation ne doit pas être accordée automatiquement à tout futur chauffeur. Elle est attribuée explicitement à un utilisateur ou à un rôle administratif approprié et peut être retirée par un administrateur.
+
+La règle déterminant si une seule approbation suffit ou si plusieurs approbations sont requises demeure à confirmer.
+
 ## Broker
 
 Responsabilités observées :
