@@ -27,3 +27,9 @@ Ce complément poursuit la numérotation du registre principal.
 - **RM-103** — L'entreprise peut ajouter ses propres journées ou périodes de fermeture; celles-ci sont traitées comme non ouvrables pour les futurs calculs.
 - **RM-104** — Le système avance jusqu'au premier jour ouvrable en traversant successivement toute fin de semaine, tout jour férié québécois configuré et toute fermeture interne.
 - **RM-105** — Le calendrier, sa version, la date brute, la date effective et les journées traversées doivent être figés dans l'historique d'un report; une modification future du calendrier ne recalcule jamais rétroactivement une échéance déjà communiquée.
+- **RM-106** — Lorsqu'un solde demeure après l'échéance effective, l'application prépare ou rend admissible un brouillon de relance dès le lendemain civil.
+- **RM-107** — La génération d'un brouillon de relance ne constitue jamais un envoi; aucun courriel ne doit quitter l'application sans approbation humaine explicite.
+- **RM-108** — Une personne autorisée doit pouvoir relire, modifier et approuver la relance avant son envoi; l'utilisateur et l'horodatage de l'approbation doivent être conservés.
+- **RM-109** — Avant l'approbation et avant l'envoi, le système doit revérifier le solde, les paiements, l'échéance effective, les reports actifs, le statut de la facture et les destinataires.
+- **RM-110** — Un paiement, un nouveau report, une annulation ou toute modification rendant le contenu périmé doit marquer le brouillon `OBSOLETE` ou exiger sa régénération.
+- **RM-111** — Toute modification du contenu, du solde, de l'échéance, des destinataires ou des pièces après l'approbation invalide cette approbation et exige une nouvelle validation avant l'envoi.
