@@ -123,12 +123,52 @@ Toute divergence bloque l'envoi ordinaire jusqu'à une correction ou une régén
 - l'erreur est enregistrée;
 - la relance passe à `ERREUR_ENVOI`;
 - aucun succès de livraison n'est simulé;
-- la responsable peut corriger le problème et réessayer;
+- une personne autorisée peut corriger le problème et réessayer;
 - l'application revalide les données avant le nouvel essai.
+
+## SC-REM-011 — Permettre aux trois membres actuels d'approuver
+
+**Étant donné** la configuration initiale de Transport Lussier et Fils,
+
+**quand** la responsable de facturation, le premier chauffeur-propriétaire ou le second chauffeur-propriétaire ouvre un brouillon de relance,
+
+**alors** chacun possède individuellement la permission `REMINDER_APPROVE` et peut :
+
+- consulter le brouillon;
+- vérifier le solde et les renseignements du client;
+- modifier le contenu proposé;
+- soumettre son approbation;
+- laisser une note d'approbation facultative.
+
+L'identité réelle du compte et l'heure de l'action sont conservées.
+
+## SC-REM-012 — Refuser l'approbation à un utilisateur non autorisé
+
+**Étant donné** un utilisateur qui ne possède pas `REMINDER_APPROVE`,
+
+**quand** il tente d'approuver une relance,
+
+**alors** :
+
+- l'action est refusée;
+- aucune approbation n'est créée;
+- aucun envoi n'est autorisé par cette tentative;
+- l'événement de refus peut être journalisé;
+- l'utilisateur ne peut pas sélectionner l'identité d'un autre approbateur.
+
+## SC-REM-013 — Retirer une permission sans supprimer l'historique
+
+**Étant donné** qu'un administrateur retire `REMINDER_APPROVE` à un utilisateur,
+
+**quand** cet utilisateur ouvre une nouvelle relance,
+
+**alors** il ne peut plus l'approuver.
+
+Ses approbations historiques demeurent toutefois visibles avec leur identité et leur horodatage; elles ne sont ni supprimées ni réattribuées.
 
 ## Points à préciser
 
-- rôles autorisés à approuver;
+- une seule approbation suffit-elle ou plusieurs approbations sont-elles requises;
 - approbation et envoi en une action ou en deux actions;
 - modèle exact de la première relance;
 - calendrier des relances suivantes;
