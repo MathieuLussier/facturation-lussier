@@ -51,8 +51,11 @@ Confirmé :
 - la date du paiement partiel, la création du brouillon et la préparation du report ne démarrent pas le compteur;
 - les délais sont calculés en jours calendaires;
 - les samedis et dimanches sont inclus dans le compteur;
-- si la date brute tombe un samedi, un dimanche ou un jour férié configuré, l'échéance effective est déplacée au prochain jour ouvrable;
-- la date brute, la date effective et la raison de l'ajustement sont conservées;
+- si la date brute tombe un samedi, un dimanche ou un jour non ouvrable configuré, l'échéance effective est déplacée au prochain jour ouvrable;
+- le calendrier par défaut est basé sur les jours fériés applicables au Québec;
+- l'entreprise peut ajouter ses propres journées ou périodes de fermeture;
+- la date brute, la date effective, le calendrier, sa version et la raison de l'ajustement sont conservés;
+- une modification future du calendrier ne recalcule pas rétroactivement un report déjà communiqué;
 - un brouillon non envoyé, un envoi annulé ou un échec d'envoi n'active pas le report;
 - l'envoi de courriel ayant activé le report doit rester lié à celui-ci dans l'historique;
 - le renvoi technique du même courriel ne redémarre pas automatiquement le délai;
@@ -60,7 +63,8 @@ Confirmé :
 
 À confirmer :
 
-- quel calendrier de jours fériés et de fermetures doit être configuré par défaut;
+- qui peut ajouter, modifier ou annuler une fermeture dans le calendrier d'entreprise;
+- faut-il permettre de déclarer exceptionnellement ouvrable une date normalement fermée;
 - quel texte exact utiliser dans le courriel confirmant le paiement partiel, le solde restant et la nouvelle échéance;
 - combien de jours après la nouvelle échéance faut-il préparer la prochaine relance;
 - plusieurs reports successifs sont-ils parfois accordés au même client;
@@ -183,4 +187,5 @@ Confirmé :
 - Qui peut finaliser, annuler ou marquer payée une facture?
 - Qui peut enregistrer, corriger ou annuler un paiement?
 - Qui peut consulter les courriels, avis et références Interac?
+- Qui peut gérer le calendrier des jours fériés et des fermetures internes?
 - Quelle durée de conservation est requise pour les documents?
