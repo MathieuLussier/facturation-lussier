@@ -1,0 +1,74 @@
+# Documentation fonctionnelle — Facturation Lussier
+
+Cette documentation décrit le métier réel de Transport Lussier et Fils et sert de référence pour la conception du produit.
+
+Le code explique comment l'application fonctionne. Ce dossier explique **pourquoi** elle doit fonctionner ainsi, quelles règles métier elle doit respecter et quelles décisions restent à valider.
+
+## Principes
+
+- documenter le métier avant les écrans;
+- conserver une validation humaine pour les actions sensibles;
+- éviter la ressaisie;
+- préserver les preuves terrain et l'historique;
+- soutenir un flux hybride numérique et papier;
+- ne pas remplacer immédiatement les habitudes qui fonctionnent;
+- distinguer clairement une règle confirmée d'une hypothèse ou d'un point ouvert.
+
+## Structure
+
+- [`00-vision.md`](00-vision.md) — vision, objectifs et périmètre;
+- [`01-glossaire.md`](01-glossaire.md) — vocabulaire métier;
+- [`02-acteurs.md`](02-acteurs.md) — utilisateurs et responsabilités;
+- [`10-calls/workflow.md`](10-calls/workflow.md) — réception et traitement des calls;
+- [`20-operations/bons-de-travail.md`](20-operations/bons-de-travail.md) — opérations terrain, remise hebdomadaire et bons;
+- [`30-facturation/workflow.md`](30-facturation/workflow.md) — facturation, impression et envoi;
+- [`30-facturation/surcharge-carburant.md`](30-facturation/surcharge-carburant.md) — calcul hebdomadaire de surcharge;
+- [`30-facturation/paiements.md`](30-facturation/paiements.md) — spécimen de chèque, dépôts, sources variables et paiements partiels;
+- [`30-facturation/avis-depot.md`](30-facturation/avis-depot.md) — format PDF observé et parcours avec ou sans document;
+- [`30-facturation/virements-interac.md`](30-facturation/virements-interac.md) — courriels Interac, état à encaisser et confirmation du dépôt;
+- [`30-facturation/verification-encaissement.md`](30-facturation/verification-encaissement.md) — double vérification du courriel et du compte bancaire;
+- [`30-facturation/report-echeance-apres-paiement-partiel.md`](30-facturation/report-echeance-apres-paiement-partiel.md) — nouveau délai accordé pour le solde restant;
+- [`30-facturation/calendrier-jours-ouvrables.md`](30-facturation/calendrier-jours-ouvrables.md) — jours fériés québécois, fermetures internes et ajustement des échéances;
+- [`30-facturation/relances-apres-echeance.md`](30-facturation/relances-apres-echeance.md) — préparation dès le lendemain, approbation obligatoire et contrôles avant envoi;
+- [`40-regles-metier.md`](40-regles-metier.md) — registre principal des règles métier;
+- [`40-regles-metier-recouvrement.md`](40-regles-metier-recouvrement.md) — règles complémentaires de recouvrement, de report et de relance;
+- [`50-modele-domaine.md`](50-modele-domaine.md) — modèle conceptuel global proposé;
+- [`50-modele-paiements.md`](50-modele-paiements.md) — modèle détaillé des sources, paiements et affectations;
+- [`50-modele-virements-interac.md`](50-modele-virements-interac.md) — spécialisation du modèle pour les virements Interac;
+- [`60-roadmap.md`](60-roadmap.md) — phases de livraison;
+- [`70-decisions-architecture.md`](70-decisions-architecture.md) — décisions fonctionnelles structurantes;
+- [`80-scenarios-acceptation.md`](80-scenarios-acceptation.md) — scénarios métier généraux et futurs critères de test;
+- [`80-scenarios-paiements.md`](80-scenarios-paiements.md) — dépôts multi-factures, saisie sans PDF et paiements partiels;
+- [`80-scenarios-virements-interac.md`](80-scenarios-virements-interac.md) — réception, dépôt, expiration et rapprochement Interac;
+- [`80-scenarios-verification-encaissement.md`](80-scenarios-verification-encaissement.md) — vérification croisée et gestion des écarts;
+- [`80-scenarios-report-echeance.md`](80-scenarios-report-echeance.md) — nouveau délai, historique et reprise des relances;
+- [`80-scenarios-calendrier-jours-ouvrables.md`](80-scenarios-calendrier-jours-ouvrables.md) — calendrier québécois, fermetures internes et versionnement;
+- [`80-scenarios-relances.md`](80-scenarios-relances.md) — génération, approbation, obsolescence et envoi contrôlé des relances;
+- [`90-questions-ouvertes.md`](90-questions-ouvertes.md) — éléments généraux à confirmer;
+- [`90-questions-relances.md`](90-questions-relances.md) — rôles, modèles et calendrier des relances à préciser.
+
+## Gouvernance
+
+1. Une règle métier confirmée reçoit un identifiant stable `RM-XXX`.
+2. Une décision structurante doit être documentée avant son implémentation.
+3. Une hypothèse ne doit pas être transformée silencieusement en exigence.
+4. Les documents doivent évoluer dans la même pull request que le code concerné.
+5. Une facture finalisée et les pièces qui la justifient doivent rester traçables.
+
+## Confidentialité
+
+Le dépôt est public. Les exemples de production doivent donc être anonymisés :
+
+- aucun scan de bon signé ou de facture client ne doit être versionné;
+- aucun avis de dépôt ou courriel Interac réel ne doit être versionné;
+- aucune signature, plaque réelle ou coordonnée personnelle ne doit être versionnée;
+- aucun spécimen de chèque ni renseignement bancaire ne doit être versionné;
+- les noms de personnes, numéros de bons, références de virement, montants et données de clients sont remplacés par des exemples génériques lorsque nécessaire.
+
+Les documents opérationnels réels, les avis de dépôt, les courriels Interac et les instructions bancaires appartiennent au stockage applicatif protégé, pas à Git.
+
+## Statut
+
+Version initiale issue des entrevues avec la responsable de facturation et un chauffeur-propriétaire, ainsi que de l'analyse d'exemples réels de SMS, bons papier, facture, avis de dépôt et virement Interac.
+
+Cette version est une base de travail : les points non confirmés demeurent dans les documents `90-questions-*.md`.

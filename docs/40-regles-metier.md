@@ -1,0 +1,82 @@
+# Règles métier initiales
+
+- **RM-001** — Un call peut provenir d'un broker, d'un client direct, d'un contrat récurrent ou d'une source interne.
+- **RM-002** — Le broker transmet le travail mais ne gère pas la facturation.
+- **RM-003** — L'entreprise ou le profil de facturation du projet est facturé directement.
+- **RM-004** — Un call peut demander un ou plusieurs camions.
+- **RM-005** — Chaque camion affecté produit son propre bon de travail.
+- **RM-006** — Chaque camion possède son propre carnet de bons papier.
+- **RM-007** — La référence d'un bon doit inclure au minimum la plaque et le numéro du bon.
+- **RM-008** — Le numéro du bon doit apparaître sur la facture pour permettre le rapprochement avec la copie du client.
+- **RM-009** — Le signataire est une personne reconnue par le client; il peut varier et ne doit pas nécessairement être préenregistré.
+- **RM-010** — Les modes de facturation soutenus sont l'heure, le voyage, la tonne, le forfait et une unité exceptionnelle.
+- **RM-011** — La facturation à l'heure représente le scénario principal.
+- **RM-012** — Les heures peuvent être calculées automatiquement à partir du début, de la fin et des pauses, mais doivent rester vérifiables.
+- **RM-013** — Plusieurs bons peuvent être regroupés lorsqu'ils concernent le même profil de facturation, le même projet, une même période et des conditions compatibles.
+- **RM-014** — Des lieux de travail différents produisent généralement des factures séparées.
+- **RM-015** — Chaque projet peut posséder son propre profil de facturation; sinon, celui du client est utilisé.
+- **RM-016** — Le tarif de base est défini par projet.
+- **RM-017** — Une facture est généralement produite par semaine.
+- **RM-018** — La surcharge carburant est saisie manuellement en pourcentage au niveau de la facture hebdomadaire.
+- **RM-019** — La surcharge augmente le taux horaire avant multiplication par les heures.
+- **RM-020** — Les taxes sont calculées sur le montant incluant la surcharge.
+- **RM-021** — Lorsqu'une surcharge s'applique, elle doit être clairement visible sur la facture.
+- **RM-022** — Une surcharge n'altère jamais le tarif de base contractuel du projet.
+- **RM-023** — Les tarifs et calculs d'une facture finalisée sont figés historiquement.
+- **RM-024** — Chaque ligne facturée doit être traçable jusqu'aux bons ou billets justificatifs.
+- **RM-025** — Les billets de carrière sont des documents distincts des bons de travail.
+- **RM-026** — L'OCR et l'extraction de SMS proposent des valeurs, mais un humain valide les champs critiques.
+- **RM-027** — Le SMS original doit être conservé avec le call.
+- **RM-028** — Le système doit soutenir l'impression d'un dossier physique complet.
+- **RM-029** — Les courriels de facture et de relance sont préparés automatiquement, mais envoyés après validation humaine.
+- **RM-030** — Les conditions de paiement peuvent varier par client, projet ou facture.
+- **RM-031** — Les chauffeurs remettent normalement à la responsable les bons et billets papier de la semaine le vendredi.
+- **RM-032** — La date de remise d'un bon est distincte de la date à laquelle le travail a été exécuté.
+- **RM-033** — Un spécimen de chèque peut être joint à un courriel de facture afin de permettre le dépôt direct.
+- **RM-034** — Le spécimen de chèque est une pièce sensible; son stockage doit être privé et sa présence doit être clairement visible avant l'envoi.
+- **RM-035** — Le mode de paiement actuellement observé est le dépôt direct, confirmé par une information reçue après le paiement.
+- **RM-036** — L'information de dépôt peut contenir les numéros des factures payées et sert au rapprochement manuel.
+- **RM-037** — La responsable confirme manuellement le paiement et enregistre la date réelle de réception.
+- **RM-038** — Une facture entièrement payée ne doit plus générer de nouvelles relances; l'action doit rester auditée.
+- **RM-039** — Un seul dépôt peut régler plusieurs factures et une même information de dépôt peut contenir plusieurs numéros de facture.
+- **RM-040** — Un dépôt multi-factures doit être enregistré comme une seule opération de paiement reliée à plusieurs factures par des affectations distinctes.
+- **RM-041** — La politique d'inclusion du spécimen doit être configurable au niveau de l'entreprise, du client ou du profil de facturation.
+- **RM-042** — Même lorsqu'il est ajouté automatiquement, le spécimen doit être visible et retirable dans le composeur avant l'envoi.
+- **RM-043** — Une relance ne joint pas automatiquement le spécimen de chèque, sauf sélection explicite.
+- **RM-044** — La réception d'une information de dépôt peut préparer un rapprochement, mais ne doit pas modifier automatiquement les statuts dans le MVP.
+- **RM-045** — Le système doit soutenir le format d'avis observé qui fournit un montant total de dépôt et un montant payé pour chaque facture.
+- **RM-046** — Chaque ligne d'avis importée doit pouvoir conserver la référence et la date de facture, le montant, la retenue, l'escompte et le montant payé.
+- **RM-047** — La date imprimée sur un avis est distincte de la date réelle d'encaissement; `paidAt` doit être confirmé par la responsable.
+- **RM-048** — Avant de confirmer un dépôt, la somme des montants affectés par facture doit être comparée au montant total annoncé lorsqu'il est connu.
+- **RM-049** — Une retenue, un escompte ou un écart non nul exige une révision explicite et ne doit pas marquer automatiquement la facture entièrement payée.
+- **RM-050** — Une source originale de paiement doit rester liée au rapprochement dans un stockage privé lorsqu'elle existe, sans exposer les identifiants bancaires dans les journaux.
+- **RM-051** — Toute valeur extraite d'une source de paiement reste une proposition avec une confiance et peut être corrigée avant validation humaine.
+- **RM-052** — Tous les clients ne fournissent pas un PDF; le parcours **Enregistrer un dépôt** doit fonctionner avec un courriel, une image, une autre source ou une saisie manuelle.
+- **RM-053** — Un paiement peut être enregistré sans avis structuré ni fichier, à condition de conserver l'utilisateur, l'horodatage et une note ou référence disponible.
+- **RM-054** — Un client peut payer seulement une partie d'une facture.
+- **RM-055** — Une facture ne devient `PAYEE` que lorsque son solde atteint zéro; sinon elle reste ouverte avec un état `PARTIELLEMENT_PAYEE` ou équivalent.
+- **RM-056** — Une même facture peut recevoir plusieurs affectations provenant de paiements distincts jusqu'au règlement complet.
+- **RM-057** — Une affectation inférieure au solde est un paiement partiel valide et ne doit pas être traitée comme une erreur de rapprochement.
+- **RM-058** — Les retenues et escomptes observés ont toujours été à zéro; le système conserve néanmoins ces champs et exige une révision si une valeur non nulle apparaît.
+- **RM-059** — Les relances ne sont annulées automatiquement que pour une facture dont le solde atteint zéro; le traitement du solde partiel doit rester visible et contrôlable.
+- **RM-060** — Certains clients paient par virement Interac et les renseignements peuvent apparaître directement dans le corps du courriel, sans PDF.
+- **RM-061** — Un virement Interac doit être distingué d'un dépôt direct par le type de source `INTERAC_EMAIL` et le mode de paiement `VIREMENT_INTERAC`.
+- **RM-062** — La réception d'un courriel Interac annonce des fonds, mais ne prouve pas leur encaissement; aucune facture ne devient payée avant confirmation humaine du dépôt.
+- **RM-063** — Une source Interac doit pouvoir conserver l'expéditeur, le montant, la devise, la date d'envoi, la référence, l'expiration, le message et les références de facture proposées.
+- **RM-064** — Une source Interac non encaissée doit être représentée par un état explicite; une source expirée ou annulée ne crée aucun paiement valide.
+- **RM-065** — Une référence de facture abrégée dans un message, par exemple sans le préfixe `FAC/`, peut être normalisée pour la recherche, mais la correspondance reste une proposition à confirmer.
+- **RM-066** — Facturation Lussier ne doit jamais ouvrir automatiquement un lien bancaire, demander des identifiants bancaires ni réaliser le dépôt Interac.
+- **RM-067** — La référence du virement, l'expéditeur et le montant doivent servir à détecter un doublon avant de créer une seconde transaction.
+- **RM-068** — La date de réception du courriel, la date d'envoi, l'expiration, la date d'acceptation, la date de dépôt et la date comptable `paidAt` sont des événements distincts et ne doivent pas s'écraser mutuellement.
+- **RM-069** — Les virements Interac peuvent exiger une acceptation manuelle ou utiliser le dépôt automatique selon le client.
+- **RM-070** — Chaque source Interac doit enregistrer son mode d'encaissement : `MANUAL_ACCEPTANCE`, `AUTO_DEPOSIT` ou `UNKNOWN`.
+- **RM-071** — Un virement manuel demeure `A_ENCAISSER` jusqu'à son acceptation et à la confirmation humaine de la réception réelle des fonds.
+- **RM-072** — Un virement à dépôt automatique demeure `DEPOT_AUTOMATIQUE_A_CONFIRMER` ou équivalent jusqu'à la confirmation humaine de la réception et du rapprochement.
+- **RM-073** — Même lorsqu'un dépôt automatique est annoncé par courriel, aucune facture ne doit être marquée payée sans confirmation humaine.
+- **RM-074** — Le client ou son profil de facturation peut mémoriser un mode Interac habituel, mais le mode du virement courant reste visible, modifiable et prioritaire.
+- **RM-075** — Pour confirmer un dépôt automatique Interac, la responsable vérifie à la fois le courriel reçu et le compte bancaire.
+- **RM-076** — Le système doit pouvoir tracer séparément la vérification de la notification et la vérification de la réception réelle au compte, sans stocker d'identifiants bancaires.
+- **RM-077** — Si le courriel et le compte bancaire ne concordent pas, aucune facture ne devient payée; la source ou le paiement passe dans un état d'écart à traiter avec une décision auditée.
+- **RM-078** — Le choix final de la date comptable `paidAt` appartient à une personne autorisée de l'entreprise et reste modifiable pour chaque paiement.
+- **RM-079** — L'application peut suggérer par défaut la date bancaire, mais elle ne doit jamais imposer silencieusement la date du compte, du courriel, de l'avis ou de l'envoi.
+- **RM-080** — Le système doit conserver la base utilisée pour choisir `paidAt` et demander une justification lorsqu'une date manuelle ou différente de la suggestion est retenue.
