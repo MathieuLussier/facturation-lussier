@@ -60,7 +60,7 @@ Le calcul produit d'abord une échéance brute :
 rawDueDate = addCalendarDays(extensionEmailSentAt, extensionTermDays)
 ```
 
-Si cette échéance brute tombe un samedi, un dimanche ou un jour férié défini dans le calendrier de l'entreprise, elle est déplacée au prochain jour ouvrable :
+Si cette échéance brute tombe un samedi, un dimanche, un jour férié québécois configuré ou une fermeture interne, elle est déplacée au prochain jour ouvrable :
 
 ```text
 effectiveDueDate = moveToNextBusinessDay(rawDueDate, businessCalendar)
@@ -75,7 +75,7 @@ Délai confirmé : 15 jours calendaires
 Échéance effective : lundi 27 juillet 2026
 ```
 
-Si le lundi est lui-même un jour férié configuré, l'échéance est déplacée au mardi suivant. La date brute, la date effective et la raison de l'ajustement doivent toutes rester auditables.
+Si le lundi est lui-même un jour férié ou une fermeture interne, l'échéance continue d'avancer jusqu'au prochain jour ouvrable. La date brute, la date effective, les journées traversées et la raison de l'ajustement doivent toutes rester auditables.
 
 ## Point de départ du nouveau délai
 
@@ -122,7 +122,9 @@ Le système doit distinguer :
 - `extensionTermUnit` — `CALENDAR_DAYS`;
 - `extensionTermSource` — niveau ayant fourni la valeur : facture, projet ou client;
 - `businessCalendarId` — calendrier utilisé pour reconnaître les jours non ouvrables;
-- `dueDateAdjustmentReason` — aucune, fin de semaine ou jour férié;
+- `businessCalendarVersion` — version ou année du calendrier figée lors du calcul;
+- `dueDateAdjustmentReason` — aucune, fin de semaine, jour férié québécois ou fermeture interne;
+- `calendarEvaluationSnapshot` — journées non ouvrables traversées, lorsque conservé;
 - `extensionEmailSentAt` — date et heure de l'envoi réussi qui déclenche le délai;
 - `extensionEmailDeliveryId` — référence facultative vers l'historique d'envoi;
 - `nextReminderAt` — prochaine date de relance prévue;
@@ -144,7 +146,7 @@ Cette séparation permet de comprendre plus tard pourquoi une facture initialeme
 6. L'application prépare un courriel indiquant le paiement reçu, le solde restant et le délai accordé.
 7. La responsable vérifie les destinataires, le texte et le délai, puis envoie le courriel.
 8. Après confirmation de l'envoi réussi, l'application enregistre `extensionEmailSentAt` et calcule l'échéance brute en jours calendaires.
-9. Si la date brute est non ouvrable, elle la déplace au prochain jour ouvrable selon le calendrier configuré.
+9. Si la date brute est non ouvrable, elle la déplace au prochain jour ouvrable selon le calendrier québécois et les fermetures internes configurées.
 10. Elle affiche l'échéance originale, la date brute, la date effective et le solde visé.
 11. Les brouillons ou relances prévus selon l'ancienne date sont annulés, reportés ou marqués comme remplacés.
 12. Le prochain cycle de relance utilise la date effective pour le solde restant.
@@ -194,13 +196,23 @@ L'unité confirmée est `CALENDAR_DAYS`.
 
 ### Calendrier d'entreprise
 
-Le système doit disposer d'un calendrier définissant au minimum :
+Le calendrier par défaut est basé sur le Québec :
+
+```text
+code = QUEBEC_STANDARD
+region = CA-QC
+timezone = America/Toronto
+weekendDays = SATURDAY, SUNDAY
+```
+
+Il comprend :
 
 - les samedis et dimanches comme jours non ouvrables;
-- les jours fériés ou fermetures configurés par l'entreprise;
+- les jours fériés applicables au Québec, configurés par année;
+- les journées ou périodes de fermeture ajoutées par l'entreprise;
 - le fuseau horaire utilisé pour interpréter l'envoi du courriel et la date d'échéance.
 
-Le calendrier précis des jours fériés demeure configurable afin de ne pas coder en dur une liste qui pourrait varier.
+Une modification future du calendrier s'applique aux futurs calculs seulement. Elle ne recalcule pas les échéances déjà communiquées. Voir [`calendrier-jours-ouvrables.md`](calendrier-jours-ouvrables.md) pour le modèle et les règles détaillées.
 
 ### PaymentDeadlineExtension
 
@@ -218,7 +230,9 @@ Champs proposés :
 - `termUnit` — `CALENDAR_DAYS`;
 - `termSource` — `INVOICE`, `PROJECT` ou `CLIENT`;
 - `businessCalendarId` facultatif;
-- `adjustmentReason` — `NONE`, `WEEKEND` ou `HOLIDAY`;
+- `businessCalendarVersion` facultative;
+- `adjustmentReason` — `NONE`, `WEEKEND`, `QUEBEC_PUBLIC_HOLIDAY` ou `COMPANY_CLOSURE`;
+- `calendarEvaluationSnapshot` facultatif;
 - `remainingBalanceCents` au moment de la décision;
 - `reason`;
 - `note` facultative;
@@ -245,7 +259,7 @@ Une facture ne possède qu'un report actif à la fois, mais conserve l'historiqu
 La date effective utilisée pour les relances est déterminée ainsi :
 
 1. date brute calculée en jours calendaires depuis l'envoi réussi du courriel;
-2. déplacement au prochain jour ouvrable lorsque la date brute est non ouvrable;
+2. déplacement au prochain jour ouvrable lorsque la date brute est non ouvrable selon le calendrier québécois et les fermetures internes;
 3. sinon, échéance originale de la facture lorsqu'aucun report actif n'existe.
 
 Cette règle concerne la gestion du recouvrement. Elle ne modifie pas la date d'émission, l'échéance originale ni l'historique du document facturé.
@@ -260,7 +274,7 @@ Avant d'envoyer et d'activer un nouveau délai :
 - le courriel doit afficher le solde restant et le délai accordé;
 - les destinataires doivent être confirmés;
 - la date brute et la date effective doivent être prévisualisées lorsqu'elles diffèrent;
-- le système doit montrer la raison du déplacement au prochain jour ouvrable;
+- le système doit montrer les journées traversées et la raison du déplacement au prochain jour ouvrable;
 - le système doit montrer les relances qui seront reportées ou remplacées;
 - l'utilisateur et l'horodatage doivent être enregistrés;
 - le report ne doit jamais modifier le total original de la facture;
@@ -270,7 +284,8 @@ Avant d'envoyer et d'activer un nouveau délai :
 
 ## Points encore ouverts
 
-- Quel calendrier de jours fériés et de fermetures doit être configuré par défaut pour l'entreprise?
+- Qui peut ajouter, modifier ou annuler une fermeture dans le calendrier d'entreprise?
+- Faut-il permettre de déclarer exceptionnellement ouvrable une date normalement fermée?
 - Quel texte exact doit être utilisé dans le courriel confirmant le paiement partiel, le solde et la nouvelle échéance?
 - Combien de jours après la nouvelle échéance faut-il préparer la prochaine relance?
 - Plusieurs reports successifs sont-ils parfois accordés au même client?
