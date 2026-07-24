@@ -33,3 +33,7 @@ Ce complément poursuit la numérotation du registre principal.
 - **RM-109** — Avant l'approbation et avant l'envoi, le système doit revérifier le solde, les paiements, l'échéance effective, les reports actifs, le statut de la facture et les destinataires.
 - **RM-110** — Un paiement, un nouveau report, une annulation ou toute modification rendant le contenu périmé doit marquer le brouillon `OBSOLETE` ou exiger sa régénération.
 - **RM-111** — Toute modification du contenu, du solde, de l'échéance, des destinataires ou des pièces après l'approbation invalide cette approbation et exige une nouvelle validation avant l'envoi.
+- **RM-112** — Dans la configuration initiale, la responsable de facturation et les deux chauffeurs-propriétaires possèdent chacun la permission d'approuver une relance.
+- **RM-113** — La permission d'approbation est attribuée individuellement et peut être retirée par un administrateur; elle n'est pas accordée automatiquement à tout chauffeur ou nouvel utilisateur.
+- **RM-114** — Chaque approbation doit conserver l'identité du compte utilisateur, l'horodatage et l'instantané exact du contenu approuvé.
+- **RM-115** — Un utilisateur ne peut pas approuver au nom d'un autre utilisateur ni réutiliser une approbation devenue invalide.
